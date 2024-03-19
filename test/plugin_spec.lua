@@ -1,5 +1,5 @@
-local maorunTime = require "maorun.time"
-local os = require "os"
+local maorunTime = require('maorun.time')
+local os = require('os')
 
 TestMaorunTime = {}
 
