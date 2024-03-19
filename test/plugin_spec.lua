@@ -20,7 +20,6 @@ describe('init plugin', function()
             Mittwoch = 8,
             Donnerstag = 8,
             Freitag = 8,
-
         }, data.hoursPerWeekday)
     end)
 
@@ -30,11 +29,11 @@ describe('init plugin', function()
             [os.date('%Y')] = {
                 [os.date('%W')] = {
                     summary = {
-                        overhour = 0
+                        overhour = 0,
                     },
-                    weekdays = {}
-                }
-            }
+                    weekdays = {},
+                },
+            },
         }, data.data)
     end)
 end)
