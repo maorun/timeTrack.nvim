@@ -1,34 +1,44 @@
-# nvim-plugin-template
-neovim plugin template integration test and doc publish
+# Timetracking in lua
+
+Automatically starts on FocusGained, BufEnter and VimEnter.
+
+Stops automatically on VimLeave
+
+## Installation
+eg:
+[packer.nvim](https://github.com/wbthomason/packer.nvim)
+```vim
+use {
+    'maorun/timeTrack.nvim',
+    requires = {
+        'nvim-lua/plenary.nvim',
+        {
+            'rcarriga/nvim-notify',
+            config = function()
+                vim.opt.termguicolors = true
+                vim.api.nvim_set_hl(0, "NotifyBackground", { bg="#000000", ctermbg=0})
+            end
+        }
+    }
+}
+```
 
 ## Usage
 
-1. click `use this template` button generate a repo on your github.
-2. clone your plugin repo.open terminal then cd plugin directory.
-3. run `python3 rename.py your-plugin-name` this will replace all `nvim-plugin-template` to your `pluing-name`. 
-   then it will prompt you input `y` or `n` to remove example codes in `init.lua` and
-   `test/plugin_spec.lua`. if you are familiar this repo just input y. if you are first look at this
-   template I suggest you look at them first. after these step the `rename.py` will also auto
-   remove.
+```lua
+require('maorun.time').setup()
+```
 
-now you have a clean plugin env . enjoy!
+## Suggested keymapping with [which-key](https://github.com/folke/which-key.nvim)
+```lua
+local wk = require("which-key")
+wk.register({
+    t = {
+        name = "Time",
+        s = {"<cmd>lua Time.TimeStop()<cr>", "TimeStop", noremap = true},
+        p = {"<cmd>lua Time.TimePause()<cr>", "TimePause", noremap = true},
+        r = {"<cmd>lua Time.TimeResume()<cr>", "TimeResume", noremap = true},
+    },
+}, { prefix = "<leader>" })
+```
 
-## Format
-
-format use `stylua` and provide `.stylua.toml`.
-
-## Test
-use vusted for test install by using `luarocks --lua-version=5.1 install vusted` then run `vusted test`
-for your test cases.
-
-create test case in test folder file rule is `foo_spec.lua` with `_spec` more usage please check
-[busted usage](https://lunarmodules.github.io/busted/)
-
-## Ci
-Ci support auto generate doc from README and integration test and lint check by `stylua`.
-
-
-## More
-Other usage you can look at my plugins
-
-## License MIT
