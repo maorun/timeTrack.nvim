@@ -98,7 +98,7 @@ local function calculate()
 end
 
 local function TimePause()
-    init()
+    init(obj.path)
     obj.content.paused = true
     save(obj)
     notify({
@@ -107,7 +107,7 @@ local function TimePause()
 end
 
 local function TimeResume()
-    init()
+    init(obj.path)
     obj.content.paused = false
     save(obj)
     notify({
@@ -115,12 +115,12 @@ local function TimeResume()
     }, 'info', { title = 'TimeTracking - Resume' })
 end
 local function isPaused()
-    init()
+    init(obj.path)
     return obj.content.paused
 end
 
 local function TimeStart(weekday, time)
-    init()
+    init(obj.path)
     if isPaused() then
         return
     end
@@ -154,7 +154,7 @@ local function TimeStart(weekday, time)
 end
 
 local function TimeStop(weekday, time)
-    init()
+    init(obj.path)
     if isPaused() then
         return
     end
@@ -231,7 +231,7 @@ local function addTime(time, weekday, clearDay)
     else
         clearDay = nil
     end
-    init()
+    init(obj.path)
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
         weekday = os.date('%A')
@@ -280,7 +280,7 @@ end
 
 -- subtracts time from the current week
 local function subtractTime(time, weekday)
-    init()
+    init(obj.path)
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
         weekday = os.date('%A')
@@ -378,7 +378,7 @@ Time = {
     setIllDay = setIllDay,
     setHoliday = setIllDay,
     calculate = function()
-        init()
+        init(obj.path)
         calculate()
         save(obj)
     end,
@@ -397,7 +397,7 @@ return {
     clearDay = clearDay,
     isPaused = isPaused,
     calculate = function()
-        init()
+        init(obj.path)
         calculate()
         save(obj)
     end,

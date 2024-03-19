@@ -1,30 +1,61 @@
+local helper = require('test.helper')
+helper.plenary_dep()
+helper.notify_dep()
+
 local maorunTime = require('maorun.time')
 local os = require('os')
-
-TestMaorunTime = {}
-
 local tempPath = os.tmpname()
 
-function TestMaorunTime:setUp()
-    maorunTime.setup(tempPath)
-end
+describe('init plugin', function() 
+    it('should have the path saved', function()
+        local data = maorunTime.setup(tempPath).path
+        assert.are.same(tempPath, data)
+    end)
 
-function TestMaorunTime:testTimeStart()
-    maorunTime.TimeStart()
-    assert.is_false(maorunTime.isPaused())
-end
+    it('should have default hoursPerWeekday', function()
+        local data = maorunTime.setup(tempPath).content
+        assert.are.same({
+             Montag = 8,
+            Dienstag = 8,
+            Mittwoch = 8,
+            Donnerstag = 8,
+            Freitag = 8,
 
-function TestMaorunTime:testTimeStop()
-    maorunTime.TimeStop()
-    assert.is_true(maorunTime.isPaused())
-end
+        }, data.hoursPerWeekday )
+    end)
 
-function TestMaorunTime:testTimePause()
-    maorunTime.TimePause()
-    assert.is_true(maorunTime.isPaused())
-end
+    it('should initialize initial date', function()
+        local data = maorunTime.setup(tempPath).content
+        assert.are.same({
+            [os.date('%Y')] = {
+                [os.date('%W')] = {
+                    summary = {
+                        overhour = 0
+                    },
+                    weekdays = {
+                    }
+                }
+            }
+        }, data.data )
+    end)
+end)
 
-function TestMaorunTime:testTimeResume()
-    maorunTime.TimeResume()
-    assert.is_false(maorunTime.isPaused())
-end
+describe('pause / resume time-tracking', function()
+    it('should pause time tracking', function()
+        maorunTime.setup(tempPath)
+
+        maorunTime.TimePause()
+
+        assert.is_true(maorunTime.isPaused())
+    end)
+    it('should resume time tracking', function()
+        maorunTime.setup(tempPath)
+
+        maorunTime.TimePause()
+
+        maorunTime.TimeResume()
+
+        assert.is_false(maorunTime.isPaused())
+    end)
+
+end)
