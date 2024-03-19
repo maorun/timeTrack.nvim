@@ -28,4 +28,3 @@ function TestMaorunTime:testTimeResume()
     maorunTime.TimeResume()
     assert.is_false(maorunTime.isPaused())
 end
-
