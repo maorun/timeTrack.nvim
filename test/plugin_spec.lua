@@ -6,7 +6,7 @@ local maorunTime = require('maorun.time')
 local os = require('os')
 local tempPath = os.tmpname()
 
-describe('init plugin', function() 
+describe('init plugin', function()
     it('should have the path saved', function()
         local data = maorunTime.setup(tempPath).path
         assert.are.same(tempPath, data)
@@ -15,13 +15,13 @@ describe('init plugin', function()
     it('should have default hoursPerWeekday', function()
         local data = maorunTime.setup(tempPath).content
         assert.are.same({
-             Montag = 8,
+            Montag = 8,
             Dienstag = 8,
             Mittwoch = 8,
             Donnerstag = 8,
             Freitag = 8,
 
-        }, data.hoursPerWeekday )
+        }, data.hoursPerWeekday)
     end)
 
     it('should initialize initial date', function()
@@ -32,11 +32,10 @@ describe('init plugin', function()
                     summary = {
                         overhour = 0
                     },
-                    weekdays = {
-                    }
+                    weekdays = {}
                 }
             }
-        }, data.data )
+        }, data.data)
     end)
 end)
 
@@ -57,5 +56,4 @@ describe('pause / resume time-tracking', function()
 
         assert.is_false(maorunTime.isPaused())
     end)
-
 end)
