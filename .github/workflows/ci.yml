@@ -15,24 +15,6 @@ jobs:
           args: --check .
 
 
-  docs:
-    runs-on: ubuntu-latest
-    name: pandoc to vimdoc
-    if: ${{ github.ref == 'refs/heads/master' }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: panvimdoc
-        uses: kdheepak/panvimdoc@main
-        with:
-          vimdoc: timeTrack.nvim
-          treesitter: true
-      - uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: 'chore(doc): auto generate docs'
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
-          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
-
   test:
     name: Run Test
     runs-on: ${{ matrix.os }}
@@ -61,3 +43,22 @@ jobs:
           luarocks install luacheck
           luarocks install vusted
           vusted ./test
+
+  docs:
+    runs-on: ubuntu-latest
+    name: pandoc to vimdoc
+    if: ${{ github.ref == 'refs/heads/master' && needs.test.result == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: panvimdoc
+        uses: kdheepak/panvimdoc@main
+        with:
+          vimdoc: timeTrack.nvim
+          treesitter: true
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore(doc): auto generate docs'
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+
