@@ -16,6 +16,12 @@ local defaultHoursPerWeekday = {
     Mittwoch = 8,
     Donnerstag = 8,
     Freitag = 8,
+
+    Monday = 8,
+    Tuesday = 8,
+    Wednesday = 8,
+    Thursday = 8,
+    Friday = 8,
 }
 local weekdayNumberMap = {
     Montag = '1',
@@ -25,6 +31,14 @@ local weekdayNumberMap = {
     Freitag = 5,
     Samstag = 6,
     Sonntag = 7,
+
+    Monday = 1,
+    Tuesday = 2,
+    Wednesday = 3,
+    Thursday = 4,
+    Friday = 5,
+    Saturday = 6,
+    Sunday = 7,
 }
 
 local function init(path)
