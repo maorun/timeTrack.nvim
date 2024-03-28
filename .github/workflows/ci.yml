@@ -47,9 +47,10 @@ jobs:
           vusted ./test
 
   docs:
+    needs: test
     runs-on: ubuntu-latest
     name: pandoc to vimdoc
-    if: ${{ github.ref == 'refs/heads/master' && needs.test.result == 'success' }}
+    if: ${{ github.ref == 'refs/heads/master' }}
     steps:
       - uses: actions/checkout@v4
       - name: panvimdoc
