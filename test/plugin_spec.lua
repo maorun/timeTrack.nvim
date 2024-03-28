@@ -20,6 +20,12 @@ describe('init plugin', function()
             Mittwoch = 8,
             Donnerstag = 8,
             Freitag = 8,
+
+            Monday = 8,
+            Tuesday = 8,
+            Wednesday = 8,
+            Thursday = 8,
+            Friday = 8,
         }, data.hoursPerWeekday)
     end)
 
