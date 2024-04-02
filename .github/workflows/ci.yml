@@ -22,7 +22,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-        # macos-latest # bug: https://github.com/rhysd/action-setup-vim/issues/30
+          - macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: rhysd/action-setup-vim@v1
