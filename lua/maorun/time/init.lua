@@ -41,9 +41,15 @@ local weekdayNumberMap = {
     Sunday = 7,
 }
 
-local function init(config)
-    local path = config.path
-    obj.path = path or vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json'
+local defaults = {
+    path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
+    hoursPerWeekday = defaultHoursPerWeekday,
+}
+local config = defaults
+
+local function init(user_config)
+    config = vim.tbl_deep_extend("force", defaults, user_config or {})
+    obj.path = config.path
     local p = Path:new(obj.path)
     if not p:exists() then
         p:touch({ parents = true })
@@ -55,7 +61,7 @@ local function init(config)
     else
         obj.content = {}
     end
-    obj.content['hoursPerWeekday'] = defaultHoursPerWeekday
+    obj.content['hoursPerWeekday'] = config.hoursPerWeekday
     local sumHoursPerWeek = 0
     for _, value in pairs(obj.content.hoursPerWeekday) do
         sumHoursPerWeek = sumHoursPerWeek + value
@@ -198,15 +204,15 @@ local function TimeStop(weekday, time)
     }, 'info', { title = 'TimeTracking - Stop' })
 end
 
--- calculate an average over the defaultHoursPerWeekday
+-- calculate an average over the hoursPerWeekday
 local function calculateAverage()
     local sum = 0
     local count = 0
-    for _, value in pairs(defaultHoursPerWeekday) do
+    for _, value in pairs(config.hoursPerWeekday) do
         sum = sum + value
         count = count + 1
     end
-    return sum / count
+    return sum / count / 2
 end
 
 local function saveTime(startTime, endTime, weekday, clearDay)
