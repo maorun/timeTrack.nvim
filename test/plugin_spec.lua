@@ -40,7 +40,7 @@ describe('init plugin', function()
                 Montag = 7,
 
                 Wednesday = 6,
-            }
+            },
         }).content
 
         assert.are.same({
