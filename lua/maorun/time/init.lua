@@ -41,7 +41,8 @@ local weekdayNumberMap = {
     Sunday = 7,
 }
 
-local function init(path)
+local function init(config)
+    local path = config.path
     obj.path = path or vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json'
     local p = Path:new(obj.path)
     if not p:exists() then
@@ -112,7 +113,7 @@ local function calculate()
 end
 
 local function TimePause()
-    init(obj.path)
+    init({ path = obj.path })
     obj.content.paused = true
     save(obj)
     notify({
@@ -121,7 +122,7 @@ local function TimePause()
 end
 
 local function TimeResume()
-    init(obj.path)
+    init({ path = obj.path })
     obj.content.paused = false
     save(obj)
     notify({
@@ -129,12 +130,12 @@ local function TimeResume()
     }, 'info', { title = 'TimeTracking - Resume' })
 end
 local function isPaused()
-    init(obj.path)
+    init({ path = obj.path })
     return obj.content.paused
 end
 
 local function TimeStart(weekday, time)
-    init(obj.path)
+    init({ path = obj.path })
     if isPaused() then
         return
     end
@@ -168,7 +169,7 @@ local function TimeStart(weekday, time)
 end
 
 local function TimeStop(weekday, time)
-    init(obj.path)
+    init({ path = obj.path })
     if isPaused() then
         return
     end
@@ -245,7 +246,7 @@ local function addTime(time, weekday, clearDay)
     else
         clearDay = nil
     end
-    init(obj.path)
+    init({ path = obj.path })
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
         weekday = os.date('%A')
@@ -294,7 +295,7 @@ end
 
 -- subtracts time from the current week
 local function subtractTime(time, weekday)
-    init(obj.path)
+    init({ path = obj.path })
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
         weekday = os.date('%A')
@@ -392,7 +393,7 @@ Time = {
     setIllDay = setIllDay,
     setHoliday = setIllDay,
     calculate = function()
-        init(obj.path)
+        init({ path = obj.path })
         calculate()
         save(obj)
     end,
@@ -411,7 +412,7 @@ return {
     clearDay = clearDay,
     isPaused = isPaused,
     calculate = function()
-        init(obj.path)
+        init({ path = obj.path })
         calculate()
         save(obj)
     end,

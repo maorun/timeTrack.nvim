@@ -8,12 +8,16 @@ local tempPath = os.tmpname()
 
 describe('init plugin', function()
     it('should have the path saved', function()
-        local data = maorunTime.setup(tempPath).path
+        local data = maorunTime.setup({
+            path = tempPath,
+        }).path
         assert.are.same(tempPath, data)
     end)
 
     it('should have default hoursPerWeekday', function()
-        local data = maorunTime.setup(tempPath).content
+        local data = maorunTime.setup({
+            path = tempPath,
+        }).content
         assert.are.same({
             Montag = 8,
             Dienstag = 8,
@@ -30,7 +34,9 @@ describe('init plugin', function()
     end)
 
     it('should initialize initial date', function()
-        local data = maorunTime.setup(tempPath).content
+        local data = maorunTime.setup({
+            path = tempPath,
+        }).content
         assert.are.same({
             [os.date('%Y')] = {
                 [os.date('%W')] = {
@@ -46,14 +52,18 @@ end)
 
 describe('pause / resume time-tracking', function()
     it('should pause time tracking', function()
-        maorunTime.setup(tempPath)
+        maorunTime.setup({
+            path = tempPath,
+        })
 
         maorunTime.TimePause()
 
         assert.is_true(maorunTime.isPaused())
     end)
     it('should resume time tracking', function()
-        maorunTime.setup(tempPath)
+        maorunTime.setup({
+            path = tempPath,
+        })
 
         maorunTime.TimePause()
 
