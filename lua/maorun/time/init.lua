@@ -48,7 +48,7 @@ local defaults = {
 local config = defaults
 
 local function init(user_config)
-    config = vim.tbl_deep_extend("force", defaults, user_config or {})
+    config = vim.tbl_deep_extend('force', defaults, user_config or {})
     obj.path = config.path
     local p = Path:new(obj.path)
     if not p:exists() then
