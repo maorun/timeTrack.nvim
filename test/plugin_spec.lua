@@ -33,6 +33,31 @@ describe('init plugin', function()
         }, data.hoursPerWeekday)
     end)
 
+    it('should overwrite default hourPerWeekday', function()
+        local data = maorunTime.setup({
+            path = tempPath,
+            hoursPerWeekday = {
+                Montag = 7,
+
+                Wednesday = 6,
+            },
+        }).content
+
+        assert.are.same({
+            Montag = 7,
+            Dienstag = 8,
+            Mittwoch = 8,
+            Donnerstag = 8,
+            Freitag = 8,
+
+            Monday = 8,
+            Tuesday = 8,
+            Wednesday = 6,
+            Thursday = 8,
+            Friday = 8,
+        }, data.hoursPerWeekday)
+    end)
+
     it('should initialize initial date', function()
         local data = maorunTime.setup({
             path = tempPath,
