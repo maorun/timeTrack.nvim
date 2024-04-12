@@ -23,14 +23,15 @@ local defaultHoursPerWeekday = {
     Thursday = 8,
     Friday = 8,
 }
+
 local weekdayNumberMap = {
-    Montag = '1',
+    Montag = 1,
     Dienstag = 2,
     Mittwoch = 3,
     Donnerstag = 4,
     Freitag = 5,
     Samstag = 6,
-    Sonntag = 7,
+    Sonntag = 0,
 
     Monday = 1,
     Tuesday = 2,
@@ -38,7 +39,7 @@ local weekdayNumberMap = {
     Thursday = 4,
     Friday = 5,
     Saturday = 6,
-    Sunday = 7,
+    Sunday = 0,
 }
 
 local defaults = {
@@ -223,6 +224,12 @@ local function saveTime(startTime, endTime, weekday, clearDay)
             items = {},
         }
     end
+    if years[os.date('%W')]['weekdays'][weekday] == nil then
+        years[os.date('%W')]['weekdays'][weekday] = {
+            summary = {},
+            items = {},
+        }
+    end
     local dayItem = obj.content['data'][os.date('%Y')][os.date('%W')]['weekdays'][weekday]
     local timeReadableStart = os.date('*t', startTime)
     local item = {
@@ -297,6 +304,7 @@ local function addTime(time, weekday, clearDay)
     if paused then
         TimePause()
     end
+    return obj
 end
 
 -- subtracts time from the current week
@@ -349,6 +357,8 @@ local function subtractTime(time, weekday)
     if paused then
         TimePause()
     end
+
+    return obj
 end
 
 local function setIllDay(weekday)
@@ -414,6 +424,7 @@ return {
     setIllDay = setIllDay,
     setHoliday = setIllDay,
     addTime = addTime,
+    subtractTime = subtractTime,
     setTime = setTime,
     clearDay = clearDay,
     isPaused = isPaused,
