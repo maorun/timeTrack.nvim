@@ -4,7 +4,14 @@ helper.notify_dep()
 
 local maorunTime = require('maorun.time')
 local os = require('os')
-local tempPath = os.tmpname()
+local tempPath
+
+before_each(function()
+    tempPath = os.tmpname()
+end)
+after_each(function()
+    os.remove(tempPath)
+end)
 
 describe('init plugin', function()
     it('should have the path saved', function()
