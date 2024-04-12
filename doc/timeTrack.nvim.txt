@@ -1,4 +1,4 @@
-*timeTrack.nvim.txt*         For NVIM v0.8.0        Last change: 2024 April 04
+*timeTrack.nvim.txt*         For NVIM v0.8.0        Last change: 2024 April 12
 
 ==============================================================================
 Table of Contents                           *timeTrack.nvim-table-of-contents*
@@ -57,7 +57,6 @@ SUGGESTED KEYMAPPING WITH WHICH-KEY*timeTrack.nvim-timetracking-in-lua-suggested
         t = {
             name = "Time",
             s = {"<cmd>lua Time.TimeStop()<cr>", "TimeStop", noremap = true},
-            r = {"<cmd>lua Time.TimeResume()<cr>", "TimeResume", noremap = true},
         },
     }, { prefix = "<leader>" })
 <
