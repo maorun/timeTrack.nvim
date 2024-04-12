@@ -41,7 +41,6 @@ wk.register({
     t = {
         name = "Time",
         s = {"<cmd>lua Time.TimeStop()<cr>", "TimeStop", noremap = true},
-        r = {"<cmd>lua Time.TimeResume()<cr>", "TimeResume", noremap = true},
     },
 }, { prefix = "<leader>" })
 ```
