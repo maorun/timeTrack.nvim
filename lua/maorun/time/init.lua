@@ -395,8 +395,14 @@ vim.api.nvim_create_autocmd('VimLeave', {
     end,
 })
 
----@param callback fun(hours:number, weekday: string) the function to call
-local function select(callback)
+---@param opts { hours: boolean, weekday: boolean }
+---@param callback fun(hours:number | nil, weekday: string) the function to call
+local function select(opts, callback)
+    opts = vim.tbl_deep_extend('keep', opts or {}, {
+        hours = true,
+        weekday = true,
+    })
+
     local selections = {}
     local selectionNumbers = {}
     for _, value in pairs(weekdayNumberMap) do
@@ -408,7 +414,6 @@ local function select(callback)
 
     ---@param weekday string
     local function selectHours(weekday)
-        print(weekday)
         vim.ui.input({
             prompt = 'How many hours? ',
         }, function(input)
@@ -420,29 +425,30 @@ local function select(callback)
         end)
     end
 
-    -- if pcall(require, 'telescope') then
-    --     local telescopeSelect = require('maorun.time.weekday_select')
-    --     telescopeSelect({
-    --         prompt_title = 'Which day?',
-    --         list = selections,
-    --         action = function(weekday)
-    --             selectHours(weekday)
-    --         end,
-    --     })
-    -- else
+    if pcall(require, 'telescope') then
+        local telescopeSelect = require('maorun.time.weekday_select')
+        telescopeSelect({
+            prompt_title = 'Which day?',
+            list = selections,
+            action = function(weekday)
+                selectHours(weekday)
+            end,
+        })
+    else
         vim.ui.select(selections, {
             prompt = 'Which day? ',
         }, function(weekday)
             selectHours(weekday)
         end)
-    -- end
+    end
 end
 
--- select(function(hours, weekday)
---     print(hours, weekday)
--- end)
-
 Time = {
+    add =function ()
+        select({} ,function(hours, weekday)
+            addTime(hours, weekday)
+        end)
+    end,
     addTime = addTime,
     subtractTime = subtractTime,
     clearDay = clearDay,
