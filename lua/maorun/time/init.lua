@@ -395,7 +395,8 @@ vim.api.nvim_create_autocmd('VimLeave', {
     end,
 })
 
-local function select()
+---@param callback fun(hours:number, weekday: string) the function to call
+local function select(callback)
     local selections = {}
     local selectionNumbers = {}
     for _, value in pairs(weekdayNumberMap) do
@@ -405,26 +406,41 @@ local function select()
         end
     end
 
+    ---@param weekday string
     local function selectHours(weekday)
         print(weekday)
-        print('now input hours')
+        vim.ui.input({
+            prompt = 'How many hours? ',
+        }, function(input)
+            local n = tonumber(input)
+            if (n == nil or input == nil or input == '') then
+                return
+            end
+            callback(n, weekday)
+        end)
     end
 
-    if pcall(require, 'telescope') then
-        local telescopeSelect = require('maorun.time.weekday_select')
-        telescopeSelect({
-            prompt_title = 'Which day?',
-            list = selections,
-            action = function(weekday)
-                selectHours(weekday)
-            end,
-        })
-    else
-        print('nope')
-    end
+    -- if pcall(require, 'telescope') then
+    --     local telescopeSelect = require('maorun.time.weekday_select')
+    --     telescopeSelect({
+    --         prompt_title = 'Which day?',
+    --         list = selections,
+    --         action = function(weekday)
+    --             selectHours(weekday)
+    --         end,
+    --     })
+    -- else
+        vim.ui.select(selections, {
+            prompt = 'Which day? ',
+        }, function(weekday)
+            selectHours(weekday)
+        end)
+    -- end
 end
 
--- select()
+-- select(function(hours, weekday)
+--     print(hours, weekday)
+-- end)
 
 Time = {
     addTime = addTime,
