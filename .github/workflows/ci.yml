@@ -16,6 +16,7 @@ jobs:
 
 
   test:
+    needs: lint
     name: Run Test
     runs-on: ${{ matrix.os }}
     strategy:

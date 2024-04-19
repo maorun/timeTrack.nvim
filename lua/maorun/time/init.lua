@@ -24,23 +24,21 @@ local defaultHoursPerWeekday = {
     Friday = 8,
 }
 
-local weekdayNumberMap = {
-    Montag = 1,
-    Dienstag = 2,
-    Mittwoch = 3,
-    Donnerstag = 4,
-    Freitag = 5,
-    Samstag = 6,
-    Sonntag = 0,
-
-    Monday = 1,
-    Tuesday = 2,
-    Wednesday = 3,
-    Thursday = 4,
-    Friday = 5,
-    Saturday = 6,
-    Sunday = 0,
-}
+local function getWeekDay(time)
+    return {
+        [os.date('%A', os.time() + time)] = os.date('*t', os.time() + time).wday - 1,
+    }
+end
+local weekdayNumberMap = vim.tbl_deep_extend(
+    'force',
+    getWeekDay(0),
+    getWeekDay(60 * 60 * 24),
+    getWeekDay(2 * 60 * 60 * 24),
+    getWeekDay(3 * 60 * 60 * 24),
+    getWeekDay(4 * 60 * 60 * 24),
+    getWeekDay(5 * 60 * 60 * 24),
+    getWeekDay(6 * 60 * 60 * 24)
+)
 
 local defaults = {
     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
@@ -433,4 +431,6 @@ return {
         calculate()
         save(obj)
     end,
+
+    weekdays = weekdayNumberMap,
 }

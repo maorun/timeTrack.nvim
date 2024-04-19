@@ -122,3 +122,18 @@ describe('pause / resume time-tracking', function()
         assert.is_false(maorunTime.isPaused())
     end)
 end)
+
+it('should init weekdayNumberMap', function()
+    maorunTime.setup({
+        path = tempPath,
+    })
+    assert.same(maorunTime.weekdays, {
+        Monday = 1,
+        Tuesday = 2,
+        Wednesday = 3,
+        Thursday = 4,
+        Friday = 5,
+        Saturday = 6,
+        Sunday = 0,
+    })
+end)
