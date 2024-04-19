@@ -11,6 +11,7 @@ eg:
 use {
     'maorun/timeTrack.nvim',
     requires = {
+        'nvim-telescope/telescope.nvim', -- optional
         'nvim-lua/plenary.nvim',
         {
             'rcarriga/nvim-notify',
