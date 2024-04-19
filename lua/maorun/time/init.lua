@@ -394,7 +394,38 @@ vim.api.nvim_create_autocmd('VimLeave', {
         TimeStop()
     end,
 })
--- Überstunden letzte Woche: 3h
+
+local function select()
+    local selections = {}
+    local selectionNumbers = {}
+    for _, value in pairs(weekdayNumberMap) do
+        if not selectionNumbers[value] then
+            selectionNumbers[value] = 1
+            selections[#selections + 1] = _
+        end
+    end
+
+    function selectHours(weekday)
+        print(weekday)
+        print('now input hours')
+    end
+
+    if pcall(require, "telescope") then
+        local telescopeSelect = require('maorun.time.weekday_select')
+        telescopeSelect({
+            prompt_title = 'Which day?',
+            list = selections,
+            action = function(weekday)
+                selectHours(weekday)
+            end,
+        })
+    else
+        print('nope')
+    end
+
+end
+
+-- select()
 
 Time = {
     addTime = addTime,
