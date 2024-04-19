@@ -418,7 +418,7 @@ local function select(opts, callback)
             prompt = 'How many hours? ',
         }, function(input)
             local n = tonumber(input)
-            if (n == nil or input == nil or input == '') then
+            if n == nil or input == nil or input == '' then
                 return
             end
             callback(n, weekday)
@@ -444,17 +444,27 @@ local function select(opts, callback)
 end
 
 Time = {
-    add =function ()
-        select({} ,function(hours, weekday)
+    add = function()
+        select({}, function(hours, weekday)
             addTime(hours, weekday)
         end)
     end,
     addTime = addTime,
+    subtract = function()
+        select({}, function(hours, weekday)
+            subtractTime(hours, weekday)
+        end)
+    end,
     subtractTime = subtractTime,
     clearDay = clearDay,
     TimePause = TimePause,
     TimeResume = TimeResume,
     TimeStop = TimeStop,
+    set = function()
+        select({}, function(hours, weekday)
+            setTime(hours, weekday)
+        end)
+    end,
     setTime = setTime,
     setIllDay = setIllDay,
     setHoliday = setIllDay,
