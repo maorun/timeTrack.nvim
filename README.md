@@ -11,6 +11,7 @@ eg:
 use {
     'maorun/timeTrack.nvim',
     requires = {
+        'nvim-telescope/telescope.nvim', -- optional
         'nvim-lua/plenary.nvim',
         {
             'rcarriga/nvim-notify',
@@ -41,6 +42,9 @@ wk.register({
     t = {
         name = "Time",
         s = {"<cmd>lua Time.TimeStop()<cr>", "TimeStop", noremap = true},
+        a = {"<cmd>lua Time.add()<cr>", "add hours to a day", noremap = true},
+        r = {"<cmd>lua Time.subtract()<cr>", "subtract hours from a day", noremap = true},
+        f = {"<cmd>lua Time.set()<cr>", "set hours of a day (clears all entries)", noremap = true},
     },
 }, { prefix = "<leader>" })
 ```

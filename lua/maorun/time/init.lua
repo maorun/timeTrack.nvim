@@ -394,15 +394,77 @@ vim.api.nvim_create_autocmd('VimLeave', {
         TimeStop()
     end,
 })
--- Überstunden letzte Woche: 3h
+
+---@param opts { hours: boolean, weekday: boolean }
+---@param callback fun(hours:number | nil, weekday: string) the function to call
+local function select(opts, callback)
+    opts = vim.tbl_deep_extend('keep', opts or {}, {
+        hours = true,
+        weekday = true,
+    })
+
+    local selections = {}
+    local selectionNumbers = {}
+    for _, value in pairs(weekdayNumberMap) do
+        if not selectionNumbers[value] then
+            selectionNumbers[value] = 1
+            selections[#selections + 1] = _
+        end
+    end
+
+    ---@param weekday string
+    local function selectHours(weekday)
+        vim.ui.input({
+            prompt = 'How many hours? ',
+        }, function(input)
+            local n = tonumber(input)
+            if n == nil or input == nil or input == '' then
+                return
+            end
+            callback(n, weekday)
+        end)
+    end
+
+    if pcall(require, 'telescope') then
+        local telescopeSelect = require('maorun.time.weekday_select')
+        telescopeSelect({
+            prompt_title = 'Which day?',
+            list = selections,
+            action = function(weekday)
+                selectHours(weekday)
+            end,
+        })
+    else
+        vim.ui.select(selections, {
+            prompt = 'Which day? ',
+        }, function(weekday)
+            selectHours(weekday)
+        end)
+    end
+end
 
 Time = {
+    add = function()
+        select({}, function(hours, weekday)
+            addTime(hours, weekday)
+        end)
+    end,
     addTime = addTime,
+    subtract = function()
+        select({}, function(hours, weekday)
+            subtractTime(hours, weekday)
+        end)
+    end,
     subtractTime = subtractTime,
     clearDay = clearDay,
     TimePause = TimePause,
     TimeResume = TimeResume,
     TimeStop = TimeStop,
+    set = function()
+        select({}, function(hours, weekday)
+            setTime(hours, weekday)
+        end)
+    end,
     setTime = setTime,
     setIllDay = setIllDay,
     setHoliday = setIllDay,
