@@ -405,12 +405,12 @@ local function select()
         end
     end
 
-    function selectHours(weekday)
+    local function selectHours(weekday)
         print(weekday)
         print('now input hours')
     end
 
-    if pcall(require, "telescope") then
+    if pcall(require, 'telescope') then
         local telescopeSelect = require('maorun.time.weekday_select')
         telescopeSelect({
             prompt_title = 'Which day?',
@@ -422,7 +422,6 @@ local function select()
     else
         print('nope')
     end
-
 end
 
 -- select()
