@@ -251,7 +251,12 @@ local function saveTime(startTime, endTime, weekday, clearDay)
 end
 
 -- adds time into the current week
-local function addTime(time, weekday, clearDay)
+---@param opts { time: number, weekday: string|osdate, clearDay?: string }
+local function addTime(opts)
+    local time = opts.time
+    local weekday = opts.weekday
+    local clearDay = opts.clearDay
+
     if clearDay == nil then
         clearDay = 'nope'
     else
@@ -360,7 +365,11 @@ local function subtractTime(time, weekday)
 end
 
 local function setIllDay(weekday)
-    addTime(calculateAverage(), weekday, 'yes')
+    addTime({
+        time = calculateAverage(),
+        weekday,
+        clearDay = 'yes',
+    })
 end
 
 local function clearDay(weekday)
@@ -376,7 +385,11 @@ end
 
 local function setTime(time, weekday)
     clearDay(weekday)
-    addTime(time, weekday, 'yes')
+    addTime({
+        time,
+        weekday,
+        clearDay = 'yes',
+    })
 end
 
 local timeGroup = vim.api.nvim_create_augroup('Maorun-Time', {})
@@ -396,7 +409,7 @@ vim.api.nvim_create_autocmd('VimLeave', {
 })
 
 ---@param opts { hours: boolean, weekday: boolean }
----@param callback fun(hours:number | nil, weekday: string) the function to call
+---@param callback fun(hours:number, weekday: string) the function to call
 local function select(opts, callback)
     opts = vim.tbl_deep_extend('keep', opts or {}, {
         hours = true,
@@ -446,7 +459,7 @@ end
 Time = {
     add = function()
         select({}, function(hours, weekday)
-            addTime(hours, weekday)
+            addTime({ time = hours, weekday })
         end)
     end,
     addTime = addTime,
