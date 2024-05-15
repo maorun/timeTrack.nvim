@@ -367,7 +367,7 @@ end
 local function setIllDay(weekday)
     addTime({
         time = calculateAverage(),
-        weekday,
+        weekday = weekday,
         clearDay = 'yes',
     })
 end
@@ -386,8 +386,8 @@ end
 local function setTime(time, weekday)
     clearDay(weekday)
     addTime({
-        time,
-        weekday,
+        time = time,
+        weekday = weekday,
         clearDay = 'yes',
     })
 end
@@ -459,7 +459,7 @@ end
 Time = {
     add = function()
         select({}, function(hours, weekday)
-            addTime({ time = hours, weekday })
+            addTime({ time = hours, weekday = weekday })
         end)
     end,
     addTime = addTime,
