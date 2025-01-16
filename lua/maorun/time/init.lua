@@ -129,7 +129,7 @@ local function calculate(opts)
 end
 
 local function TimePause()
-    init({ path = obj.path })
+    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     obj.content.paused = true
     save(obj)
     notify({
@@ -138,7 +138,7 @@ local function TimePause()
 end
 
 local function TimeResume()
-    init({ path = obj.path })
+    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     obj.content.paused = false
     save(obj)
     notify({
@@ -146,12 +146,12 @@ local function TimeResume()
     }, 'info', { title = 'TimeTracking - Resume' })
 end
 local function isPaused()
-    init({ path = obj.path })
+    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     return obj.content.paused
 end
 
 local function TimeStart(weekday, time)
-    init({ path = obj.path })
+    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     if isPaused() then
         return
     end
@@ -185,7 +185,7 @@ local function TimeStart(weekday, time)
 end
 
 local function TimeStop(weekday, time)
-    init({ path = obj.path })
+    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     if isPaused() then
         return
     end
@@ -273,7 +273,7 @@ local function addTime(opts)
     else
         clearDay = nil
     end
-    init({ path = obj.path })
+    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
         weekday = os.date('%A')
@@ -323,7 +323,7 @@ end
 
 -- subtracts time from the current week
 local function subtractTime(time, weekday)
-    init({ path = obj.path })
+    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
         weekday = os.date('%A')
@@ -494,7 +494,7 @@ Time = {
     setIllDay = setIllDay,
     setHoliday = setIllDay,
     calculate = function()
-        init({ path = obj.path })
+        init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
         calculate()
         save(obj)
         return obj
@@ -515,7 +515,7 @@ return {
     clearDay = clearDay,
     isPaused = isPaused,
     calculate = function()
-        init({ path = obj.path })
+        init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
         calculate()
         save(obj)
         return obj
