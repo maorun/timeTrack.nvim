@@ -48,6 +48,9 @@ local config = defaults
 
 local function init(user_config)
     config = vim.tbl_deep_extend('force', defaults, user_config or {})
+    if user_config.hoursPerWeekday ~= nil then
+        config.hoursPerWeekday = user_config.hoursPerWeekday
+    end
     obj.path = config.path
     local p = Path:new(obj.path)
     if not p:exists() then
@@ -84,13 +87,21 @@ local function init(user_config)
     return obj
 end
 
-local function calculate()
-    local weeknumber = os.date('%W')
-    local year = obj.content['data'][os.date('%Y')]
-    local week = year[weeknumber]
+---@param opts {weeknumber: string|osdate, year: string|osdate}|nil
+local function calculate(opts)
+    opts = vim.tbl_deep_extend('keep', opts or {}, {
+        year = os.date('%Y'),
+        weeknumber = os.date('%W'),
+    })
+
+    local year = opts.year
+    local weeknumber = opts.weeknumber
+
+    local yearData = obj.content['data'][year]
+    local week = yearData[weeknumber]
     local prevWeekOverhour = 0
-    if year[string.format('%02d', weeknumber - 1)] ~= nil then
-        prevWeekOverhour = year[string.format('%02d', weeknumber - 1)].summary.overhour
+    if yearData[string.format('%02d', weeknumber - 1)] ~= nil then
+        prevWeekOverhour = yearData[string.format('%02d', weeknumber - 1)].summary.overhour
     end
 
     local weekdays = week['weekdays']
@@ -211,7 +222,7 @@ local function calculateAverage()
         sum = sum + value
         count = count + 1
     end
-    return sum / count / 2
+    return sum / count
 end
 
 local function saveTime(startTime, endTime, weekday, clearDay)
@@ -370,6 +381,7 @@ local function setIllDay(weekday)
         weekday = weekday,
         clearDay = 'yes',
     })
+    return obj
 end
 
 local function clearDay(weekday)
@@ -485,6 +497,7 @@ Time = {
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
         calculate()
         save(obj)
+        return obj
     end,
 }
 
@@ -505,6 +518,7 @@ return {
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
         calculate()
         save(obj)
+        return obj
     end,
 
     weekdays = weekdayNumberMap,
