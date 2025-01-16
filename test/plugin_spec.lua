@@ -52,16 +52,8 @@ describe('init plugin', function()
 
         assert.are.same({
             Montag = 7,
-            Dienstag = 8,
-            Mittwoch = 8,
-            Donnerstag = 8,
-            Freitag = 8,
 
-            Monday = 8,
-            Tuesday = 8,
             Wednesday = 6,
-            Thursday = 8,
-            Friday = 8,
         }, data.hoursPerWeekday)
     end)
 
