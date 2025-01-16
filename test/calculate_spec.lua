@@ -26,14 +26,18 @@ describe('calculate', function()
         data = maorunTime.calculate()
 
         assert.are.same(-6, data.content.data[os.date('%Y')][os.date('%W')].summary.overhour)
-        assert.are.same(2,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].summary
-            .diffInHours)
-        assert.are.same(-6,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].summary.overhour)
-        assert.are.same(2,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].items[1]
-            .diffInHours)
+        assert.are.same(
+            2,
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].summary.diffInHours
+        )
+        assert.are.same(
+            -6,
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].summary.overhour
+        )
+        assert.are.same(
+            2,
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].items[1].diffInHours
+        )
     end)
 end)
 
@@ -45,9 +49,10 @@ describe('setIllDay', function()
 
         local data = maorunTime.setIllDay(os.date('%A'))
         -- 8 because everyday is 8 hours
-        assert.are.same(8,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].items[1]
-            .diffInHours)
+        assert.are.same(
+            8,
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].items[1].diffInHours
+        )
 
         maorunTime.setup({
             path = tempPath,
@@ -61,8 +66,9 @@ describe('setIllDay', function()
         })
 
         local data = maorunTime.setIllDay(os.date('%A'))
-        assert.are.same(7.2,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].items[1]
-            .diffInHours)
+        assert.are.same(
+            7.2,
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays[os.date('%A')].items[1].diffInHours
+        )
     end)
 end)
