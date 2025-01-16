@@ -88,7 +88,7 @@ it('should add/subtract time to a specific day', function()
     })
     local data = maorunTime.addTime({
         time = 2,
-        weekday = os.date('%A'),
+        weekday = os.date('%A')
     })
 
     local week = data.content.data[os.date('%Y')][os.date('%W')]
@@ -96,7 +96,7 @@ it('should add/subtract time to a specific day', function()
 
     data = maorunTime.addTime({
         time = 2,
-        weekday = os.date('%A'),
+        weekday = os.date('%A')
     })
     week = data.content.data[os.date('%Y')][os.date('%W')]
     assert.are.same(-4, week.summary.overhour)

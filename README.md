@@ -49,3 +49,11 @@ wk.register({
 }, { prefix = "<leader>" })
 ```
 
+## Development
+style-check with [style-lua](https://github.com/JohnnyMorganz/StyLua)
+
+testing with [vusted](https://github.com/notomo/vusted)
+
+```sh
+vusted ./test
+```
