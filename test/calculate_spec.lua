@@ -21,22 +21,22 @@ describe('calculate', function()
         local data = maorunTime.calculate()
         assert.are.same({}, data.content.data[os.date('%Y')][os.date('%W')].weekdays)
 
-        maorunTime.addTime({ time = 2, weekday = "Monday" })
+        maorunTime.addTime({ time = 2, weekday = 'Monday' })
 
         data = maorunTime.calculate()
 
         assert.are.same(-6, data.content.data[os.date('%Y')][os.date('%W')].summary.overhour)
         assert.are.same(
             2,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays["Monday"].summary.diffInHours
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays['Monday'].summary.diffInHours
         )
         assert.are.same(
             -6,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays["Monday"].summary.overhour
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays['Monday'].summary.overhour
         )
         assert.are.same(
             2,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays["Monday"].items[1].diffInHours
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays['Monday'].items[1].diffInHours
         )
     end)
 end)
@@ -47,11 +47,11 @@ describe('setIllDay', function()
             path = tempPath,
         })
 
-        local data = maorunTime.setIllDay("Monday")
+        local data = maorunTime.setIllDay('Monday')
         -- 8 because everyday is 8 hours
         assert.are.same(
             8,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays["Monday"].items[1].diffInHours
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays['Monday'].items[1].diffInHours
         )
 
         maorunTime.setup({
@@ -65,10 +65,10 @@ describe('setIllDay', function()
             },
         })
 
-        local data = maorunTime.setIllDay("Monday")
+        local data = maorunTime.setIllDay('Monday')
         assert.are.same(
             7.2,
-            data.content.data[os.date('%Y')][os.date('%W')].weekdays["Monday"].items[1].diffInHours
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays['Monday'].items[1].diffInHours
         )
     end)
 end)

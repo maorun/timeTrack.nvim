@@ -286,9 +286,19 @@ local function addTime(opts)
     if targetWeekdayNumeric == nil then
         -- Use notify if available, or print an error. Let's assume notify is available as it's used elsewhere.
         if notify then
-            notify("Error: Weekday '" .. tostring(weekday) .. "' is not recognized in weekdayNumberMap.", "error", { title = "TimeTracking Error" })
+            notify(
+                "Error: Weekday '"
+                    .. tostring(weekday)
+                    .. "' is not recognized in weekdayNumberMap.",
+                'error',
+                { title = 'TimeTracking Error' }
+            )
         else
-            print("Error: Weekday '" .. tostring(weekday) .. "' is not recognized in weekdayNumberMap.")
+            print(
+                "Error: Weekday '"
+                    .. tostring(weekday)
+                    .. "' is not recognized in weekdayNumberMap."
+            )
         end
         return -- Stop execution if weekday is invalid
     end
@@ -349,9 +359,19 @@ local function subtractTime(time, weekday)
     if targetWeekdayNumeric == nil then
         -- Use notify if available, or print an error. Let's assume notify is available as it's used elsewhere.
         if notify then
-            notify("Error: Weekday '" .. tostring(weekday) .. "' is not recognized in weekdayNumberMap.", "error", { title = "TimeTracking Error" })
+            notify(
+                "Error: Weekday '"
+                    .. tostring(weekday)
+                    .. "' is not recognized in weekdayNumberMap.",
+                'error',
+                { title = 'TimeTracking Error' }
+            )
         else
-            print("Error: Weekday '" .. tostring(weekday) .. "' is not recognized in weekdayNumberMap.")
+            print(
+                "Error: Weekday '"
+                    .. tostring(weekday)
+                    .. "' is not recognized in weekdayNumberMap."
+            )
         end
         return -- Stop execution if weekday is invalid
     end
