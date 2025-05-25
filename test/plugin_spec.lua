@@ -80,7 +80,7 @@ it('should add/subtract time to a specific day', function()
     })
     local data = maorunTime.addTime({
         time = 2,
-        weekday = os.date('%A'),
+        weekday = "Monday",
     })
 
     local week = data.content.data[os.date('%Y')][os.date('%W')]
@@ -88,12 +88,12 @@ it('should add/subtract time to a specific day', function()
 
     data = maorunTime.addTime({
         time = 2,
-        weekday = os.date('%A'),
+        weekday = "Monday",
     })
     week = data.content.data[os.date('%Y')][os.date('%W')]
     assert.are.same(-4, week.summary.overhour)
 
-    data = maorunTime.subtractTime(2, os.date('%A'))
+    data = maorunTime.subtractTime(2, "Monday")
     week = data.content.data[os.date('%Y')][os.date('%W')]
     assert.are.same(-6, week.summary.overhour)
 end)
@@ -126,12 +126,21 @@ it('should init weekdayNumberMap', function()
         path = tempPath,
     })
     assert.same(maorunTime.weekdays, {
+        -- English
+        Sunday = 0,
         Monday = 1,
         Tuesday = 2,
         Wednesday = 3,
         Thursday = 4,
         Friday = 5,
         Saturday = 6,
-        Sunday = 0,
+        -- German
+        Sonntag = 0,
+        Montag = 1,
+        Dienstag = 2,
+        Mittwoch = 3,
+        Donnerstag = 4,
+        Freitag = 5,
+        Samstag = 6,
     })
 end)
