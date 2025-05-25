@@ -387,12 +387,16 @@ end
 local function clearDay(weekday)
     local years = obj.content['data'][os.date('%Y')]
     local week = years[os.date('%W')]
-    local items = week['weekdays'][weekday].items
-    for key, _ in pairs(items) do
-        items[key] = nil
+    -- Check if the weekday and its items exist before trying to clear them
+    if week['weekdays'][weekday] ~= nil and week['weekdays'][weekday].items ~= nil then
+        local items = week['weekdays'][weekday].items
+        for key, _ in pairs(items) do
+            items[key] = nil
+        end
+        calculate()
+        save(obj)
     end
-    calculate()
-    save(obj)
+    -- If the weekday doesn't exist, do nothing, as addTime will create it.
 end
 
 local function setTime(time, weekday)
