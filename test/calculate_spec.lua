@@ -62,16 +62,28 @@ describe('setTime', function()
         local currentData = maorunTime.calculate().content.data[year][weekNum]
 
         -- Check if weekdays table and specific weekday entry exist
-        assert.truthy(currentData.weekdays, "Weekdays table should exist")
+        assert.truthy(currentData.weekdays, 'Weekdays table should exist')
         local dayData = currentData.weekdays[testWeekday]
-        assert.truthy(dayData, "Data for " .. testWeekday .. " should exist")
-        assert.truthy(dayData.items, testWeekday .. " should have an items table")
-        assert.are.same(1, #dayData.items, "Should be exactly one entry for " .. testWeekday)
-        assert.are.same(testHours, dayData.items[1].diffInHours, "Incorrect diffInHours for the entry")
+        assert.truthy(dayData, 'Data for ' .. testWeekday .. ' should exist')
+        assert.truthy(dayData.items, testWeekday .. ' should have an items table')
+        assert.are.same(1, #dayData.items, 'Should be exactly one entry for ' .. testWeekday)
+        assert.are.same(
+            testHours,
+            dayData.items[1].diffInHours,
+            'Incorrect diffInHours for the entry'
+        )
 
-        assert.truthy(dayData.summary, testWeekday .. " should have a summary table")
-        assert.are.same(testHours, dayData.summary.diffInHours, "Incorrect summary diffInHours for " .. testWeekday)
-        assert.are.same(expectedOverhour, dayData.summary.overhour, "Incorrect summary overhour for " .. testWeekday)
+        assert.truthy(dayData.summary, testWeekday .. ' should have a summary table')
+        assert.are.same(
+            testHours,
+            dayData.summary.diffInHours,
+            'Incorrect summary diffInHours for ' .. testWeekday
+        )
+        assert.are.same(
+            expectedOverhour,
+            dayData.summary.overhour,
+            'Incorrect summary overhour for ' .. testWeekday
+        )
     end)
 end)
 
