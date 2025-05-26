@@ -3,8 +3,13 @@ local os_sep = require('plenary.path').path.sep
 local notify = require('notify')
 
 local wdayToEngName = {
-    [1] = "Sunday", [2] = "Monday", [3] = "Tuesday", [4] = "Wednesday",
-    [5] = "Thursday", [6] = "Friday", [7] = "Saturday"
+    [1] = 'Sunday',
+    [2] = 'Monday',
+    [3] = 'Tuesday',
+    [4] = 'Wednesday',
+    [5] = 'Thursday',
+    [6] = 'Friday',
+    [7] = 'Saturday',
 }
 
 local function save(obj)
@@ -16,13 +21,23 @@ local obj = {
 }
 
 local defaultHoursPerWeekday = {
-    Monday = 8, Tuesday = 8, Wednesday = 8, Thursday = 8, Friday = 8,
-    Saturday = 0, Sunday = 0
+    Monday = 8,
+    Tuesday = 8,
+    Wednesday = 8,
+    Thursday = 8,
+    Friday = 8,
+    Saturday = 0,
+    Sunday = 0,
 }
 
 local weekdayNumberMap = {
-    Sunday = 0, Monday = 1, Tuesday = 2, Wednesday = 3,
-    Thursday = 4, Friday = 5, Saturday = 6
+    Sunday = 0,
+    Monday = 1,
+    Tuesday = 2,
+    Wednesday = 3,
+    Thursday = 4,
+    Friday = 5,
+    Saturday = 6,
 }
 
 local defaults = {
@@ -89,7 +104,7 @@ local function calculate(opts)
     if yearData and yearData[string.format('%02d', weeknumber - 1)] ~= nil then
         prevWeekOverhour = yearData[string.format('%02d', weeknumber - 1)].summary.overhour
     end
-    
+
     -- Ensure week and week['weekdays'] are not nil
     local weekdays = {}
     if week and week['weekdays'] then
@@ -100,7 +115,7 @@ local function calculate(opts)
     if week and week['summary'] then
         summary = week['summary']
     end
-    
+
     local loggedWeekdays = 0
     local timeInWeek = 0
     summary.overhour = prevWeekOverhour
@@ -153,7 +168,7 @@ local function TimeStart(weekday, time)
     end
 
     if weekday == nil then
-        local current_wday_numeric = os.date("*t", os.time()).wday
+        local current_wday_numeric = os.date('*t', os.time()).wday
         weekday = wdayToEngName[current_wday_numeric]
     end
     if time == nil then
@@ -188,7 +203,7 @@ local function TimeStop(weekday, time)
     end
 
     if weekday == nil then
-        local current_wday_numeric = os.date("*t", os.time()).wday
+        local current_wday_numeric = os.date('*t', os.time()).wday
         weekday = wdayToEngName[current_wday_numeric]
     end
     if time == nil then
@@ -274,7 +289,7 @@ local function addTime(opts)
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
-        local current_wday_numeric = os.date("*t", os.time()).wday
+        local current_wday_numeric = os.date('*t', os.time()).wday
         weekday = wdayToEngName[current_wday_numeric]
     end
 
@@ -292,12 +307,12 @@ local function addTime(opts)
 
     -- New logic for addTime
     local current_ts = os.time() -- Get current timestamp
-    local current_t_info = os.date("*t", current_ts)
+    local current_t_info = os.date('*t', current_ts)
 
     current_t_info.day = current_t_info.day - diffDays
-    
+
     local target_day_ref_ts = os.time(current_t_info)
-    local target_day_t_info = os.date("*t", target_day_ref_ts) -- Normalized date info
+    local target_day_t_info = os.date('*t', target_day_ref_ts) -- Normalized date info
 
     local minutes_float = (time - math.floor(time)) * 60
     local seconds_float = (minutes_float - math.floor(minutes_float)) * 60
@@ -312,8 +327,9 @@ local function addTime(opts)
     local endTime_ts = os.time(target_day_t_info)
 
     -- Calculate startTime by subtracting the duration from endTime_ts
-    local startTime_ts = endTime_ts - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
-    
+    local startTime_ts = endTime_ts
+        - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
+
     local startTime = startTime_ts
     local endTime = endTime_ts
     -- End of new logic for addTime
@@ -336,7 +352,7 @@ local function subtractTime(time, weekday)
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
-        local current_wday_numeric = os.date("*t", os.time()).wday
+        local current_wday_numeric = os.date('*t', os.time()).wday
         weekday = wdayToEngName[current_wday_numeric]
     end
 
@@ -354,10 +370,10 @@ local function subtractTime(time, weekday)
 
     -- New logic for subtractTime
     local current_ts = os.time()
-    local current_t_info = os.date("*t", current_ts)
+    local current_t_info = os.date('*t', current_ts)
     current_t_info.day = current_t_info.day - diffDays
     local target_day_ref_ts = os.time(current_t_info)
-    local target_day_t_info = os.date("*t", target_day_ref_ts)
+    local target_day_t_info = os.date('*t', target_day_ref_ts)
 
     local minutes_float = (time - math.floor(time)) * 60
     local seconds_float = (minutes_float - math.floor(minutes_float)) * 60
@@ -372,7 +388,8 @@ local function subtractTime(time, weekday)
     local startTime_ts = os.time(target_day_t_info)
 
     -- Calculate endTime by subtracting the duration from startTime_ts
-    local endTime_ts = startTime_ts - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
+    local endTime_ts = startTime_ts
+        - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
 
     local startTime = startTime_ts
     local endTime = endTime_ts

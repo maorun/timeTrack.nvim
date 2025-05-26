@@ -22,16 +22,20 @@ describe('calculate', function()
         local data = maorunTime.calculate()
         assert.are.same({}, data.content.data[os.date('%Y')][os.date('%W')].weekdays)
 
-        local targetWeekday = "Monday"
+        local targetWeekday = 'Monday'
         maorunTime.addTime({ time = 2, weekday = targetWeekday })
 
         data = maorunTime.calculate()
 
         local year = os.date('%Y')
         local week = os.date('%W')
-        
-        assert.are.same(-6, data.content.data[year][week].weekdays[targetWeekday].summary.overhour, "Daily overhour for " .. targetWeekday)
-        assert.are.same(-6, data.content.data[year][week].summary.overhour, "Weekly overhour")
+
+        assert.are.same(
+            -6,
+            data.content.data[year][week].weekdays[targetWeekday].summary.overhour,
+            'Daily overhour for ' .. targetWeekday
+        )
+        assert.are.same(-6, data.content.data[year][week].summary.overhour, 'Weekly overhour')
         assert.are.same(
             2,
             data.content.data[year][week].weekdays[targetWeekday].summary.diffInHours
@@ -150,9 +154,11 @@ describe('calculate', function()
     it('should incorporate prevWeekOverhour into current week calculation', function()
         maorunTime.setup({ path = tempPath })
         local initialContentJson = Path:new(tempPath):read()
-        if initialContentJson == "" then
-            print("Warning (prevWeekOverhour test): tempPath file was empty after setup. Using '{}'.")
-            initialContentJson = "{}"
+        if initialContentJson == '' then
+            print(
+                "Warning (prevWeekOverhour test): tempPath file was empty after setup. Using '{}'."
+            )
+            initialContentJson = '{}'
         end
         local initialContent = vim.json.decode(initialContentJson)
         -- local hoursConf = initialContent.hoursPerWeekday -- Not strictly needed for fileData if we copy initialContent
@@ -163,7 +169,13 @@ describe('calculate', function()
         local currentWeekString = os.date('%W')
 
         if currentWeekNum <= 1 then
-            print("Skipping 'prevWeekOverhour' test as current week is " .. currentWeekString .. " in " .. currentYear .. ".")
+            print(
+                "Skipping 'prevWeekOverhour' test as current week is "
+                    .. currentWeekString
+                    .. ' in '
+                    .. currentYear
+                    .. '.'
+            )
             return -- Skip the rest of this test
         end
 
@@ -183,7 +195,7 @@ describe('calculate', function()
             summary = { overhour = prevWeekOverhourValue },
             weekdays = {}, -- Must be a table
         }
-        
+
         -- Ensure current week structure exists for addTime to modify later, if not already there.
         -- init() inside addTime/calculate should handle creating it, but this makes sure.
         if not fileData.data[currentYear][currentWeekString] then
@@ -196,18 +208,17 @@ describe('calculate', function()
             -- or just let calculate handle it. For this test, we assume calculate will correctly use prevWeekOverhour.
             -- The important part is that prevWeekString.summary.overhour is set.
         end
-        
+
         -- Ensure 'paused' key exists, copying from initialContent or defaulting.
         if initialContent.paused == nil then
-             fileData.paused = false -- Default if not in initialContent
+            fileData.paused = false -- Default if not in initialContent
         else
-             fileData.paused = initialContent.paused
+            fileData.paused = initialContent.paused
         end
-
 
         Path:new(tempPath):write(vim.fn.json_encode(fileData), 'w')
 
-        local dayToLog = "Monday" -- Default hours for Monday is 8
+        local dayToLog = 'Monday' -- Default hours for Monday is 8
         maorunTime.addTime({ time = 6, weekday = dayToLog }) -- This logs 6 hours -> -2 for the day
 
         local data = maorunTime.calculate() -- This uses os.date() for year/week
@@ -228,27 +239,33 @@ describe('calculate', function()
     it('should calculate correctly for a specific year and weeknumber option', function()
         maorunTime.setup({ path = tempPath }) -- Initialize to create the file and get default configs
         local initialContentJson = Path:new(tempPath):read()
-        if initialContentJson == "" then
-            print("Warning (specific year/week test): tempPath file was empty after setup. Using '{}'.")
-            initialContentJson = "{}"
+        if initialContentJson == '' then
+            print(
+                "Warning (specific year/week test): tempPath file was empty after setup. Using '{}'."
+            )
+            initialContentJson = '{}'
         end
         local fileContent = vim.json.decode(initialContentJson) -- Get hoursPerWeekday, paused status
 
-        local testYear = "2022"
-        local testWeek = "30" -- Corresponds to July 25-31, 2022. Wednesday is July 27th.
-        local testWeekday = "Wednesday"
+        local testYear = '2022'
+        local testWeek = '30' -- Corresponds to July 25-31, 2022. Wednesday is July 27th.
+        local testWeekday = 'Wednesday'
         local loggedHours = 10
-        
+
         -- Ensure hoursPerWeekday from setup is used. Default to 8 if somehow not found.
-        local hoursForTestWeekday = 8 
+        local hoursForTestWeekday = 8
         if fileContent.hoursPerWeekday and fileContent.hoursPerWeekday[testWeekday] then
             hoursForTestWeekday = fileContent.hoursPerWeekday[testWeekday]
         end
         local expectedDailyOvertime = loggedHours - hoursForTestWeekday
 
         -- Prepare data for the specific year and week
-        if not fileContent.data then fileContent.data = {} end
-        if not fileContent.data[testYear] then fileContent.data[testYear] = {} end
+        if not fileContent.data then
+            fileContent.data = {}
+        end
+        if not fileContent.data[testYear] then
+            fileContent.data[testYear] = {}
+        end
 
         fileContent.data[testYear][testWeek] = {
             summary = { overhour = 0 }, -- Will be calculated by maorunTime.calculate
@@ -258,8 +275,22 @@ describe('calculate', function()
                     items = {
                         {
                             -- Example: Wednesday, July 27, 2022, 9:00 AM
-                            startTime = os.time({ year = 2022, month = 7, day = 27, hour = 9, min = 0, sec = 0 }),
-                            endTime = os.time({ year = 2022, month = 7, day = 27, hour = 9, min = 0, sec = 0 }) + loggedHours * 3600,
+                            startTime = os.time({
+                                year = 2022,
+                                month = 7,
+                                day = 27,
+                                hour = 9,
+                                min = 0,
+                                sec = 0,
+                            }),
+                            endTime = os.time({
+                                year = 2022,
+                                month = 7,
+                                day = 27,
+                                hour = 9,
+                                min = 0,
+                                sec = 0,
+                            }) + loggedHours * 3600,
                             diffInHours = loggedHours,
                             -- startReadable and endReadable are not strictly needed for calculate logic
                         },
@@ -273,18 +304,44 @@ describe('calculate', function()
         local data = maorunTime.calculate({ year = testYear, weeknumber = testWeek })
 
         -- Assertions for the specific year and week data
-        assert.is_not_nil(data.content.data, "data.content.data should exist")
-        assert.is_not_nil(data.content.data[testYear], "Data for year " .. testYear .. " should exist")
+        assert.is_not_nil(data.content.data, 'data.content.data should exist')
+        assert.is_not_nil(
+            data.content.data[testYear],
+            'Data for year ' .. testYear .. ' should exist'
+        )
         local weekData = data.content.data[testYear][testWeek]
-        assert.is_not_nil(weekData, "Data for " .. testYear .. " week " .. testWeek .. " should exist")
+        assert.is_not_nil(
+            weekData,
+            'Data for ' .. testYear .. ' week ' .. testWeek .. ' should exist'
+        )
 
-        assert.is_not_nil(weekData.weekdays, "weekData.weekdays should exist for " .. testYear .. " week " .. testWeek)
+        assert.is_not_nil(
+            weekData.weekdays,
+            'weekData.weekdays should exist for ' .. testYear .. ' week ' .. testWeek
+        )
         local weekdayData = weekData.weekdays[testWeekday]
-        assert.is_not_nil(weekdayData, "Data for " .. testWeekday .. " in " .. testYear .. " week " .. testWeek .. " should exist")
+        assert.is_not_nil(
+            weekdayData,
+            'Data for '
+                .. testWeekday
+                .. ' in '
+                .. testYear
+                .. ' week '
+                .. testWeek
+                .. ' should exist'
+        )
 
-        assert.are.same(loggedHours, weekdayData.summary.diffInHours, "Logged hours for " .. testWeekday)
-        assert.are.same(expectedDailyOvertime, weekdayData.summary.overhour, "Overtime for " .. testWeekday)
-        assert.are.same(expectedDailyOvertime, weekData.summary.overhour, "Total weekly overtime")
+        assert.are.same(
+            loggedHours,
+            weekdayData.summary.diffInHours,
+            'Logged hours for ' .. testWeekday
+        )
+        assert.are.same(
+            expectedDailyOvertime,
+            weekdayData.summary.overhour,
+            'Overtime for ' .. testWeekday
+        )
+        assert.are.same(expectedDailyOvertime, weekData.summary.overhour, 'Total weekly overtime')
     end)
 
     it('should return zero totals for a week with no logged time', function()
@@ -298,28 +355,36 @@ describe('calculate', function()
 
         -- Assertions
         local weekData = data.content.data[currentYear][currentWeek]
-        assert.is_not_nil(weekData, "Week data should exist even if no time logged")
-        assert.is_not_nil(weekData.summary, "Week summary should exist")
-        assert.is_not_nil(weekData.weekdays, "Weekdays table should exist")
-        
-        assert.are.same(0, weekData.summary.overhour, "Weekly overhour should be 0 for an empty week with no prior history")
-        
-        assert.are.same(0, vim.tbl_count(weekData.weekdays), "Weekdays table should be empty")
+        assert.is_not_nil(weekData, 'Week data should exist even if no time logged')
+        assert.is_not_nil(weekData.summary, 'Week summary should exist')
+        assert.is_not_nil(weekData.weekdays, 'Weekdays table should exist')
+
+        assert.are.same(
+            0,
+            weekData.summary.overhour,
+            'Weekly overhour should be 0 for an empty week with no prior history'
+        )
+
+        assert.are.same(0, vim.tbl_count(weekData.weekdays), 'Weekdays table should be empty')
     end)
 
     it('should treat all logged time as overtime if weekday configured for zero hours', function()
-        local targetWeekday = "Saturday" -- A day often configured for 0 hours
+        local targetWeekday = 'Saturday' -- A day often configured for 0 hours
         local loggedHours = 2
 
         local customHours = {
-            Monday = 8, Tuesday = 8, Wednesday = 8, Thursday = 8, Friday = 8,
+            Monday = 8,
+            Tuesday = 8,
+            Wednesday = 8,
+            Thursday = 8,
+            Friday = 8,
             Saturday = 0, -- Target for this test
-            Sunday = 0
+            Sunday = 0,
         }
 
         maorunTime.setup({
             path = tempPath,
-            hoursPerWeekday = customHours
+            hoursPerWeekday = customHours,
         })
 
         local currentYear = os.date('%Y')
@@ -332,18 +397,30 @@ describe('calculate', function()
 
         -- Assertions
         local weekData = data.content.data[currentYear][currentWeek]
-        assert.is_not_nil(weekData, "Week data should exist")
+        assert.is_not_nil(weekData, 'Week data should exist')
 
         local weekdayData = weekData.weekdays[targetWeekday]
-        assert.is_not_nil(weekdayData, "Data for " .. targetWeekday .. " should exist")
-        assert.is_not_nil(weekdayData.summary, "Summary for " .. targetWeekday .. " should exist")
+        assert.is_not_nil(weekdayData, 'Data for ' .. targetWeekday .. ' should exist')
+        assert.is_not_nil(weekdayData.summary, 'Summary for ' .. targetWeekday .. ' should exist')
 
-        assert.are.same(loggedHours, weekdayData.summary.diffInHours, "Logged hours for " .. targetWeekday)
+        assert.are.same(
+            loggedHours,
+            weekdayData.summary.diffInHours,
+            'Logged hours for ' .. targetWeekday
+        )
         -- Expected overtime is loggedHours - 0 = loggedHours
-        assert.are.same(loggedHours, weekdayData.summary.overhour, "Overtime for " .. targetWeekday .. " (configured for 0 hours)")
+        assert.are.same(
+            loggedHours,
+            weekdayData.summary.overhour,
+            'Overtime for ' .. targetWeekday .. ' (configured for 0 hours)'
+        )
 
         -- Assuming no other entries and no prevWeekOverhour
-        assert.are.same(loggedHours, weekData.summary.overhour, "Weekly overhour should reflect the " .. targetWeekday .. " overtime")
+        assert.are.same(
+            loggedHours,
+            weekData.summary.overhour,
+            'Weekly overhour should reflect the ' .. targetWeekday .. ' overtime'
+        )
     end)
 end)
 
@@ -353,12 +430,20 @@ describe('setIllDay', function()
             path = tempPath,
         })
 
-        local targetWeekdayForAvg = "Monday"
-        print(string.format("DEBUG setIllDay TEST: hoursPerWeekday just before calling setIllDay('Monday') = %s", vim.inspect(maorunTime.calculate().content.hoursPerWeekday)))
+        local targetWeekdayForAvg = 'Monday'
         local data = maorunTime.setIllDay(targetWeekdayForAvg)
-        local expected_avg = 40/7
-        local actual_avg = data.content.data[os.date('%Y')][os.date('%W')].weekdays[targetWeekdayForAvg].items[1].diffInHours
-        assert(math.abs(expected_avg - actual_avg) < 0.001, string.format("Average hours for default config on %s. Expected close to %s, got %s", targetWeekdayForAvg, expected_avg, actual_avg))
+        local expected_avg = 40 / 7
+        local actual_avg =
+            data.content.data[os.date('%Y')][os.date('%W')].weekdays[targetWeekdayForAvg].items[1].diffInHours
+        assert(
+            math.abs(expected_avg - actual_avg) < 0.001,
+            string.format(
+                'Average hours for default config on %s. Expected close to %s, got %s',
+                targetWeekdayForAvg,
+                expected_avg,
+                actual_avg
+            )
+        )
 
         maorunTime.setup({
             path = tempPath,
@@ -371,7 +456,7 @@ describe('setIllDay', function()
             },
         })
 
-        local targetCustomWeekday = "Friday" -- Using Friday as it has a unique value (5) in this custom map
+        local targetCustomWeekday = 'Friday' -- Using Friday as it has a unique value (5) in this custom map
         local data = maorunTime.setIllDay(targetCustomWeekday)
         assert.are.same(
             7.2, -- This average ( (8+8+8+7+5) / 5 = 36/5 = 7.2 ) should still be correct
