@@ -50,10 +50,29 @@ wk.register({
 ```
 
 ## Development
-style-check with [style-lua](https://github.com/JohnnyMorganz/StyLua)
 
-testing with [vusted](https://github.com/notomo/vusted)
+### Development Environment Setup
 
+This project uses `stylua` for formatting Lua code and `vusted` for running tests.
+The `install.sh` script in the root of this repository will help you install these tools.
+
+**Prerequisites:**
+
+*   **Neovim:** Ensure you have Neovim installed. You can find installation instructions at [Installing Neovim](https://github.com/neovim/neovim/wiki/Installing-Neovim).
+*   **Rust/Cargo:** `stylua` is installed via Cargo. If you don't have Rust and Cargo, install them from [https://rustup.rs/](https://rustup.rs/).
+*   **Luarocks:** `vusted` is installed via Luarocks. If you don't have Luarocks, install it from [https://luarocks.org/wiki/rock/Installation](https://luarocks.org/wiki/rock/Installation).
+
+**Installation:**
+
+1.  Run the script:
+    ```sh
+    ./install.sh
+    ```
+    This will check for Cargo and Luarocks, then install `stylua` and `vusted`.
+
+### Running Tests
+
+After setting up the environment and installing `vusted`, you can run tests using:
 ```sh
 vusted ./test
 ```
