@@ -161,8 +161,6 @@ describe('calculate', function()
             initialContentJson = '{}'
         end
         local initialContent = vim.json.decode(initialContentJson)
-        -- local hoursConf = initialContent.hoursPerWeekday -- Not strictly needed for fileData if we copy initialContent
-        -- local pausedStatus = initialContent.paused -- Capture if needed, or ensure fileData below includes it
 
         local currentYear = os.date('%Y')
         local currentWeekNum = tonumber(os.date('%W'))
