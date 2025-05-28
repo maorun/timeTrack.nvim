@@ -2,6 +2,16 @@ local Path = require('plenary.path')
 local os_sep = require('plenary.path').path.sep
 local notify = require('notify')
 
+local wdayToEngName = {
+    [1] = 'Sunday',
+    [2] = 'Monday',
+    [3] = 'Tuesday',
+    [4] = 'Wednesday',
+    [5] = 'Thursday',
+    [6] = 'Friday',
+    [7] = 'Saturday',
+}
+
 local function save(obj)
     Path:new(obj.path):write(vim.fn.json_encode(obj.content), 'w')
 end
@@ -11,34 +21,24 @@ local obj = {
 }
 
 local defaultHoursPerWeekday = {
-    Montag = 8,
-    Dienstag = 8,
-    Mittwoch = 8,
-    Donnerstag = 8,
-    Freitag = 8,
-
     Monday = 8,
     Tuesday = 8,
     Wednesday = 8,
     Thursday = 8,
     Friday = 8,
+    Saturday = 0,
+    Sunday = 0,
 }
 
-local function getWeekDay(time)
-    return {
-        [os.date('%A', os.time() + time)] = os.date('*t', os.time() + time).wday - 1,
-    }
-end
-local weekdayNumberMap = vim.tbl_deep_extend(
-    'force',
-    getWeekDay(0),
-    getWeekDay(60 * 60 * 24),
-    getWeekDay(2 * 60 * 60 * 24),
-    getWeekDay(3 * 60 * 60 * 24),
-    getWeekDay(4 * 60 * 60 * 24),
-    getWeekDay(5 * 60 * 60 * 24),
-    getWeekDay(6 * 60 * 60 * 24)
-)
+local weekdayNumberMap = {
+    Sunday = 0,
+    Monday = 1,
+    Tuesday = 2,
+    Wednesday = 3,
+    Thursday = 4,
+    Friday = 5,
+    Saturday = 6,
+}
 
 local defaults = {
     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
@@ -100,15 +100,26 @@ local function calculate(opts)
     local yearData = obj.content['data'][year]
     local week = yearData[weeknumber]
     local prevWeekOverhour = 0
-    if yearData[string.format('%02d', weeknumber - 1)] ~= nil then
+    -- Ensure yearData is not nil before trying to access it for prevWeekOverhour
+    if yearData and yearData[string.format('%02d', weeknumber - 1)] ~= nil then
         prevWeekOverhour = yearData[string.format('%02d', weeknumber - 1)].summary.overhour
     end
 
-    local weekdays = week['weekdays']
-    local summary = week['summary']
+    -- Ensure week and week['weekdays'] are not nil
+    local weekdays = {}
+    if week and week['weekdays'] then
+        weekdays = week['weekdays']
+    end
+
+    local summary = {}
+    if week and week['summary'] then
+        summary = week['summary']
+    end
+
     local loggedWeekdays = 0
     local timeInWeek = 0
     summary.overhour = prevWeekOverhour
+
     for weekdayName, items in pairs(weekdays) do
         local timeInWeekday = 0
         for _, value in pairs(items.items) do
@@ -157,7 +168,8 @@ local function TimeStart(weekday, time)
     end
 
     if weekday == nil then
-        weekday = os.date('%A')
+        local current_wday_numeric = os.date('*t', os.time()).wday
+        weekday = wdayToEngName[current_wday_numeric]
     end
     if time == nil then
         time = os.time()
@@ -191,7 +203,8 @@ local function TimeStop(weekday, time)
     end
 
     if weekday == nil then
-        weekday = os.date('%A')
+        local current_wday_numeric = os.date('*t', os.time()).wday
+        weekday = wdayToEngName[current_wday_numeric]
     end
     if time == nil then
         time = os.time()
@@ -276,7 +289,8 @@ local function addTime(opts)
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
-        weekday = os.date('%A')
+        local current_wday_numeric = os.date('*t', os.time()).wday
+        weekday = wdayToEngName[current_wday_numeric]
     end
 
     local week = years[os.date('%W')]
@@ -313,24 +327,41 @@ local function addTime(opts)
             items = {},
         }
     end
-    ---@diagnostic disable-next-line: missing-fields
-    local endTime = os.time({
-        year = string.format('%s', os.date('%Y')),
-        month = string.format('%s', os.date('%m')),
-        day = os.date('%d') - diffDays,
+
+    -- Get current timestamp
+    local current_ts = os.time()
+
+    -- Subtract "diffDays" days from the current timestamp
+    local target_day_ref_ts = current_ts - (diffDays * 24 * 3600)
+    local target_day_t_info = os.date('*t', target_day_ref_ts)
+
+    -- Extract hours/min/sec from "time"
+    local minutes_float = (time - math.floor(time)) * 60
+    local seconds_float = (minutes_float - math.floor(minutes_float)) * 60
+    local hours_to_subtract = math.floor(time)
+    local minutes_to_subtract = math.floor(minutes_float)
+    local seconds_to_subtract = math.floor(seconds_float)
+
+    -- Build a new osdateparam table with only supported fields
+    local endTime_date_table = {
+        year = target_day_t_info.year,
+        month = target_day_t_info.month,
+        day = target_day_t_info.day,
         hour = 23,
-    })
-    local minutes = ((time - math.floor(time)) * 60)
-    local seconds = (minutes - math.floor(minutes)) * 60
-    ---@diagnostic disable-next-line: missing-fields
-    local startTime = os.time({
-        year = string.format('%s', os.date('%Y')),
-        month = string.format('%s', os.date('%m')),
-        day = os.date('%d') - diffDays,
-        hour = 22 - math.floor(time),
-        min = 59 - math.floor(minutes),
-        sec = 60 - math.floor(seconds),
-    })
+        min = 0,
+        sec = 0,
+        isdst = target_day_t_info.isdst,
+    }
+
+    local endTime_ts = os.time(endTime_date_table)
+
+    -- Calculate startTime by subtracting the duration from endTime_ts
+    local startTime_ts = endTime_ts
+        - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
+
+    local startTime = startTime_ts
+    local endTime = endTime_ts
+
     local paused = isPaused()
     if paused then
         TimeResume()
@@ -349,7 +380,8 @@ local function subtractTime(time, weekday)
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     local years = obj.content['data'][os.date('%Y')]
     if weekday == nil then
-        weekday = os.date('%A')
+        local current_wday_numeric = os.date('*t', os.time()).wday
+        weekday = wdayToEngName[current_wday_numeric]
     end
 
     local week = years[os.date('%W')]
@@ -386,26 +418,34 @@ local function subtractTime(time, weekday)
             items = {},
         }
     end
-    ---@diagnostic disable-next-line: missing-fields
-    local startTime = os.time({
-        year = string.format('%s', os.date('%Y')),
-        month = string.format('%s', os.date('%m')),
-        day = os.date('%d') - diffDays,
+
+    local current_ts = os.time()
+
+    local target_day_ref_ts = current_ts - (diffDays * 24 * 3600)
+    local target_day_t_info = os.date('*t', target_day_ref_ts)
+
+    local minutes_float = (time - math.floor(time)) * 60
+    local seconds_float = (minutes_float - math.floor(minutes_float)) * 60
+    local hours_to_subtract = math.floor(time)
+    local minutes_to_subtract = math.floor(minutes_float)
+    local seconds_to_subtract = math.floor(seconds_float)
+
+    local endTime_date_table = {
+        year = target_day_t_info.year,
+        month = target_day_t_info.month,
+        day = target_day_t_info.day,
         hour = 23,
         min = 0,
         sec = 0,
-    })
-    local minutes = ((time - math.floor(time)) * 60)
-    local seconds = (minutes - math.floor(minutes)) * 60
-    ---@diagnostic disable-next-line: missing-fields
-    local endTime = os.time({
-        year = string.format('%s', os.date('%Y')),
-        month = string.format('%s', os.date('%m')),
-        day = os.date('%d') - diffDays,
-        hour = 22 - math.floor(time),
-        min = 59 - math.floor(minutes),
-        sec = 60 - math.floor(seconds),
-    })
+        isdst = target_day_t_info.isdst,
+    }
+
+    local startTime_ts = os.time(endTime_date_table)
+    local endTime_ts = startTime_ts
+        - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
+
+    local startTime = startTime_ts
+    local endTime = endTime_ts
 
     local paused = isPaused()
     if paused then
@@ -539,9 +579,9 @@ Time = {
     setTime = setTime,
     setIllDay = setIllDay,
     setHoliday = setIllDay,
-    calculate = function()
+    calculate = function(opts) -- Accept opts
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-        calculate()
+        calculate(opts) -- Pass opts to local calculate
         save(obj)
         return obj
     end,
@@ -560,9 +600,9 @@ return {
     setTime = setTime,
     clearDay = clearDay,
     isPaused = isPaused,
-    calculate = function()
+    calculate = function(opts) -- Accept opts
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-        calculate()
+        calculate(opts) -- Pass opts to local calculate
         save(obj)
         return obj
     end,
