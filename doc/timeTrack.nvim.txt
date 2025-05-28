@@ -1,4 +1,4 @@
-*timeTrack.nvim.txt*         For NVIM v0.8.0        Last change: 2025 March 03
+*timeTrack.nvim.txt*          For NVIM v0.8.0         Last change: 2025 May 28
 
 ==============================================================================
 Table of Contents                           *timeTrack.nvim-table-of-contents*
@@ -69,9 +69,30 @@ SUGGESTED KEYMAPPING WITH WHICH-KEY*timeTrack.nvim-timetracking-in-lua-suggested
 
 DEVELOPMENT                   *timeTrack.nvim-timetracking-in-lua-development*
 
-style-check with style-lua <https://github.com/JohnnyMorganz/StyLua>
 
-testing with vusted <https://github.com/notomo/vusted>
+DEVELOPMENT ENVIRONMENT SETUP ~
+
+This project uses `stylua` for formatting Lua code and `vusted` for running
+tests. The `install.sh` script in the root of this repository will help you
+install these tools.
+
+**Prerequisites:**
+
+- **Neovim:** Ensure you have Neovim installed. You can find installation instructions at Installing Neovim <https://github.com/neovim/neovim/wiki/Installing-Neovim>.
+- **Rust/Cargo:** `stylua` is installed via Cargo. If you don’t have Rust and Cargo, install them from <https://rustup.rs/>.
+- **Luarocks:** `vusted` is installed via Luarocks. If you don’t have Luarocks, install it from <https://luarocks.org/wiki/rock/Installation>.
+
+**Installation:**
+
+1. Run the script:
+`sh     ./install.sh`
+This will check for Cargo and Luarocks, then install `stylua` and `vusted`.
+
+
+RUNNING TESTS ~
+
+After setting up the environment and installing `vusted`, you can run tests
+using:
 
 >sh
     vusted ./test
