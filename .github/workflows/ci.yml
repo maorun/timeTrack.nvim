@@ -37,6 +37,15 @@ jobs:
         with:
           luaVersion: "luajit-openresty"
 
+      - name: Cache Luarocks
+        uses: actions/cache@v4
+        id: cache-luarocks
+        with:
+          path: ~/.luarocks
+          key: ${{ runner.os }}-luarocks-${{ hashFiles('**/rockspec') }}
+          restore-keys: |
+            ${{ runner.os }}-luarocks-
+
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
 
