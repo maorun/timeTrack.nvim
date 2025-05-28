@@ -42,7 +42,7 @@ describe('calculate', function()
         )
         assert.are.same( -- This assertion is redundant with the first one for daily overhour, but kept for structural similarity if needed
             -6,
-            data.content.data[year][week].weekdays[targetWeekday].summary.diffInHours
+            data.content.data[year][week].weekdays[targetWeekday].summary.overhour
         )
         assert.are.same(
             2,

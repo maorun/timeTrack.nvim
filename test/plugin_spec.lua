@@ -130,7 +130,7 @@ it('should add/subtract time to a specific day', function()
 
     data = maorunTime.subtractTime(2, current_weekday) -- Current test subtracts 2, not 1
     week = data.content.data[year][weekNum]
-    local final_logged_hours_after_subtract = 2 -- (4 - 2)
+    local final_logged_hours_after_subtract = 2        -- (4 - 2)
     local expected_daily_overhour_after_subtract = final_logged_hours_after_subtract
         - configured_hours_day
     assert.are.same(
@@ -173,7 +173,6 @@ it('should init weekdayNumberMap', function()
         path = tempPath,
     })
     assert.same(maorunTime.weekdays, {
-        -- English
         Sunday = 0,
         Monday = 1,
         Tuesday = 2,
@@ -181,13 +180,5 @@ it('should init weekdayNumberMap', function()
         Thursday = 4,
         Friday = 5,
         Saturday = 6,
-        -- German
-        Sonntag = 0,
-        Montag = 1,
-        Dienstag = 2,
-        Mittwoch = 3,
-        Donnerstag = 4,
-        Freitag = 5,
-        Samstag = 6,
     })
 end)
