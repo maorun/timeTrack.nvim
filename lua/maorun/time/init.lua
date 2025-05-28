@@ -297,27 +297,12 @@ local function addTime(opts)
     local currentWeekdayNumeric = os.date('*t').wday - 1 -- Sunday=0, Monday=1, etc.
     local targetWeekdayNumeric = weekdayNumberMap[weekday]
 
+    -- If targetWeekdayNumeric is nil, treat as a custom/new weekday
     if targetWeekdayNumeric == nil then
-        -- Use notify if available, or print an error. Let's assume notify is available as it's used elsewhere.
-        if notify then
-            notify(
-                "Error: Weekday '"
-                    .. tostring(weekday)
-                    .. "' is not recognized in weekdayNumberMap.",
-                'error',
-                { title = 'TimeTracking Error' }
-            )
-        else
-            print(
-                "Error: Weekday '"
-                    .. tostring(weekday)
-                    .. "' is not recognized in weekdayNumberMap."
-            )
-        end
-        return -- Stop execution if weekday is invalid
+        targetWeekdayNumeric = currentWeekdayNumeric
     end
 
-    local diffDays = currentWeekdayNumeric - targetWeekdayNumeric
+    local diffDays = currentWeekdayNumeric - (targetWeekdayNumeric or currentWeekdayNumeric)
     if diffDays < 0 then
         diffDays = diffDays + 7
     end
@@ -393,16 +378,16 @@ local function subtractTime(time, weekday)
         if notify then
             notify(
                 "Error: Weekday '"
-                    .. tostring(weekday)
-                    .. "' is not recognized in weekdayNumberMap.",
+                .. tostring(weekday)
+                .. "' is not recognized in weekdayNumberMap.",
                 'error',
                 { title = 'TimeTracking Error' }
             )
         else
             print(
                 "Error: Weekday '"
-                    .. tostring(weekday)
-                    .. "' is not recognized in weekdayNumberMap."
+                .. tostring(weekday)
+                .. "' is not recognized in weekdayNumberMap."
             )
         end
         return -- Stop execution if weekday is invalid
@@ -581,7 +566,7 @@ Time = {
     setHoliday = setIllDay,
     calculate = function(opts) -- Accept opts
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-        calculate(opts) -- Pass opts to local calculate
+        calculate(opts)        -- Pass opts to local calculate
         save(obj)
         return obj
     end,
@@ -602,7 +587,7 @@ return {
     isPaused = isPaused,
     calculate = function(opts) -- Accept opts
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-        calculate(opts) -- Pass opts to local calculate
+        calculate(opts)        -- Pass opts to local calculate
         save(obj)
         return obj
     end,
