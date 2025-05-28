@@ -321,23 +321,23 @@ local function addTime(opts)
 
     -- Build a new osdateparam table with only supported fields
     local endTime_date_table = {
-        year  = target_day_t_info.year,
+        year = target_day_t_info.year,
         month = target_day_t_info.month,
-        day   = target_day_t_info.day,
-        hour  = 23,
-        min   = 0,
-        sec   = 0,
-        isdst = target_day_t_info.isdst
+        day = target_day_t_info.day,
+        hour = 23,
+        min = 0,
+        sec = 0,
+        isdst = target_day_t_info.isdst,
     }
 
     local endTime_ts = os.time(endTime_date_table)
 
     -- Calculate startTime by subtracting the duration from endTime_ts
-    local startTime_ts = endTime_ts - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
+    local startTime_ts = endTime_ts
+        - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
 
     local startTime = startTime_ts
     local endTime = endTime_ts
-
 
     local paused = isPaused()
     if paused then
@@ -385,17 +385,18 @@ local function subtractTime(time, weekday)
     local seconds_to_subtract = math.floor(seconds_float)
 
     local endTime_date_table = {
-        year  = target_day_t_info.year,
+        year = target_day_t_info.year,
         month = target_day_t_info.month,
-        day   = target_day_t_info.day,
-        hour  = 23,
-        min   = 0,
-        sec   = 0,
-        isdst = target_day_t_info.isdst
+        day = target_day_t_info.day,
+        hour = 23,
+        min = 0,
+        sec = 0,
+        isdst = target_day_t_info.isdst,
     }
 
     local startTime_ts = os.time(endTime_date_table)
-    local endTime_ts = startTime_ts - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
+    local endTime_ts = startTime_ts
+        - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
 
     local startTime = startTime_ts
     local endTime = endTime_ts
@@ -534,7 +535,7 @@ Time = {
     setHoliday = setIllDay,
     calculate = function(opts) -- Accept opts
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-        calculate(opts)        -- Pass opts to local calculate
+        calculate(opts) -- Pass opts to local calculate
         save(obj)
         return obj
     end,
@@ -555,7 +556,7 @@ return {
     isPaused = isPaused,
     calculate = function(opts) -- Accept opts
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-        calculate(opts)        -- Pass opts to local calculate
+        calculate(opts) -- Pass opts to local calculate
         save(obj)
         return obj
     end,
