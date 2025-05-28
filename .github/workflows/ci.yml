@@ -32,6 +32,9 @@ jobs:
           neovim: true
           version: nightly
 
+      - name: luajit
+        uses: leafo/gh-actions-lua@v11
+
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
 
