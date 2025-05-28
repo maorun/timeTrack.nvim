@@ -130,7 +130,8 @@ it('should add/subtract time to a specific day', function()
 
     data = maorunTime.subtractTime(2, current_weekday) -- Current test subtracts 2, not 1
     week = data.content.data[year][weekNum]
-    local final_logged_hours_after_subtract = 2        -- (4 - 2)
+
+    local final_logged_hours_after_subtract = 2 -- (4 - 2)
     local expected_daily_overhour_after_subtract = final_logged_hours_after_subtract
         - configured_hours_day
     assert.are.same(
