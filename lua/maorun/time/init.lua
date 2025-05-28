@@ -377,17 +377,13 @@ local function subtractTime(time, weekday)
         -- Use notify if available, or print an error. Let's assume notify is available as it's used elsewhere.
         if notify then
             notify(
-                "Error: Weekday '"
-                .. tostring(weekday)
-                .. "' is not recognized in weekdayNumberMap.",
+                "Error: Weekday '" .. tostring(weekday) .. "' is not recognized in weekdayNumberMap.",
                 'error',
                 { title = 'TimeTracking Error' }
             )
         else
             print(
-                "Error: Weekday '"
-                .. tostring(weekday)
-                .. "' is not recognized in weekdayNumberMap."
+                "Error: Weekday '" .. tostring(weekday) .. "' is not recognized in weekdayNumberMap."
             )
         end
         return -- Stop execution if weekday is invalid
@@ -566,7 +562,7 @@ Time = {
     setHoliday = setIllDay,
     calculate = function(opts) -- Accept opts
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-        calculate(opts)        -- Pass opts to local calculate
+        calculate(opts)
         save(obj)
         return obj
     end,
@@ -587,7 +583,7 @@ return {
     isPaused = isPaused,
     calculate = function(opts) -- Accept opts
         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-        calculate(opts)        -- Pass opts to local calculate
+        calculate(opts)
         save(obj)
         return obj
     end,
