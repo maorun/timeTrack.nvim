@@ -21,38 +21,6 @@ fi
 
 echo "Starting development environment setup..."
 
-# Check for Cargo
-if ! command -v cargo &> /dev/null
-then
-    if [[ "${CURRENT_OS}" == "linux" ]] || [[ "${CURRENT_OS}" == "macos" ]]; then
-        echo "Cargo not found. Attempting to install via rustup..."
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        # Source the cargo environment script to make cargo available in the current session
-        if [ -f "$HOME/.cargo/env" ]; then
-            source "$HOME/.cargo/env"
-        else
-            # Fallback if .cargo/env doesn't exist, though rustup should create it.
-            # Attempt to add to PATH directly, common for non-login shells or if .profile/.bashrc isn't sourced.
-            export PATH="$HOME/.cargo/bin:$PATH"
-        fi
-
-        if ! command -v cargo &> /dev/null; then
-            echo "Cargo installation failed. Please check the output above or install manually from https://rustup.rs/"
-            exit 1
-        else
-            echo "Cargo installed successfully."
-            cargo --version # Print version for confirmation
-        fi
-    else
-        # Fallback for other OSes (though Windows is handled earlier)
-        echo "Cargo not found. Please install Rust and Cargo from https://rustup.rs/"
-        exit 1
-    fi
-fi
-
-echo "Installing stylua..."
-cargo install stylua
-
 # Check for Luarocks
 if ! command -v luarocks &> /dev/null
 then
@@ -97,6 +65,11 @@ then
         exit 1
     fi
 fi
+
+echo "Installing stylua..."
+luarocks install stylua
+echo "Verifying stylua installation..."
+stylua --version
 
 echo "Installing vusted..."
 luarocks install vusted
