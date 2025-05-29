@@ -99,6 +99,6 @@ then
 fi
 
 echo "Installing vusted..."
-luarocks install vusted
+luarocks install --local vusted
 
 echo "Development environment setup complete!"
