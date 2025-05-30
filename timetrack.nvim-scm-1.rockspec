@@ -1,5 +1,5 @@
 rockspec_format = "3.0"
-package = "timeTrack.nvim"
+package = "timetrack.nvim"
 version = "scm-1"
 source = {
   url = "git://github.com/maorun/timeTrack.nvim.git"

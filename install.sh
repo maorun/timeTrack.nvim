@@ -67,6 +67,6 @@ then
 fi
 
 echo "Installing dependencies from rockspec..."
-luarocks make timeTrack.nvim-scm-1.rockspec || exit 1
+luarocks make timetrack.nvim-scm-1.rockspec || exit 1
 
 echo "Development environment setup complete!"

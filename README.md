@@ -53,7 +53,7 @@ wk.register({
 
 ### Development Environment Setup
 
-This project uses a Luarocks rockspec file (`timeTrack.nvim-scm-1.rockspec`) to manage development and build dependencies, including `stylua` for formatting and `vusted` for testing.
+This project uses a Luarocks rockspec file (`timetrack.nvim-scm-1.rockspec`) to manage development and build dependencies, including `stylua` for formatting and `vusted` for testing.
 
 The `install.sh` script in the root of this repository automates the setup process by using `luarocks make` with the rockspec file.
 
@@ -69,7 +69,7 @@ The `install.sh` script in the root of this repository automates the setup proce
     ```sh
     ./install.sh
     ```
-    This script will use Luarocks to install all necessary dependencies as defined in the `timeTrack.nvim-scm-1.rockspec` file.
+    This script will use Luarocks to install all necessary dependencies as defined in the `timetrack.nvim-scm-1.rockspec` file.
 
 ### Running Tests
 
