@@ -209,21 +209,54 @@ local function TimeStop(weekday, time)
     if time == nil then
         time = os.time()
     end
-    local years = obj.content['data'][os.date('%Y')]
-    local dayItem = years[os.date('%W')]['weekdays'][weekday]
-    for _, item in pairs(dayItem.items) do
-        if item.endTime == nil then
-            item.endTime = time
-            local timeReadable = os.date('*t', time)
-            item.endReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min)
-            item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
+
+    local year_str = os.date('%Y', time)
+    local week_str = os.date('%W', time)
+    local dayItem_path_exists = obj.content['data'][year_str]
+        and obj.content['data'][year_str][week_str]
+        and obj.content['data'][year_str][week_str]['weekdays']
+        and obj.content['data'][year_str][week_str]['weekdays'][weekday]
+        and obj.content['data'][year_str][week_str]['weekdays'][weekday].items
+
+    if dayItem_path_exists then
+        local dayItem = obj.content['data'][year_str][week_str]['weekdays'][weekday]
+        for _, item in pairs(dayItem.items) do
+            if item.endTime == nil then
+                item.endTime = time
+                local timeReadable = os.date('*t', time)
+                item.endReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min)
+                item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
+            end
         end
     end
-    calculate()
+
+    calculate() -- Calculate regardless of whether items were stopped, to update summaries.
     save(obj)
+
+    local heute_text = 'N/A'
+    if dayItem_path_exists then
+        -- Accessing dayItem here is safe because dayItem_path_exists is true
+        local dayItem = obj.content['data'][year_str][week_str]['weekdays'][weekday]
+        if dayItem.summary and dayItem.summary.overhour then
+            heute_text = string.format('%.2f', dayItem.summary.overhour)
+        end
+    end
+
+    local gesamt_text = 'N/A'
+    -- Check path for overall week summary
+    if
+        obj.content['data'][year_str]
+        and obj.content['data'][year_str][week_str]
+        and obj.content['data'][year_str][week_str].summary
+        and obj.content['data'][year_str][week_str].summary.overhour
+    then
+        gesamt_text =
+            string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour)
+    end
+
     notify({
-        'Heute: ' .. string.format('%.2f', dayItem.summary.overhour) .. ' Stunden',
-        'Gesamt: ' .. string.format('%.2f', years[os.date('%W')].summary.overhour) .. ' Stunden',
+        'Heute: ' .. heute_text .. ' Stunden',
+        'Gesamt: ' .. gesamt_text .. ' Stunden',
     }, 'info', { title = 'TimeTracking - Stop' })
 end
 
