@@ -62,8 +62,7 @@ jobs:
       - name: run test
         shell: bash
         run: |
-          luarocks install luacheck
-          luarocks install vusted
+          luarocks make timeTrack.nvim-scm-1.rockspec
           vusted ./test
 
   docs:
