@@ -59,6 +59,9 @@ jobs:
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
 
+      - name: Update LuaRocks
+        run: luarocks install luarocks
+
       - name: run test
         shell: bash
         run: |
