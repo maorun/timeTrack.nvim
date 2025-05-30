@@ -32,29 +32,29 @@ jobs:
           neovim: true
           version: nightly
 
-      - name: Cache LuaJIT installation
+      - name: Cache Lua installation
         uses: actions/cache@v4
-        id: cache-luajit
+        id: cache-lua
         with:
           path: .lua/
-          key: ${{ runner.os }}-luajit-openresty
+          key: ${{ runner.os }}-lua5.4
           restore-keys: |
-            ${{ runner.os }}-luajit-openresty
+            ${{ runner.os }}-lua5.4
 
-      - name: luajit
+      - name: lua
         uses: leafo/gh-actions-lua@v11
-        if: steps.cache-luajit.outputs.cache-hit != 'true'
+        if: steps.cache-lua.outputs.cache-hit != 'true'
         with:
-          luaVersion: "luajit-openresty"
+          luaVersion: "lua5.4"
 
       - name: Cache Luarocks packages
         uses: actions/cache@v4
         id: cache-luarocks
         with:
           path: ~/.luarocks
-          key: ${{ runner.os }}-luajit-openresty-luarocks-${{ hashFiles('**/rockspec') }}
+          key: ${{ runner.os }}-lua5.4-luarocks-${{ hashFiles('**/rockspec') }}
           restore-keys: |
-            ${{ runner.os }}-luajit-openresty-luarocks-
+            ${{ runner.os }}-lua5.4-luarocks-
 
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
