@@ -1,3 +1,4 @@
+rockspec_format = "3.0"
 package = "timeTrack.nvim"
 version = "scm-1"
 source = {
