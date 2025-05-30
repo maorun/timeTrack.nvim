@@ -12,7 +12,7 @@ description = {
 dependencies = {
   "lua >= 5.1"
 }
-dev_dependencies = {
+test_dependencies = {
   "vusted",
   "stylua",
   "luacheck"
