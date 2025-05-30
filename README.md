@@ -53,14 +53,15 @@ wk.register({
 
 ### Development Environment Setup
 
-This project uses `stylua` for formatting Lua code and `vusted` for running tests.
-The `install.sh` script in the root of this repository will help you install these tools.
+This project uses a Luarocks rockspec file (`timeTrack.nvim-scm-1.rockspec`) to manage development and build dependencies, including `stylua` for formatting and `vusted` for testing.
+
+The `install.sh` script in the root of this repository automates the setup process by using `luarocks make` with the rockspec file.
 
 **Prerequisites:**
 
 *   **Neovim:** Ensure you have Neovim installed. You can find installation instructions at [Installing Neovim](https://github.com/neovim/neovim/wiki/Installing-Neovim).
-*   **Rust/Cargo:** `stylua` is installed via Cargo. If you don't have Rust and Cargo, install them from [https://rustup.rs/](https://rustup.rs/).
-*   **Luarocks:** `vusted` is installed via Luarocks. If you don't have Luarocks, install it from [https://luarocks.org/wiki/rock/Installation](https://luarocks.org/wiki/rock/Installation).
+*   **Luarocks:** This is essential for installing dependencies via the rockspec. If you don't have Luarocks, install it from [https://luarocks.org/wiki/rock/Installation](https://luarocks.org/wiki/rock/Installation).
+*   **Rust/Cargo:** `stylua` is written in Rust. While Luarocks will handle its installation as a dependency, having Rust/Cargo installed can be beneficial for troubleshooting or direct use. Install them from [https://rustup.rs/](https://rustup.rs/).
 
 **Installation:**
 
@@ -68,7 +69,7 @@ The `install.sh` script in the root of this repository will help you install the
     ```sh
     ./install.sh
     ```
-    This will check for Cargo and Luarocks, then install `stylua` and `vusted`.
+    This script will use Luarocks to install all necessary dependencies as defined in the `timeTrack.nvim-scm-1.rockspec` file.
 
 ### Running Tests
 

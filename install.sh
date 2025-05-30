@@ -66,12 +66,7 @@ then
     fi
 fi
 
-echo "Installing stylua..."
-luarocks install stylua
-echo "Verifying stylua installation..."
-stylua --version
-
-echo "Installing vusted..."
-luarocks install --local vusted
+echo "Installing dependencies from rockspec..."
+luarocks make timeTrack.nvim-scm-1.rockspec || exit 1
 
 echo "Development environment setup complete!"
