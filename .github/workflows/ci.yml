@@ -37,9 +37,9 @@ jobs:
         id: cache-luajit 
         with: 
           path: .lua/ 
-          key: ${{ runner.os }}-luajit-openresty 
+          key: ${{ runner.os }}-luajit-openresty-2
           restore-keys: | 
-            ${{ runner.os }}-luajit-openresty 
+            ${{ runner.os }}-luajit-openresty-2
  
       - name: luajit
         uses: leafo/gh-actions-lua@v11
@@ -53,7 +53,7 @@ jobs:
           path: ~/.luarocks 
           key: ${{ runner.os }}-luajit-openresty-luarocks-${{ hashFiles('**/rockspec') }} 
           restore-keys: | 
-            ${{ runner.os }}-luajit-openresty-luarocks- 
+            ${{ runner.os }}-luajit-openresty-luarocks-2
  
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
