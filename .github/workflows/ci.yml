@@ -62,6 +62,7 @@ jobs:
       - name: run test
         shell: bash
         run: |
+          export LUA_VERSION=5.1
           luarocks install --server=https://luarocks.org/dev luarocks
           luarocks install luacheck
           luarocks install vusted
