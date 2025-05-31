@@ -47,12 +47,23 @@ jobs:
         with:
           luaVersion: "luajit-openresty"
 
+      - name: Cache Luarocks packages 
+         uses: actions/cache@v4 
+         id: cache-luarocks 
+         with: 
+           path: ~/.luarocks 
+           key: ${{ runner.os }}-luajit-openresty-luarocks-${{ hashFiles('**/rockspec') }} 
+           restore-keys: | 
+             ${{ runner.os }}-luajit-openresty-luarocks- 
+ 
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
 
       - name: run test
         shell: bash
         run: |
+          export LUA_VERSION=5.1
+          luarocks install --server=https://luarocks.org/dev luarocks
           luarocks install luacheck
           luarocks install vusted
           vusted ./test
