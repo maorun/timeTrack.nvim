@@ -59,11 +59,14 @@ jobs:
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
 
+      - name: install dependencies
+        shell: bash
+        run: |
+          luarocks install vusted
+
       - name: run test
         shell: bash
         run: |
-          luarocks install luacheck
-          luarocks install vusted
           vusted ./test
 
   docs:
