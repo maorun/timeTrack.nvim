@@ -35,7 +35,7 @@ jobs:
       - name: luajit
         uses: leafo/gh-actions-lua@v11
         with:
-          luaVersion: "luajit-openresty"
+          luaVersion: "5.1"
 
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
