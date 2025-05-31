@@ -42,6 +42,7 @@ jobs:
             ${{ runner.os }}-luajit-openresty-2
  
       - name: luajit
+        if: steps.cache-luajit.outputs.cache-hit != 'true'
         uses: leafo/gh-actions-lua@v11
         with:
           luaVersion: "luajit-openresty"
