@@ -32,6 +32,15 @@ jobs:
           neovim: true
           version: nightly
 
+      - name: Cache LuaJIT installation 
+        uses: actions/cache@v4 
+        id: cache-luajit 
+        with: 
+          path: .lua/ 
+          key: ${{ runner.os }}-luajit-openresty 
+          restore-keys: | 
+            ${{ runner.os }}-luajit-openresty 
+ 
       - name: luajit
         uses: leafo/gh-actions-lua@v11
         with:
