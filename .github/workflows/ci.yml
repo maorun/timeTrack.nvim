@@ -62,6 +62,7 @@ jobs:
       - name: run test
         shell: bash
         run: |
+          luarocks install --server=https://luarocks.org/dev luarocks
           luarocks install luacheck
           luarocks install vusted
           vusted ./test
