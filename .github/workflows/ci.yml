@@ -54,7 +54,7 @@ jobs:
           path: ~/.luarocks 
           key: ${{ runner.os }}-luajit-openresty-luarocks-${{ hashFiles('**/rockspec') }} 
           restore-keys: | 
-             ${{ runner.os }}-luajit-openresty-luarocks- 
+            ${{ runner.os }}-luajit-openresty-luarocks- 
  
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
