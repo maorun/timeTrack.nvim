@@ -45,7 +45,7 @@ jobs:
         if: steps.cache-luajit.outputs.cache-hit != 'true'
         uses: leafo/gh-actions-lua@v11
         with:
-          luaVersion: "luajit-5.0.0"
+          luaVersion: "luajit-2.1"
 
       - name: Cache Luarocks packages 
         uses: actions/cache@v4 
