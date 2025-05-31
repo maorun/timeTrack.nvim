@@ -52,6 +52,7 @@ jobs:
       - name: install dependencies
         shell: bash
         run: |
+          apt-get install curl wget
           luarocks install vusted
 
       - name: run test
