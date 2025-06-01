@@ -1,3 +1,5 @@
+require("luacov")
+
 local function join_paths(...)
     local result = table.concat({ ... }, '/')
     return result
