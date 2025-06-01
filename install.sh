@@ -66,16 +66,43 @@ then
     fi
 fi
 
-echo "Installing stylua for Lua 5.1..."
-if ! luarocks install stylua --lua-version=5.1; then
-    echo "Failed to install stylua for Lua 5.1."
-    echo "Checking if stylua is available for other Lua versions..."
-    if ! luarocks install stylua --check-lua-versions; then
-        echo "Failed to check other Lua versions for stylua."
+echo "Installing stylua from GitHub release..."
+# Ensure curl and unzip are installed
+if command -v apt-get &> /dev/null; then
+    sudo apt-get update
+    sudo apt-get install -y curl unzip
+elif command -v yum &> /dev/null; then
+    sudo yum install -y curl unzip
+else
+    echo "apt-get or yum not found. Cannot install curl and unzip. Please install them manually."
+fi
+
+STYLUA_VERSION="v2.1.0"
+STYLUA_ARTIFACT_NAME="stylua-linux-x86_64.zip"
+STYLUA_DOWNLOAD_URL="https://github.com/JohnnyMorganz/StyLua/releases/download/${STYLUA_VERSION}/${STYLUA_ARTIFACT_NAME}"
+STYLUA_BIN_DIR="$HOME/.luarocks/bin" # Using this as it's already added to PATH by luarocks setup
+
+# Create the target bin directory if it doesn't exist
+mkdir -p "${STYLUA_BIN_DIR}"
+
+echo "Downloading stylua from ${STYLUA_DOWNLOAD_URL}..."
+if curl -L "${STYLUA_DOWNLOAD_URL}" -o "/tmp/${STYLUA_ARTIFACT_NAME}"; then
+    echo "Unzipping stylua..."
+    if unzip -o "/tmp/${STYLUA_ARTIFACT_NAME}" -d "/tmp"; then
+        echo "Making stylua executable and moving to ${STYLUA_BIN_DIR}..."
+        chmod +x "/tmp/stylua"
+        if mv "/tmp/stylua" "${STYLUA_BIN_DIR}/stylua"; then
+            echo "stylua installed successfully to ${STYLUA_BIN_DIR}/stylua"
+        else
+            echo "Failed to move stylua to ${STYLUA_BIN_DIR}."
+        fi
+    else
+        echo "Failed to unzip stylua."
     fi
-    echo "Please check the output above and the Luarocks website (luarocks.org) for stylua compatibility."
-    # Decide if exiting here is the best course of action or just warn
-    # For now, we'll just warn and continue, as verification will fail later if not installed.
+    rm -f "/tmp/${STYLUA_ARTIFACT_NAME}" # Clean up zip
+    rm -f "/tmp/stylua" # Clean up extracted binary if mv failed or it's the same location
+else
+    echo "Failed to download stylua."
 fi
 
 echo "Verifying stylua installation..."
@@ -98,5 +125,8 @@ if ! luarocks install --local vusted --lua-version=5.1; then
     # Decide if exiting here is the best course of action or just warn
     # For now, we'll just warn and continue. The script doesn't verify vusted installation with a command.
 fi
+
+echo "Installing inspect..."
+luarocks install --local inspect
 
 echo "Development environment setup complete!"

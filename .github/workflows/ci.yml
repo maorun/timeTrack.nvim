@@ -63,6 +63,7 @@ jobs:
         shell: bash
         run: |
           luarocks install vusted
+          luarocks install inspect
 
       - name: run test
         shell: bash
