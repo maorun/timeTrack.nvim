@@ -32,38 +32,41 @@ jobs:
           neovim: true
           version: nightly
 
-      - name: Cache LuaJIT installation
+      - name: Cache Lua installation
         uses: actions/cache@v4
         id: cache-luajit
         with:
           path: .lua/
-          key: ${{ runner.os }}-luajit-openresty
+          key: ${{ runner.os }}-lua-5.1
           restore-keys: |
-            ${{ runner.os }}-luajit-openresty
+            ${{ runner.os }}-lua-5.1
 
-      - name: luajit
+      - name: Setup Lua
         uses: leafo/gh-actions-lua@v11
         if: steps.cache-luajit.outputs.cache-hit != 'true'
         with:
-          luaVersion: "luajit-openresty"
+          luaVersion: "5.1"
 
       - name: Cache Luarocks packages
         uses: actions/cache@v4
         id: cache-luarocks
         with:
           path: ~/.luarocks
-          key: ${{ runner.os }}-luajit-openresty-luarocks-${{ hashFiles('**/rockspec') }}
+          key: ${{ runner.os }}-lua-5.1-luarocks-${{ hashFiles('**/rockspec') }}
           restore-keys: |
-            ${{ runner.os }}-luajit-openresty-luarocks-
+            ${{ runner.os }}-lua-5.1-luarocks-
 
       - name: luarocks
         uses: leafo/gh-actions-luarocks@v5
 
+      - name: install dependencies
+        shell: bash
+        run: |
+          luarocks install vusted
+
       - name: run test
         shell: bash
         run: |
-          luarocks install luacheck
-          luarocks install vusted
           vusted ./test
 
   docs:
