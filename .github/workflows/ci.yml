@@ -14,6 +14,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
+          args: .
       - name: Auto Commit
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
