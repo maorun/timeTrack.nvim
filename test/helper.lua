@@ -54,7 +54,9 @@ return {
                 vim.loop.sleep(10) -- Sleep in 10ms intervals
                 -- May need vim.rpcnotify(0, 'nvim_eval', '1') or similar to drive event loop
             end
-            if callback then callback() end
+            if callback then
+                callback()
+            end
         end
     end,
 }

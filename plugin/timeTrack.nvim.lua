@@ -1,6 +1,10 @@
 -- Define global configuration variables with defaults if not already set
-vim.g.timetrack_inactivity_detection_enabled = vim.g.timetrack_inactivity_detection_enabled == nil and false or vim.g.timetrack_inactivity_detection_enabled
-vim.g.timetrack_inactivity_timeout_minutes = vim.g.timetrack_inactivity_timeout_minutes == nil and 15 or vim.g.timetrack_inactivity_timeout_minutes
+vim.g.timetrack_inactivity_detection_enabled = vim.g.timetrack_inactivity_detection_enabled == nil
+        and false
+    or vim.g.timetrack_inactivity_detection_enabled
+vim.g.timetrack_inactivity_timeout_minutes = vim.g.timetrack_inactivity_timeout_minutes == nil
+        and 15
+    or vim.g.timetrack_inactivity_timeout_minutes
 
 -- Require the time tracking module
 local timeTrack = require('maorun.time')
@@ -20,11 +24,11 @@ vim.api.nvim_create_user_command('TimeTrackToggleInactivity', function()
     timeTrack.setup({})
 
     if vim.g.timetrack_inactivity_detection_enabled then
-        vim.notify("Inactivity detection enabled.", vim.log.levels.INFO, {title = "TimeTrack"})
+        vim.notify('Inactivity detection enabled.', vim.log.levels.INFO, { title = 'TimeTrack' })
     else
-        vim.notify("Inactivity detection disabled.", vim.log.levels.INFO, {title = "TimeTrack"})
+        vim.notify('Inactivity detection disabled.', vim.log.levels.INFO, { title = 'TimeTrack' })
     end
-end, { desc = "Toggle inactivity detection for TimeTrack.nvim" })
+end, { desc = 'Toggle inactivity detection for TimeTrack.nvim' })
 
 -- User command to set inactivity timeout
 vim.api.nvim_create_user_command('TimeTrackSetInactivityTimeout', function(opts)
@@ -36,8 +40,16 @@ vim.api.nvim_create_user_command('TimeTrackSetInactivityTimeout', function(opts)
         -- in maorun.time will pick up the updated vim.g variable.
         timeTrack.setup({})
 
-        vim.notify("Inactivity timeout set to " .. minutes .. " minutes.", vim.log.levels.INFO, {title = "TimeTrack"})
+        vim.notify(
+            'Inactivity timeout set to ' .. minutes .. ' minutes.',
+            vim.log.levels.INFO,
+            { title = 'TimeTrack' }
+        )
     else
-        vim.notify("Usage: TimeTrackSetInactivityTimeout <minutes>", vim.log.levels.ERROR, {title = "TimeTrack"})
+        vim.notify(
+            'Usage: TimeTrackSetInactivityTimeout <minutes>',
+            vim.log.levels.ERROR,
+            { title = 'TimeTrack' }
+        )
     end
-end, { nargs = 1, desc = "Set inactivity timeout for TimeTrack.nvim (minutes)" })
+end, { nargs = 1, desc = 'Set inactivity timeout for TimeTrack.nvim (minutes)' })

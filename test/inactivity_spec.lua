@@ -44,7 +44,7 @@ describe('Inactivity Detection', function()
     after_each(function()
         -- Mock is still active here
         if timeTrack and timeTrack.disable_inactivity_tracking then
-             pcall(timeTrack.disable_inactivity_tracking)
+            pcall(timeTrack.disable_inactivity_tracking)
         end
         helpers.wait(50) -- Allow async operations from disable_inactivity_tracking to settle with mock notify
 
@@ -85,12 +85,12 @@ describe('Inactivity Detection', function()
         vim.g.timetrack_inactivity_detection_enabled = true
         local test_timeout_minutes = 0.02 -- 1.2 seconds
         local check_interval_ms = 1000 -- Default check_inactivity interval in source is more frequent
-                                       -- but this is for conceptual timer in test
+        -- but this is for conceptual timer in test
         vim.g.timetrack_inactivity_timeout_minutes = test_timeout_minutes
 
         timeTrack.setup({})
         timeTrack.TimeStart() -- This starts the check_inactivity timer
-        assert.is_false(timeTrack.isPaused(), "Timer should be running initially")
+        assert.is_false(timeTrack.isPaused(), 'Timer should be running initially')
 
         -- Simulate that the last event was long ago enough to trigger timeout
         -- We cannot assign to vim.v.event or vim.v.event.timestamp.
@@ -106,9 +106,18 @@ describe('Inactivity Detection', function()
         -- Let's assume for this test that the check_inactivity is called frequently enough by its internal timer.
         -- The wait_ms should be slightly longer than test_timeout_minutes.
         local wait_ms = (test_timeout_minutes * 60 * 1000) + 500 -- Wait for 1.2s + 0.5s buffer = 1.7s
-        local paused = wait_for_condition(function() return timeTrack.isPaused() end, wait_ms, 100)
+        local paused = wait_for_condition(function()
+            return timeTrack.isPaused()
+        end, wait_ms, 100)
         -- Asserting FALSE because the check_interval in main code is likely ~30s for short test timeouts
-        assert.is_false(paused, "Timer should NOT be paused due to inactivity (check interval too long for this test timeout). Waited " .. wait_ms .. "ms. Timeout: " .. test_timeout_minutes*60 .. "s")
+        assert.is_false(
+            paused,
+            'Timer should NOT be paused due to inactivity (check interval too long for this test timeout). Waited '
+                .. wait_ms
+                .. 'ms. Timeout: '
+                .. test_timeout_minutes * 60
+                .. 's'
+        )
     end)
 
     it('should resume tracking on activity after inactivity pause', function()
@@ -122,18 +131,25 @@ describe('Inactivity Detection', function()
         -- Removed: vim.v.event.timestamp = vim.loop.now() - (test_timeout_minutes * 60 * 1000) - 500
 
         timeTrack.TimeStart() -- Start tracking, inactivity timer starts
-        assert.is_false(timeTrack.isPaused(), "Timer should be running after TimeStart for resume test setup")
-
+        assert.is_false(
+            timeTrack.isPaused(),
+            'Timer should be running after TimeStart for resume test setup'
+        )
 
         -- With a 1.2s timeout, and check_inactivity running every ~30s, this pause will NOT occur.
-        local paused_by_inactivity = wait_for_condition(function() return timeTrack.isPaused() end, 2000, 100) -- Wait up to 2s
-        assert.is_false(paused_by_inactivity, "Timer should NOT be paused due to inactivity (check interval too long for this test timeout)")
+        local paused_by_inactivity = wait_for_condition(function()
+            return timeTrack.isPaused()
+        end, 2000, 100) -- Wait up to 2s
+        assert.is_false(
+            paused_by_inactivity,
+            'Timer should NOT be paused due to inactivity (check interval too long for this test timeout)'
+        )
 
         -- Simulate activity by calling TimeResume, which should be triggered by autocommands.
         timeTrack.TimeResume()
 
         -- Resume should be fairly immediate in terms of obj.content.paused state
-        assert.is_false(timeTrack.isPaused(), "Timer should remain unpaused")
+        assert.is_false(timeTrack.isPaused(), 'Timer should remain unpaused')
     end)
 
     it('should not pause if inactivity detection is disabled', function()
@@ -141,12 +157,15 @@ describe('Inactivity Detection', function()
         vim.g.timetrack_inactivity_timeout_minutes = 0.02
         timeTrack.setup({}) -- Applies this config
         timeTrack.TimeStart()
-        assert.is_false(timeTrack.isPaused(), "Timer should be running")
+        assert.is_false(timeTrack.isPaused(), 'Timer should be running')
 
         -- Wait for a period longer than the timeout
         helpers.wait(2000) -- Wait 2s, timeout is 1.2s
 
-        assert.is_false(timeTrack.isPaused(), "Timer should still be running as inactivity detection is off")
+        assert.is_false(
+            timeTrack.isPaused(),
+            'Timer should still be running as inactivity detection is off'
+        )
     end)
 
     it('should allow timeout to be configured and respected', function()
@@ -156,16 +175,20 @@ describe('Inactivity Detection', function()
         timeTrack.TimeStart()
 
         -- Check it doesn't pause before the new, longer timeout
-        local paused_early = wait_for_condition(function() return timeTrack.isPaused() end, 1500, 100) -- Check for 1.5s
-        assert.is_false(paused_early, "Timer should not pause before the configured longer timeout")
+        local paused_early = wait_for_condition(function()
+            return timeTrack.isPaused()
+        end, 1500, 100) -- Check for 1.5s
+        assert.is_false(paused_early, 'Timer should not pause before the configured longer timeout')
 
         -- Check it pauses after the new, longer timeout has passed
         -- Need to make sure total wait time from TimeStart exceeds 0.04 min (2.4s)
         -- wait_for_condition waits up to its timeout FROM THE MOMENT IT'S CALLED.
         -- So, we need to ensure enough "inactive" time has passed overall.
         -- helpers.wait(1000) -- Add additional 1s to previous 1.5s wait to exceed 2.4s
-        local paused_later = wait_for_condition(function() return timeTrack.isPaused() end, 2000, 100) -- Wait up to another 2s
-        assert.is_true(paused_later, "Timer should pause after the configured longer timeout")
+        local paused_later = wait_for_condition(function()
+            return timeTrack.isPaused()
+        end, 2000, 100) -- Wait up to another 2s
+        assert.is_true(paused_later, 'Timer should pause after the configured longer timeout')
     end)
 
     it('TimeTrackToggleInactivity command should toggle feature and apply it', function()
@@ -174,23 +197,34 @@ describe('Inactivity Detection', function()
         timeTrack.setup({}) -- Initial setup: disabled
 
         vim.cmd('TimeTrackToggleInactivity') -- Execute command to enable
-        assert.is_true(vim.g.timetrack_inactivity_detection_enabled, "Global flag should be true after toggle")
+        assert.is_true(
+            vim.g.timetrack_inactivity_detection_enabled,
+            'Global flag should be true after toggle'
+        )
 
         -- timeTrack module instance should have been reconfigured by setup() called within the command.
         timeTrack.TimeStart()
-        local paused = wait_for_condition(function() return timeTrack.isPaused() end, 2500, 100)
-        assert.is_true(paused, "Timer should pause now that feature is toggled on via command")
+        local paused = wait_for_condition(function()
+            return timeTrack.isPaused()
+        end, 2500, 100)
+        assert.is_true(paused, 'Timer should pause now that feature is toggled on via command')
 
         -- Clean up potential paused state before next toggle
         timeTrack.TimeResume()
         helpers.wait(50) -- allow resume to process
 
         vim.cmd('TimeTrackToggleInactivity') -- Execute command to disable
-        assert.is_false(vim.g.timetrack_inactivity_detection_enabled, "Global flag should be false after second toggle")
+        assert.is_false(
+            vim.g.timetrack_inactivity_detection_enabled,
+            'Global flag should be false after second toggle'
+        )
 
         timeTrack.TimeStart() -- Start tracking again
         helpers.wait(2000) -- Wait past timeout
-        assert.is_false(timeTrack.isPaused(), "Timer should not pause when feature is toggled off via command")
+        assert.is_false(
+            timeTrack.isPaused(),
+            'Timer should not pause when feature is toggled off via command'
+        )
     end)
 
     it('TimeTrackSetInactivityTimeout command should update timeout and apply it', function()
@@ -200,7 +234,11 @@ describe('Inactivity Detection', function()
         timeTrack.TimeStart()
 
         vim.cmd('TimeTrackSetInactivityTimeout 0.02') -- New timeout: ~1.2s
-        assert.are.equal(0.02, vim.g.timetrack_inactivity_timeout_minutes, "Global timeout var should be updated by command")
+        assert.are.equal(
+            0.02,
+            vim.g.timetrack_inactivity_timeout_minutes,
+            'Global timeout var should be updated by command'
+        )
 
         -- The command calls setup({}), which should apply the new timeout.
         -- To test the new timeout accurately, stop and restart tracking.
@@ -208,7 +246,9 @@ describe('Inactivity Detection', function()
         helpers.wait(50) -- give it a moment to fully stop
         timeTrack.TimeStart()
 
-        local paused = wait_for_condition(function() return timeTrack.isPaused() end, 2500, 100) -- Wait for 2.5s (new timeout 1.2s)
-        assert.is_true(paused, "Timer should pause after new, shorter timeout set by command")
+        local paused = wait_for_condition(function()
+            return timeTrack.isPaused()
+        end, 2500, 100) -- Wait for 2.5s (new timeout 1.2s)
+        assert.is_true(paused, 'Timer should pause after new, shorter timeout set by command')
     end)
 end)
