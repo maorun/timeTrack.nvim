@@ -105,7 +105,7 @@ jobs:
 
       - name: Setup Neovim
         uses: rhysd/action-setup-vim@v1
-        id: vim
+        id: nvim
         with:
           neovim: true
           version: nightly
@@ -146,10 +146,20 @@ jobs:
       - name: Run tests for coverage
         shell: bash
         run: |
-          LUA_OPTS="-lluacov" vusted ./test
+          LUACOV_STATSFILE=${{ github.workspace }}/luacov.stats.out LUA_OPTS="-lluacov" vusted ./test
+
+      - name: Debug: List files after test run
+        shell: bash
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Workspace content:"
+          ls -Rla ${{ github.workspace }}
+          echo "Searching for luacov.stats.out in workspace:"
+          find ${{ github.workspace }} -name "luacov.stats.out" -print -exec echo "Found luacov.stats.out above" \;
+          echo "Value of LUACOV_STATSFILE in this step: $LUACOV_STATSFILE"
 
       - name: Generate Luacov report
-        run: luacov # This generates luacov.report.out from luacov.stats.out
+        run: luacov ${{ github.workspace }}/luacov.stats.out # This generates luacov.report.out from luacov.stats.out
 
       - name: Commit coverage report
         uses: stefanzweifel/git-auto-commit-action@v5
