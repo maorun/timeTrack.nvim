@@ -1,6 +1,9 @@
--- local helper = require('test.helper') -- Not used for file paths anymore
+local helper = require('test.helper')
+helper.plenary_dep() -- Ensure plenary is cloned/available
+helper.notify_dep() -- Might as well ensure notify is also there, like other specs
+
 local time_init_module = require('maorun.time.init')
-local fs = require('plenary.path')
+local fs = require('plenary.path') -- This should now work if plenary_dep sets up paths or if LUA_PATH is correct
 local inspect = require('inspect') -- For debugging test failures
 
 describe('Project and File Tracking Functionality', function()
