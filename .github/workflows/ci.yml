@@ -136,10 +136,10 @@ jobs:
           luarocks install vusted
           luarocks install luacov
 
-      - name: Run tests with Luacov
+      - name: Run tests for coverage
         shell: bash
         run: |
-          luacov vusted ./test
+          LUA_OPTS="-lluacov" vusted ./test
 
       - name: Generate Luacov report
         run: luacov # This generates luacov.report.out from luacov.stats.out
