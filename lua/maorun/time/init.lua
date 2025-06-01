@@ -20,6 +20,18 @@ local obj = {
     path = nil,
 }
 
+local inactivity_timer_id = nil
+local paused_due_to_inactivity = false
+local inactivity_augroup = vim.api.nvim_create_augroup('TimeTrackInactivity', { clear = true })
+
+-- Forward declare functions that depend on each other or are called by autocommands/timers
+local start_inactivity_timer
+local stop_inactivity_timer
+local check_inactivity
+local enable_inactivity_tracking
+local disable_inactivity_tracking
+local TimeResume -- Forward declare TimeResume as it's called by autocommands
+
 local defaultHoursPerWeekday = {
     Monday = 8,
     Tuesday = 8,
@@ -43,14 +55,25 @@ local weekdayNumberMap = {
 local defaults = {
     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
     hoursPerWeekday = defaultHoursPerWeekday,
+    inactivity_detection_enabled = false, -- New default
+    inactivity_timeout_minutes = 15,    -- New default
 }
 local config = defaults
 
 local function init(user_config)
     config = vim.tbl_deep_extend('force', defaults, user_config or {})
-    if user_config.hoursPerWeekday ~= nil then
+    if user_config and user_config.hoursPerWeekday ~= nil then
         config.hoursPerWeekday = user_config.hoursPerWeekday
     end
+
+    -- Apply global settings from plugin to local config if they exist
+    if vim.g.timetrack_inactivity_detection_enabled ~= nil then
+      config.inactivity_detection_enabled = vim.g.timetrack_inactivity_detection_enabled
+    end
+    if vim.g.timetrack_inactivity_timeout_minutes ~= nil then
+      config.inactivity_timeout_minutes = vim.g.timetrack_inactivity_timeout_minutes
+    end
+
     obj.path = config.path
     local p = Path:new(obj.path)
     if not p:exists() then
@@ -62,6 +85,10 @@ local function init(user_config)
         obj.content = vim.json.decode(data)
     else
         obj.content = {}
+    end
+    -- Ensure 'paused' state is explicitly initialized if not in loaded data
+    if obj.content.paused == nil then
+        obj.content.paused = false
     end
     obj.content['hoursPerWeekday'] = config.hoursPerWeekday
     local sumHoursPerWeek = 0
@@ -139,32 +166,128 @@ local function calculate(opts)
     end
 end
 
-local function TimePause()
-    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    obj.content.paused = true
-    save(obj)
-    notify({
-        'Timetracking paused',
-    }, 'info', { title = 'TimeTracking - Pause' })
+stop_inactivity_timer = function()
+    if inactivity_timer_id then
+        vim.loop.timer_stop(inactivity_timer_id)
+        inactivity_timer_id = nil
+    end
 end
 
-local function TimeResume()
-    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    obj.content.paused = false
-    save(obj)
-    notify({
-        'Timetracking resumed',
-    }, 'info', { title = 'TimeTracking - Resume' })
+check_inactivity = function()
+    -- Use local config values, which should be sync'd with vim.g by init() and enable/disable functions
+    if not config.inactivity_detection_enabled then
+        return
+    end
+
+    -- If manually paused or tracking is already paused for inactivity, don't do anything here.
+    -- obj.content.paused is true if EITHER manually paused OR paused by inactivity.
+    -- paused_due_to_inactivity distinguishes the type of pause.
+    if obj.content.paused and not paused_due_to_inactivity then
+        return -- Manually paused, respect that.
+    end
+
+    local current_time = vim.loop.now() / 1000 -- Convert ms to seconds
+    local last_event_time = vim.v.event.timestamp / 1000 -- Convert ms to seconds
+    local timeout_seconds = (config.inactivity_timeout_minutes or 15) * 60
+
+    if (current_time - last_event_time) > timeout_seconds then
+        if not obj.content.paused then -- Only pause if not already paused
+            -- No need to call stop_inactivity_timer() here as TimePause will do it.
+            TimePause() -- This will set obj.content.paused = true
+            paused_due_to_inactivity = true
+            notify({ "Timetracking paused due to inactivity" }, "info", { title = "TimeTracking - Inactive" })
+        end
+    end
 end
-local function isPaused()
+
+start_inactivity_timer = function()
+    stop_inactivity_timer() -- Stop any existing timer
+    if not config.inactivity_detection_enabled or obj.content.paused then
+        return -- Don't start if disabled or already paused
+    end
+
+    local timeout_ms = (config.inactivity_timeout_minutes or 15) * 60 * 1000
+    if timeout_ms <= 0 then return end -- Avoid issues with zero/negative timeout
+
+    inactivity_timer_id = vim.loop.new_timer()
+    -- Check more frequently than the timeout itself, e.g., every 1 minute or 1/5th of timeout, capped at a reasonable minimum like 30s
+    local check_interval_ms = math.max(30000, math.min(timeout_ms / 5, 60000))
+
+    inactivity_timer_id:start(check_interval_ms, check_interval_ms, vim.schedule_wrap(check_inactivity))
+end
+
+local function TimePause(is_manual_pause)
+    -- is_manual_pause is true if called by user command, false/nil if called by inactivity detection (check_inactivity)
+    -- However, check_inactivity now calls TimePause without args, so we infer.
+    -- The important distinction is whether `paused_due_to_inactivity` was set *before* calling TimePause.
+
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+    stop_inactivity_timer() -- Always stop the timer when pausing
+
+    if not obj.content.paused then -- Only notify and save if it wasn't already paused
+        obj.content.paused = true
+        save(obj)
+        if not paused_due_to_inactivity then -- If this pause is not due to inactivity, it's manual or from elsewhere
+            notify({ 'Timetracking paused' }, 'info', { title = 'TimeTracking - Pause' })
+        end
+        -- If paused_due_to_inactivity is true, the notification is handled in check_inactivity
+    end
+end
+
+TimeResume = function()
+    init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+
+    local was_paused_by_inactivity = paused_due_to_inactivity
+    paused_due_to_inactivity = false -- Reset flag immediately
+
+    if obj.content.paused then -- Only do something if actually paused
+        obj.content.paused = false
+        save(obj)
+        if was_paused_by_inactivity then
+            notify({ 'Timetracking resumed (activity detected)' }, 'info', { title = 'TimeTracking - Resume' })
+        else
+            notify({ 'Timetracking resumed' }, 'info', { title = 'TimeTracking - Resume' })
+        end
+    end
+
+    -- Always try to start the timer if detection is enabled and not paused
+    if config.inactivity_detection_enabled and not obj.content.paused then
+        start_inactivity_timer()
+    end
+    return obj
+end
+
+local function isPaused()
+    -- Ensure init has a chance to populate obj and obj.content
+    -- Pass a potentially nil hoursPerWeekday if obj.content is not yet set.
+    init({ path = obj.path, hoursPerWeekday = (obj and obj.content and obj.content['hoursPerWeekday'] or nil) })
+
+    -- After init, check if obj.content.paused is available.
+    -- If not, default to true (paused) as a fail-safe for tests.
+    if not obj or not obj.content or obj.content.paused == nil then
+        return true
+    end
     return obj.content.paused
 end
 
 local function TimeStart(weekday, time)
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    if isPaused() then
+    if isPaused() and not paused_due_to_inactivity then -- If manually paused, don't start. If paused by inactivity, TimeResume will handle.
         return
+    end
+
+    -- If it was paused due to inactivity, TimeResume should be called by autocommands first.
+    -- This function mainly handles the initial start or starting after a manual stop.
+    if obj.content.paused then -- if true here, it must be paused_due_to_inactivity
+      TimeResume() -- This will unpause and restart timer if needed
+      -- If still paused after TimeResume (shouldn't happen if logic is correct), then exit.
+      if obj.content.paused then return end
+    end
+
+    paused_due_to_inactivity = false -- Reset flag
+
+    if config.inactivity_detection_enabled and not obj.content.paused then
+        start_inactivity_timer()
     end
 
     if weekday == nil then
@@ -198,7 +321,9 @@ end
 
 local function TimeStop(weekday, time)
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    if isPaused() then
+    stop_inactivity_timer() -- Stop timer when stopping tracking
+
+    if isPaused() then -- Already paused (likely manually, or this is a redundant call)
         return
     end
 
@@ -603,14 +728,83 @@ Time = {
         save(obj)
         return obj
     end,
+    enable_inactivity_tracking = function()
+        init() -- ensure config is loaded
+        config.inactivity_detection_enabled = true
+        vim.g.timetrack_inactivity_detection_enabled = true -- keep global var in sync
+        enable_inactivity_tracking()
+    end,
+    disable_inactivity_tracking = function()
+        init() -- ensure config is loaded
+        config.inactivity_detection_enabled = false
+        vim.g.timetrack_inactivity_detection_enabled = false -- keep global var in sync
+        disable_inactivity_tracking()
+    end,
 }
 
+enable_inactivity_tracking = function()
+    init() -- Load latest config
+    config.inactivity_detection_enabled = true -- Explicitly set internal config state
+
+    vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI', 'TextChanged', 'TextChangedI', 'InsertEnter', 'FocusGained', 'WinEnter' }, {
+        group = inactivity_augroup,
+        callback = vim.schedule_wrap(function()
+            vim.v.event.timestamp = vim.loop.now() -- Update last event time
+            if paused_due_to_inactivity and config.inactivity_detection_enabled then
+                TimeResume() -- This will unpause and restart the timer
+            end
+        end),
+    })
+    -- Start timer only if not paused. If paused (manually), timer will start on resume.
+    if not obj.content.paused then
+        start_inactivity_timer()
+    end
+end
+
+disable_inactivity_tracking = function()
+    init() -- Load latest config
+    config.inactivity_detection_enabled = false -- Explicitly set internal config state
+    stop_inactivity_timer()
+    vim.api.nvim_clear_autocmds({ group = inactivity_augroup })
+
+    if paused_due_to_inactivity then
+        -- If it was paused by inactivity, and we are now disabling the feature,
+        -- resume tracking as if activity was detected.
+        obj.content.paused = false
+        paused_due_to_inactivity = false
+        save(obj)
+        notify({ 'Inactivity detection disabled, resuming timetracking.' }, 'info', { title = 'TimeTracking' })
+    end
+end
+
+
 return {
-    setup = init,
+    setup = function(user_config)
+        init(user_config) -- Initialize/update config
+        -- After setup, decide whether to enable inactivity tracking based on final config
+        if config.inactivity_detection_enabled then
+            enable_inactivity_tracking()
+        else
+            disable_inactivity_tracking() -- Ensures any prior state is cleared if now disabled
+        end
+        return obj -- Return obj as original init did
+    end,
     TimeStart = TimeStart,
     TimeStop = TimeStop,
-    TimePause = TimePause,
+    TimePause = function() TimePause(true) end, -- Public TimePause is always manual
     TimeResume = TimeResume,
+    enable_inactivity_tracking = function()
+        init()
+        config.inactivity_detection_enabled = true
+        vim.g.timetrack_inactivity_detection_enabled = true
+        enable_inactivity_tracking()
+    end,
+    disable_inactivity_tracking = function()
+        init()
+        config.inactivity_detection_enabled = false
+        vim.g.timetrack_inactivity_detection_enabled = false
+        disable_inactivity_tracking()
+    end,
     setIllDay = setIllDay,
     setHoliday = setIllDay,
     addTime = addTime,
@@ -624,6 +818,6 @@ return {
         save(obj)
         return obj
     end,
-
+    isPaused = isPaused, -- Expose isPaused
     weekdays = weekdayNumberMap,
 }

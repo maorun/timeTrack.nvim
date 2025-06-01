@@ -39,5 +39,22 @@ end
 
 return {
     plenary_dep = plenary_dep,
+    plenary_dep = plenary_dep,
     notify_dep = notify_dep,
+    wait = function(ms, callback)
+        -- vim.wait is the preferred method if available (Neovim 0.5+)
+        -- It processes events while waiting.
+        if vim.wait then
+            vim.wait(ms, callback or function() end, 10) -- Check every 10ms
+        else
+            -- Fallback for older Neovim or if vim.wait is not suitable
+            -- This is a very basic sleep and might not process events well for timers.
+            local start = vim.loop.now()
+            while vim.loop.now() - start < ms do
+                vim.loop.sleep(10) -- Sleep in 10ms intervals
+                -- May need vim.rpcnotify(0, 'nvim_eval', '1') or similar to drive event loop
+            end
+            if callback then callback() end
+        end
+    end,
 }
