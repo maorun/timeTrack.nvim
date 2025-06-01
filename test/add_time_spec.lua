@@ -29,17 +29,17 @@ describe('addTime', function()
 
         assert.are.same(
             hoursToAdd,
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         local endTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].endTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].endTime
         local endTimeInfo = os_module.date('*t', endTimeTs)
         assert.are.same(23, endTimeInfo.hour)
         assert.are.same(0, endTimeInfo.min)
         assert.are.same(0, endTimeInfo.sec)
 
         local startTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].startTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].startTime
         assert.are.same(hoursToAdd * 3600, endTimeTs - startTimeTs)
     end)
 
@@ -53,17 +53,17 @@ describe('addTime', function()
 
         assert.are.same(
             hoursToAdd,
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         local endTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].endTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].endTime
         local endTimeInfo = os_module.date('*t', endTimeTs)
         assert.are.same(23, endTimeInfo.hour)
         assert.are.same(0, endTimeInfo.min)
         assert.are.same(0, endTimeInfo.sec)
 
         local startTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].startTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].startTime
         -- Using math.floor for comparison due to potential floating point inaccuracies with seconds
         assert.are.same(math.floor(hoursToAdd * 3600), math.floor(endTimeTs - startTimeTs))
     end)
@@ -79,17 +79,17 @@ describe('addTime', function()
 
         assert.are.same(
             hoursToAdd,
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         local endTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].endTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].endTime
         local endTimeInfo = os_module.date('*t', endTimeTs)
         assert.are.same(23, endTimeInfo.hour)
         assert.are.same(0, endTimeInfo.min)
         assert.are.same(0, endTimeInfo.sec)
 
         local startTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].startTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].startTime
         assert.are.same(hoursToAdd * 3600, endTimeTs - startTimeTs)
     end)
 
@@ -106,7 +106,7 @@ describe('addTime', function()
 
         assert.are.same(
             hoursToAdd,
-            data.content.data[os_module.date('%Y')][os_module.date('%W')]["default_project"]["default_file"].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         -- The problem description says "should resume and re-pause", implying isPaused should be true.
         -- However, addTime typically unpauses. Let's assume it should be unpaused after adding time.
@@ -131,14 +131,17 @@ describe('addTime', function()
         local yearKey = os_module.date('%Y')
         local weekKey = os_module.date('%W')
 
-        assert.are.same(2, #data.content.data[yearKey][weekKey]["default_project"]["default_file"].weekdays[targetWeekday].items)
+        assert.are.same(
+            2,
+            #data.content.data[yearKey][weekKey]['default_project']['default_file'].weekdays[targetWeekday].items
+        )
         assert.are.same(
             initialHours,
-            data.content.data[yearKey][weekKey]["default_project"]["default_file"].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[yearKey][weekKey]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         assert.are.same(
             additionalHours,
-            data.content.data[yearKey][weekKey]["default_project"]["default_file"].weekdays[targetWeekday].items[2].diffInHours
+            data.content.data[yearKey][weekKey]['default_project']['default_file'].weekdays[targetWeekday].items[2].diffInHours
         )
     end)
 end)

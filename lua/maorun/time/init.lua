@@ -74,8 +74,8 @@ local function init(user_config)
 
     local year_str = os.date('%Y')
     local week_str = os.date('%W')
-    local project_name = "default_project" -- Hardcoded for now
-    local file_name = "default_file"       -- Hardcoded for now
+    local project_name = 'default_project' -- Hardcoded for now
+    local file_name = 'default_file' -- Hardcoded for now
 
     if obj.content['data'][year_str] == nil then
         obj.content['data'][year_str] = {}
@@ -89,8 +89,8 @@ local function init(user_config)
     if obj.content['data'][year_str][week_str][project_name][file_name] == nil then
         obj.content['data'][year_str][week_str][project_name][file_name] = {
             weekdays = {}, -- Will store weekday -> {summary={}, items={...}}
-                           -- The weekly summary (overhour) is not initialized here,
-                           -- it will be handled by the calculate function.
+            -- The weekly summary (overhour) is not initialized here,
+            -- it will be handled by the calculate function.
         }
     end
     return obj
@@ -135,7 +135,7 @@ local function calculate(opts)
 
     -- Iterate over projects in the current week
     for project_name, project_data in pairs(current_week_data) do
-        if project_name ~= "summary" then -- Skip the summary table itself
+        if project_name ~= 'summary' then -- Skip the summary table itself
             -- Iterate over files in the current project
             for file_name, file_data in pairs(project_data) do
                 if file_data.weekdays then
@@ -151,14 +151,17 @@ local function calculate(opts)
                         end
 
                         -- Update summary for this specific day under project -> file -> weekday
-                        if day_data.summary == nil then day_data.summary = {} end
+                        if day_data.summary == nil then
+                            day_data.summary = {}
+                        end
                         day_data.summary.diffInHours = time_in_weekday
 
                         local expected_hours = obj.content['hoursPerWeekday'][weekday_name] or 0
                         day_data.summary.overhour = time_in_weekday - expected_hours
 
                         -- Accumulate this day's overhour to the overall week summary
-                        current_week_data.summary.overhour = current_week_data.summary.overhour + day_data.summary.overhour
+                        current_week_data.summary.overhour = current_week_data.summary.overhour
+                            + day_data.summary.overhour
                         -- total_time_in_week = total_time_in_week + time_in_weekday -- Accumulate total logged time
                     end
                 end
@@ -201,8 +204,8 @@ local function TimeStart(opts)
 
     local weekday = opts.weekday
     local time = opts.time
-    local project = opts.project or "default_project"
-    local file = opts.file or "default_file"
+    local project = opts.project or 'default_project'
+    local file = opts.file or 'default_file'
 
     if weekday == nil then
         local current_wday_numeric = os.date('*t', os.time()).wday
@@ -216,9 +219,15 @@ local function TimeStart(opts)
     local week_str = os.date('%W', time) -- Use time for week_str for consistency
 
     -- Ensure path exists (init might have only created for current os.date)
-    if obj.content['data'][year_str] == nil then obj.content['data'][year_str] = {} end
-    if obj.content['data'][year_str][week_str] == nil then obj.content['data'][year_str][week_str] = {} end
-    if obj.content['data'][year_str][week_str][project] == nil then obj.content['data'][year_str][week_str][project] = {} end
+    if obj.content['data'][year_str] == nil then
+        obj.content['data'][year_str] = {}
+    end
+    if obj.content['data'][year_str][week_str] == nil then
+        obj.content['data'][year_str][week_str] = {}
+    end
+    if obj.content['data'][year_str][week_str][project] == nil then
+        obj.content['data'][year_str][week_str][project] = {}
+    end
     if obj.content['data'][year_str][week_str][project][file] == nil then
         obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
     end
@@ -254,8 +263,8 @@ local function TimeStop(opts)
 
     local weekday = opts.weekday
     local time = opts.time
-    local project = opts.project or "default_project"
-    local file = opts.file or "default_file"
+    local project = opts.project or 'default_project'
+    local file = opts.file or 'default_file'
 
     if weekday == nil then
         local current_wday_numeric = os.date('*t', os.time()).wday
@@ -331,15 +340,21 @@ local function calculateAverage()
 end
 
 local function saveTime(startTime, endTime, weekday, clearDay, project, file)
-    project = project or "default_project"
-    file = file or "default_file"
+    project = project or 'default_project'
+    file = file or 'default_file'
     local year_str = os.date('%Y', startTime) -- Use startTime to determine year/week
     local week_str = os.date('%W', startTime)
 
     -- Ensure path exists
-    if obj.content['data'][year_str] == nil then obj.content['data'][year_str] = {} end
-    if obj.content['data'][year_str][week_str] == nil then obj.content['data'][year_str][week_str] = {} end
-    if obj.content['data'][year_str][week_str][project] == nil then obj.content['data'][year_str][week_str][project] = {} end
+    if obj.content['data'][year_str] == nil then
+        obj.content['data'][year_str] = {}
+    end
+    if obj.content['data'][year_str][week_str] == nil then
+        obj.content['data'][year_str][week_str] = {}
+    end
+    if obj.content['data'][year_str][week_str][project] == nil then
+        obj.content['data'][year_str][week_str][project] = {}
+    end
     if obj.content['data'][year_str][week_str][project][file] == nil then
         obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
     end
@@ -380,7 +395,9 @@ local function saveTime(startTime, endTime, weekday, clearDay, project, file)
 
     notify({
         'Heute: ' .. string.format('%.2f', dayItem.summary.overhour) .. ' Stunden',
-        'Gesamt: ' .. string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour) .. ' Stunden',
+        'Gesamt: '
+            .. string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour)
+            .. ' Stunden',
     }, 'info', { title = 'TimeTracking - SaveTime' }) -- Changed title for clarity
 end
 
@@ -390,8 +407,8 @@ local function addTime(opts)
     local time = opts.time
     local weekday = opts.weekday
     local clearDay = opts.clearDay -- This is 'yes' or nil from setTime/setIllDay, or 'nope'
-    local project = opts.project or "default_project"
-    local file = opts.file or "default_file"
+    local project = opts.project or 'default_project'
+    local file = opts.file or 'default_file'
 
     -- The original clearDay logic: if nil, it's 'nope'; if 'yes', it's nil for saveTime's old check.
     -- This is confusing. Let's simplify: `clearDay` in `addTime` means "should the day be cleared before adding".
@@ -480,8 +497,8 @@ end
 local function subtractTime(opts)
     local time = opts.time
     local weekday = opts.weekday
-    local project = opts.project or "default_project"
-    local file = opts.file or "default_file"
+    local project = opts.project or 'default_project'
+    local file = opts.file or 'default_file'
 
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
     -- local years = obj.content['data'][os.date('%Y')] -- Not used
@@ -579,34 +596,36 @@ local function setIllDay(weekday)
 end
 
 local function clearDay(weekday, project, file)
-    project = project or "default_project"
-    file = file or "default_file"
+    project = project or 'default_project'
+    file = file or 'default_file'
     local year_str = os.date('%Y')
     local week_str = os.date('%W')
 
-    if obj.content['data'][year_str]
+    if
+        obj.content['data'][year_str]
         and obj.content['data'][year_str][week_str]
         and obj.content['data'][year_str][week_str][project]
         and obj.content['data'][year_str][week_str][project][file]
         and obj.content['data'][year_str][week_str][project][file]['weekdays']
         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
     then
-        local dayItems = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
+        local dayItems =
+            obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
         if dayItems then
             for key, _ in pairs(dayItems) do
                 dayItems[key] = nil
             end
         end
     end
-    calculate({year = year_str, weeknumber = week_str}) -- Recalculate for the current/affected week
+    calculate({ year = year_str, weeknumber = week_str }) -- Recalculate for the current/affected week
     save(obj)
 end
 
 ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
 local function setTime(opts)
     opts = opts or {}
-    local project = opts.project or "default_project"
-    local file = opts.file or "default_file"
+    local project = opts.project or 'default_project'
+    local file = opts.file or 'default_file'
 
     clearDay(opts.weekday, project, file) -- Pass project and file to clearDay
     addTime({
@@ -644,13 +663,13 @@ local function select(opts, callback)
         file = true,
     }, opts or {})
 
-    local selected_project = "default_project"
-    local selected_file = "default_file"
+    local selected_project = 'default_project'
+    local selected_file = 'default_file'
 
     local function get_file_input()
         if opts.file then
             vim.ui.input({ prompt = 'File name? (default: default_file) ' }, function(input)
-                selected_file = (input and input ~= "") and input or "default_file"
+                selected_file = (input and input ~= '') and input or 'default_file'
                 get_weekday_selection() -- Proceed to weekday selection
             end)
         else
@@ -661,7 +680,7 @@ local function select(opts, callback)
     local function get_project_input()
         if opts.project then
             vim.ui.input({ prompt = 'Project name? (default: default_project) ' }, function(input)
-                selected_project = (input and input ~= "") and input or "default_project"
+                selected_project = (input and input ~= '') and input or 'default_project'
                 get_file_input() -- Proceed to file input
             end)
         else
@@ -730,16 +749,18 @@ local function select(opts, callback)
         end
     end
 
-
     -- Start the chain of inputs
     get_project_input()
 end
 
 Time = {
     add = function()
-        select({}, function(hours, weekday, project, file) -- Add project and file to callback params
-            addTime({ time = hours, weekday = weekday, project = project, file = file })
-        end)
+        select(
+            {},
+            function(hours, weekday, project, file) -- Add project and file to callback params
+                addTime({ time = hours, weekday = weekday, project = project, file = file })
+            end
+        )
     end,
     addTime = addTime,
     subtract = function()
@@ -749,8 +770,8 @@ Time = {
     end,
     subtractTime = subtractTime,
     clearDay = clearDay, -- clearDay now takes project and file, but this public Time.clearDay would need them.
-                         -- This might require another vim.ui.select or direct args. For now, it's an issue.
-                         -- TODO: Adjust public Time.clearDay or make it internal / part of setTime only.
+    -- This might require another vim.ui.select or direct args. For now, it's an issue.
+    -- TODO: Adjust public Time.clearDay or make it internal / part of setTime only.
     TimePause = TimePause,
     TimeResume = TimeResume,
     TimeStop = TimeStop,

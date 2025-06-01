@@ -72,14 +72,14 @@ describe('init plugin', function()
         assert.are.same({
             [os.date('%Y')] = {
                 [os.date('%W')] = {
-                    ["default_project"] = {
-                        ["default_file"] = {
-                            weekdays = {}
-                        }
-                    }
+                    ['default_project'] = {
+                        ['default_file'] = {
+                            weekdays = {},
+                        },
+                    },
                     -- Week summary is not created by init directly anymore, but by calculate
-                }
-            }
+                },
+            },
         }, data.data)
     end)
 end)
@@ -104,7 +104,7 @@ it('should add/subtract time to a specific day', function()
     local year = os.date('%Y')
     local weekNum = os.date('%W')
     -- Access the data through the new structure for assertions
-    local week_content_path = data.content.data[year][weekNum]["default_project"]["default_file"]
+    local week_content_path = data.content.data[year][weekNum]['default_project']['default_file']
     local week_summary_path = data.content.data[year][weekNum].summary -- Week summary is still at week level
 
     local configured_hours_day = data.content.hoursPerWeekday[current_weekday]
@@ -115,7 +115,10 @@ it('should add/subtract time to a specific day', function()
         week_content_path.weekdays[current_weekday].summary.overhour,
         'Daily overhour for ' .. current_weekday .. ' after 1st add'
     )
-    assert.is_not_nil(week_summary_path, "Week summary should exist after calculate (called by addTime via saveTime)")
+    assert.is_not_nil(
+        week_summary_path,
+        'Week summary should exist after calculate (called by addTime via saveTime)'
+    )
     if week_summary_path then -- Guard against nil if calculate didn't run or create it
         assert.are.same(
             expected_daily_overhour_1st_add,
@@ -129,7 +132,7 @@ it('should add/subtract time to a specific day', function()
         weekday = current_weekday,
     })
     -- Re-access paths as 'data' object might be new
-    week_content_path = data.content.data[year][weekNum]["default_project"]["default_file"]
+    week_content_path = data.content.data[year][weekNum]['default_project']['default_file']
     week_summary_path = data.content.data[year][weekNum].summary
 
     local total_logged_hours_after_2nd_add = 4 -- (2 from first add + 2 from second)
@@ -147,8 +150,8 @@ it('should add/subtract time to a specific day', function()
         )
     end
 
-    data = maorunTime.subtractTime({time = 2, weekday = current_weekday})
-    week_content_path = data.content.data[year][weekNum]["default_project"]["default_file"]
+    data = maorunTime.subtractTime({ time = 2, weekday = current_weekday })
+    week_content_path = data.content.data[year][weekNum]['default_project']['default_file']
     week_summary_path = data.content.data[year][weekNum].summary
 
     local final_logged_hours_after_subtract = 2 -- (4 - 2)

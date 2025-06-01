@@ -25,8 +25,8 @@ describe('calculate', function()
         -- and the weekdays table under it should be empty.
         local year_data = data.content.data[os.date('%Y')]
         local week_data = year_data and year_data[os.date('%W')]
-        local project_data = week_data and week_data["default_project"]
-        local file_data = project_data and project_data["default_file"]
+        local project_data = week_data and week_data['default_project']
+        local file_data = project_data and project_data['default_file']
         assert.are.same({}, file_data and file_data.weekdays or nil)
 
         local targetWeekday = 'Monday'
@@ -39,21 +39,21 @@ describe('calculate', function()
 
         assert.are.same(
             -6,
-            data.content.data[year][week]["default_project"]["default_file"].weekdays[targetWeekday].summary.overhour,
+            data.content.data[year][week]['default_project']['default_file'].weekdays[targetWeekday].summary.overhour,
             'Daily overhour for ' .. targetWeekday
         )
         assert.are.same(-6, data.content.data[year][week].summary.overhour, 'Weekly overhour') -- Week summary path is correct
         assert.are.same(
             2,
-            data.content.data[year][week]["default_project"]["default_file"].weekdays[targetWeekday].summary.diffInHours
+            data.content.data[year][week]['default_project']['default_file'].weekdays[targetWeekday].summary.diffInHours
         )
         assert.are.same(
             -6,
-            data.content.data[year][week]["default_project"]["default_file"].weekdays[targetWeekday].summary.overhour
+            data.content.data[year][week]['default_project']['default_file'].weekdays[targetWeekday].summary.overhour
         )
         assert.are.same(
             2,
-            data.content.data[year][week]["default_project"]["default_file"].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[year][week]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
     end)
 
@@ -83,11 +83,11 @@ describe('calculate', function()
         -- Assertions
         assert.are.same(
             7,
-            data.content.data[currentYear][currentWeek]["default_project"]["default_file"].weekdays[targetWeekday].summary.diffInHours
+            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[targetWeekday].summary.diffInHours
         )
         assert.are.same(
             1,
-            data.content.data[currentYear][currentWeek]["default_project"]["default_file"].weekdays[targetWeekday].summary.overhour
+            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[targetWeekday].summary.overhour
         )
         assert.are.same(1, data.content.data[currentYear][currentWeek].summary.overhour) -- Week summary path
     end)
@@ -109,11 +109,11 @@ describe('calculate', function()
         -- Assertions for targetWeekday
         assert.are.same(
             5,
-            data.content.data[currentYear][currentWeek]["default_project"]["default_file"].weekdays[targetWeekday].summary.diffInHours
+            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[targetWeekday].summary.diffInHours
         )
         assert.are.same(
             -3,
-            data.content.data[currentYear][currentWeek]["default_project"]["default_file"].weekdays[targetWeekday].summary.overhour
+            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[targetWeekday].summary.overhour
         )
         -- Assertion for total summary
         assert.are.same(-3, data.content.data[currentYear][currentWeek].summary.overhour) -- Week summary path
@@ -137,21 +137,21 @@ describe('calculate', function()
         -- Assertions for weekday1 (Monday)
         assert.are.same(
             7,
-            data.content.data[currentYear][currentWeek]["default_project"]["default_file"].weekdays[weekday1].summary.diffInHours
+            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[weekday1].summary.diffInHours
         )
         assert.are.same(
             -1,
-            data.content.data[currentYear][currentWeek]["default_project"]["default_file"].weekdays[weekday1].summary.overhour
+            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[weekday1].summary.overhour
         )
 
         -- Assertions for weekday2 (Tuesday)
         assert.are.same(
             9,
-            data.content.data[currentYear][currentWeek]["default_project"]["default_file"].weekdays[weekday2].summary.diffInHours
+            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[weekday2].summary.diffInHours
         )
         assert.are.same(
             1,
-            data.content.data[currentYear][currentWeek]["default_project"]["default_file"].weekdays[weekday2].summary.overhour
+            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[weekday2].summary.overhour
         )
 
         -- Assertion for total summary
@@ -207,20 +207,23 @@ describe('calculate', function()
         if not fileData.data[currentYear][currentWeekString] then
             fileData.data[currentYear][currentWeekString] = {
                 -- summary will be created by calculate if it doesn't exist
-                ["default_project"] = {
-                    ["default_file"] = {
-                        weekdays = {}
-                    }
-                }
+                ['default_project'] = {
+                    ['default_file'] = {
+                        weekdays = {},
+                    },
+                },
             }
-        elseif not fileData.data[currentYear][currentWeekString]["default_project"] then
-             fileData.data[currentYear][currentWeekString]["default_project"] = {
-                ["default_file"] = {
-                    weekdays = {}
-                }
+        elseif not fileData.data[currentYear][currentWeekString]['default_project'] then
+            fileData.data[currentYear][currentWeekString]['default_project'] = {
+                ['default_file'] = {
+                    weekdays = {},
+                },
             }
-        elseif not fileData.data[currentYear][currentWeekString]["default_project"]["default_file"] then
-            fileData.data[currentYear][currentWeekString]["default_project"]["default_file"] = { weekdays = {} }
+        elseif
+            not fileData.data[currentYear][currentWeekString]['default_project']['default_file']
+        then
+            fileData.data[currentYear][currentWeekString]['default_project']['default_file'] =
+                { weekdays = {} }
         end
 
         -- Ensure 'paused' key exists, copying from initialContent or defaulting.
@@ -242,7 +245,7 @@ describe('calculate', function()
 
         assert.are.same(
             -2,
-            data.content.data[yearFromOS][weekFromOS]["default_project"]["default_file"].weekdays[dayToLog].summary.overhour
+            data.content.data[yearFromOS][weekFromOS]['default_project']['default_file'].weekdays[dayToLog].summary.overhour
         )
         assert.are.same(
             prevWeekOverhourValue - 2, -- 5 - 2 = 3
@@ -283,22 +286,37 @@ describe('calculate', function()
 
         fileContent.data[testYear][testWeek] = {
             -- summary will be created by calculate
-            ["default_project"] = {
-                ["default_file"] = {
+            ['default_project'] = {
+                ['default_file'] = {
                     weekdays = {
                         [testWeekday] = {
                             -- summary for weekday will be created by calculate
                             items = {
                                 {
-                                    startTime = os.time({ year = 2022, month = 7, day = 27, hour = 9, min = 0, sec = 0 }),
-                                    endTime = os.time({ year = 2022, month = 7, day = 27, hour = 9, min = 0, sec = 0 }) + loggedHours * 3600,
+                                    startTime = os.time({
+                                        year = 2022,
+                                        month = 7,
+                                        day = 27,
+                                        hour = 9,
+                                        min = 0,
+                                        sec = 0,
+                                    }),
+                                    endTime = os.time({
+                                        year = 2022,
+                                        month = 7,
+                                        day = 27,
+                                        hour = 9,
+                                        min = 0,
+                                        sec = 0,
+                                    })
+                                        + loggedHours * 3600,
                                     diffInHours = loggedHours,
                                 },
                             },
-                        }
-                    }
-                }
-            }
+                        },
+                    },
+                },
+            },
         }
         Path:new(tempPath):write(vim.fn.json_encode(fileContent), 'w')
 
@@ -318,10 +336,10 @@ describe('calculate', function()
         )
 
         assert.is_not_nil(
-            weekData["default_project"]["default_file"].weekdays,
+            weekData['default_project']['default_file'].weekdays,
             'weekData.weekdays should exist for ' .. testYear .. ' week ' .. testWeek -- Check project/file path
         )
-        local weekdayData = weekData["default_project"]["default_file"].weekdays[testWeekday]
+        local weekdayData = weekData['default_project']['default_file'].weekdays[testWeekday]
         assert.is_not_nil(
             weekdayData,
             'Data for '
@@ -360,10 +378,10 @@ describe('calculate', function()
         assert.is_not_nil(weekData, 'Week data should exist even if no time logged')
         assert.is_not_nil(weekData.summary, 'Week summary should exist')
 
-        local projectData = weekData["default_project"]
-        assert.is_not_nil(projectData, "Default project data should exist")
-        local fileData = projectData["default_file"]
-        assert.is_not_nil(fileData, "Default file data should exist")
+        local projectData = weekData['default_project']
+        assert.is_not_nil(projectData, 'Default project data should exist')
+        local fileData = projectData['default_file']
+        assert.is_not_nil(fileData, 'Default file data should exist')
         assert.is_not_nil(fileData.weekdays, 'Weekdays table should exist in default project/file')
 
         assert.are.same(
@@ -406,7 +424,7 @@ describe('calculate', function()
         local weekData = data.content.data[currentYear][currentWeek]
         assert.is_not_nil(weekData, 'Week data should exist')
 
-        local weekdayData = weekData["default_project"]["default_file"].weekdays[targetWeekday]
+        local weekdayData = weekData['default_project']['default_file'].weekdays[targetWeekday]
         assert.is_not_nil(weekdayData, 'Data for ' .. targetWeekday .. ' should exist')
         assert.is_not_nil(weekdayData.summary, 'Summary for ' .. targetWeekday .. ' should exist')
 
@@ -441,7 +459,7 @@ describe('setIllDay', function()
         local data = maorunTime.setIllDay(targetWeekdayForAvg) -- Uses default project/file
         local expected_avg = 40 / 7
         local actual_avg =
-            data.content.data[os.date('%Y')][os.date('%W')]["default_project"]["default_file"].weekdays[targetWeekdayForAvg].items[1].diffInHours
+            data.content.data[os.date('%Y')][os.date('%W')]['default_project']['default_file'].weekdays[targetWeekdayForAvg].items[1].diffInHours
         assert(
             math.abs(expected_avg - actual_avg) < 0.001,
             string.format(
@@ -467,7 +485,7 @@ describe('setIllDay', function()
         local data = maorunTime.setIllDay(targetCustomWeekday) -- Uses default project/file
         assert.are.same(
             7.2, -- This average ( (8+8+8+7+5) / 5 = 36/5 = 7.2 ) should still be correct
-            data.content.data[os.date('%Y')][os.date('%W')]["default_project"]["default_file"].weekdays[targetCustomWeekday].items[1].diffInHours
+            data.content.data[os.date('%Y')][os.date('%W')]['default_project']['default_file'].weekdays[targetCustomWeekday].items[1].diffInHours
         )
     end)
 end)
