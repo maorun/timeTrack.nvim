@@ -72,7 +72,7 @@ jobs:
       - name: run test
         shell: bash
         run: |
-          luacov vusted ./test
+          lua -lluacov $(which vusted) ./test
 
       - name: Generate Luacov report
         run: luacov
