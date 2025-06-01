@@ -103,6 +103,13 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
 
+      - name: Setup Neovim
+        uses: rhysd/action-setup-vim@v1
+        id: vim
+        with:
+          neovim: true
+          version: nightly
+
       - name: Cache Lua installation
         uses: actions/cache@v4
         id: cache-luajit # Added id for consistency, step name matches test job
