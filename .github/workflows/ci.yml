@@ -146,7 +146,7 @@ jobs:
       - name: Run tests for coverage
         shell: bash
         run: |
-          vusted --lua-lluacov ./test
+          vusted --coverage ./test
 
       - name: Generate Luacov report
         run: luacov ${{ github.workspace }}/luacov.stats.out # This generates luacov.report.out from luacov.stats.out
