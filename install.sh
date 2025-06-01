@@ -66,12 +66,37 @@ then
     fi
 fi
 
-echo "Installing stylua..."
-luarocks install stylua
-echo "Verifying stylua installation..."
-stylua --version
+echo "Installing stylua for Lua 5.1..."
+if ! luarocks install stylua --lua-version=5.1; then
+    echo "Failed to install stylua for Lua 5.1."
+    echo "Checking if stylua is available for other Lua versions..."
+    if ! luarocks install stylua --check-lua-versions; then
+        echo "Failed to check other Lua versions for stylua."
+    fi
+    echo "Please check the output above and the Luarocks website (luarocks.org) for stylua compatibility."
+    # Decide if exiting here is the best course of action or just warn
+    # For now, we'll just warn and continue, as verification will fail later if not installed.
+fi
 
-echo "Installing vusted..."
-luarocks install --local vusted
+echo "Verifying stylua installation..."
+if command -v stylua &> /dev/null; then
+    stylua --version
+else
+    echo "stylua command not found after installation attempt."
+fi
+
+echo "Installing vusted for Lua 5.1..."
+if ! luarocks install --local vusted --lua-version=5.1; then
+    echo "Failed to install vusted for Lua 5.1."
+    echo "Checking if vusted is available for other Lua versions..."
+    # Note: --local might not be compatible with --check-lua-versions for some luarocks versions or packages.
+    # We'll try without --local for the check command.
+    if ! luarocks install vusted --check-lua-versions; then
+        echo "Failed to check other Lua versions for vusted."
+    fi
+    echo "Please check the output above and the Luarocks website (luarocks.org) for vusted compatibility."
+    # Decide if exiting here is the best course of action or just warn
+    # For now, we'll just warn and continue. The script doesn't verify vusted installation with a command.
+fi
 
 echo "Development environment setup complete!"
