@@ -72,7 +72,7 @@ jobs:
       - name: run test
         shell: bash
         run: |
-          luacov -r vusted ./test
+          luacov vusted ./test
 
       - name: Generate Luacov report
         run: luacov
