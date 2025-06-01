@@ -57,7 +57,6 @@ This project uses `stylua` for formatting and `vusted` for testing. The `install
 
 **Prerequisites:**
 
-*   **Neovim:** Ensure you have Neovim installed. You can find installation instructions at [Installing Neovim](https://github.com/neovim/neovim/wiki/Installing-Neovim).
 *   **Luarocks:** Used for installing `vusted` and `stylua`. The `install.sh` script will attempt to install Luarocks if it's not found on your system (for Linux and macOS). For other operating systems, or if the automatic installation fails, you might need to install it manually from [https://luarocks.org/wiki/rock/Installation](https://luarocks.org/wiki/rock/Installation).
 
 **Installation:**
