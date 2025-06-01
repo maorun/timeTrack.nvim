@@ -19,6 +19,8 @@ jobs:
     needs: lint
     name: Run Test
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       matrix:
         os:
@@ -26,6 +28,8 @@ jobs:
           - macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
       - uses: rhysd/action-setup-vim@v1
         id: vim
         with:
@@ -63,11 +67,21 @@ jobs:
         shell: bash
         run: |
           luarocks install vusted
+          luarocks install luacov
 
       - name: run test
         shell: bash
         run: |
-          vusted ./test
+          luacov -r vusted ./test
+
+      - name: Generate Luacov report
+        run: luacov
+
+      - name: Commit coverage report
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore(ci): update coverage report'
+          file_pattern: luacov.report.out luacov.stats.out
 
   docs:
     needs: test

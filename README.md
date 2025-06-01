@@ -76,3 +76,6 @@ After setting up the environment and installing `vusted`, you can run tests usin
 ```sh
 vusted ./test
 ```
+
+## Test Coverage
+View the latest test coverage report: [luacov.report.out](luacov.report.out)
