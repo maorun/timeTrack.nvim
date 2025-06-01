@@ -114,7 +114,6 @@ jobs:
 
       - name: Setup Lua
         uses: leafo/gh-actions-lua@v11
-        if: steps.cache-luajit.outputs.cache-hit != 'true' # Made conditional
         with:
           luaVersion: "5.1"
 
