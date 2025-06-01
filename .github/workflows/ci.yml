@@ -139,7 +139,7 @@ jobs:
       - name: Run tests with Luacov
         shell: bash
         run: |
-          lua -lluacov $(which vusted) ./test
+          luacov vusted ./test
 
       - name: Generate Luacov report
         run: luacov # This generates luacov.report.out from luacov.stats.out
