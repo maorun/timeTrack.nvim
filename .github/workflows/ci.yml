@@ -149,7 +149,7 @@ jobs:
           LUACOV_STATSFILE=${{ github.workspace }}/luacov.stats.out LUA_OPTS="-lluacov" vusted ./test
 
       - name: Generate Luacov report
-        run: luacov ${{ github.workspace }}/luacov.stats.out # This generates luacov.report.out from luacov.stats.out
+        run: LUA_OPTS="-lluacov" luacov ${{ github.workspace }}/luacov.stats.out # This generates luacov.report.out from luacov.stats.out
 
       - name: Commit coverage report
         uses: stefanzweifel/git-auto-commit-action@v5
