@@ -146,17 +146,7 @@ jobs:
       - name: Run tests for coverage
         shell: bash
         run: |
-          LUACOV_STATSFILE=${{ github.workspace }}/luacov.stats.out LUA_OPTS="-lluacov" vusted ./test
-
-      - name: Debug: List files after test run
-        shell: bash
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Workspace content:"
-          ls -Rla ${{ github.workspace }}
-          echo "Searching for luacov.stats.out in workspace:"
-          find ${{ github.workspace }} -name "luacov.stats.out" -print -exec echo "Found luacov.stats.out above" \;
-          echo "Value of LUACOV_STATSFILE in this step: $LUACOV_STATSFILE"
+          vusted --lua-lluacov ./test
 
       - name: Generate Luacov report
         run: luacov ${{ github.workspace }}/luacov.stats.out # This generates luacov.report.out from luacov.stats.out
