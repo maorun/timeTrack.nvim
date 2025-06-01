@@ -63,19 +63,11 @@ jobs:
         shell: bash
         run: |
           luarocks install vusted
-          luarocks install luacov
 
       - name: run test
         shell: bash
         run: |
-          lua -lluacov $(which vusted) ./test
-
-      - name: Upload Luacov stats
-        uses: actions/upload-artifact@v4
-        with:
-          name: luacov-stats-${{ matrix.os }}
-          path: luacov.stats.out
-          if-no-files-found: error # Optional: ensures the job fails if the stats file isn't found
+          vusted ./test
 
   docs:
     needs: test
@@ -140,19 +132,15 @@ jobs:
       - name: Setup Luarocks
         uses: leafo/gh-actions-luarocks@v5
 
-      - name: Install Luacov
-        run: luarocks install luacov
+      - name: Install dependencies
+        run: |
+          luarocks install vusted
+          luarocks install luacov
 
-      - name: Download Luacov stats from Ubuntu
-        uses: actions/download-artifact@v4
-        with:
-          name: luacov-stats-ubuntu-latest
-          # This will download to the current workspace, potentially in a folder.
-          # By default, it downloads into a directory named after the artifact.
-          # So, 'luacov-stats-ubuntu-latest/luacov.stats.out'
-
-      - name: Move Luacov stats file
-        run: mv luacov-stats-ubuntu-latest/luacov.stats.out luacov.stats.out
+      - name: Run tests with Luacov
+        shell: bash
+        run: |
+          lua -lluacov $(which vusted) ./test
 
       - name: Generate Luacov report
         run: luacov # This generates luacov.report.out from luacov.stats.out
