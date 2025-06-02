@@ -19,6 +19,59 @@ if [[ "${CURRENT_OS}" == "windows" ]]; then
     exit 0
 fi
 
+echo "Checking for Neovim..."
+if command -v nvim &> /dev/null
+then
+    echo "Neovim is already installed."
+    nvim --version
+else
+    echo "Neovim not found. Proceeding with installation attempts..."
+    if [[ "${CURRENT_OS}" == "linux" ]]; then
+       echo "Attempting to install Neovim for Linux..."
+       # Try package managers first
+       if command -v apt-get &> /dev/null; then
+           echo "Attempting installation via apt-get..."
+           sudo apt-get update && sudo apt-get install -y neovim
+       elif command -v yum &> /dev/null; then
+           echo "Attempting installation via yum..."
+           sudo yum install -y neovim
+       fi
+
+       # Check if Neovim was installed by package manager
+       if command -v nvim &> /dev/null; then
+           echo "Neovim installed successfully via package manager."
+           nvim --version
+       else
+           echo "ERROR: Neovim could not be installed via apt-get or yum." >&2
+           echo "Please install Neovim manually and re-run this script." >&2
+           exit 1
+       fi
+   elif [[ "${CURRENT_OS}" == "macos" ]]; then # This is the new block to add/fill
+       echo "Attempting to install Neovim for macOS..."
+       # Try Homebrew first
+       if command -v brew &> /dev/null; then
+           echo "Attempting installation via Homebrew..."
+           brew install neovim
+       else
+           echo "Homebrew not found. Skipping Homebrew installation."
+       fi
+
+       # Check if Neovim was installed by Homebrew
+       if command -v nvim &> /dev/null; then
+           echo "Neovim installed successfully via Homebrew."
+           nvim --version
+       else
+           echo "ERROR: Neovim could not be installed via Homebrew." >&2
+           echo "Please ensure Homebrew is installed and working, then install Neovim manually (e.g., 'brew install neovim') and re-run this script." >&2
+           exit 1
+       fi
+   else
+       echo "ERROR: Automated Neovim installation is not configured for ${CURRENT_OS} in this script." >&2
+       echo "Please install Neovim manually and re-run this script." >&2
+       exit 1
+   fi
+fi
+
 echo "Starting development environment setup..."
 
 # Check for Luarocks
