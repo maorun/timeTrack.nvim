@@ -1,0 +1,4 @@
+-- Coverage configuration for luacov
+includes = {
+  "lua/"
+}
