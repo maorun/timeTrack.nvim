@@ -29,17 +29,17 @@ describe('addTime', function()
 
         assert.are.same(
             hoursToAdd,
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         local endTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].endTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].endTime
         local endTimeInfo = os_module.date('*t', endTimeTs)
         assert.are.same(23, endTimeInfo.hour)
         assert.are.same(0, endTimeInfo.min)
         assert.are.same(0, endTimeInfo.sec)
 
         local startTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].startTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].startTime
         assert.are.same(hoursToAdd * 3600, endTimeTs - startTimeTs)
     end)
 
@@ -48,22 +48,39 @@ describe('addTime', function()
         local targetWeekday = 'Tuesday'
         local hoursToAdd = 2.5
         maorunTime.addTime({ time = hoursToAdd, weekday = targetWeekday })
+
+        -- Calculate the year and week that addTime would have used
+        -- NOTE: Using a fixed os.time() for consistent test runs might be better in real scenarios,
+        -- but for now, this replicates the logic closely.
+        local current_ts_for_test = os_module.time()
+        local currentWeekdayNumeric_for_test = os_module.date('*t', current_ts_for_test).wday - 1
+        -- Accessing the weekdays map from the maorunTime module itself
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[targetWeekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
+
         local data =
-            maorunTime.calculate({ year = os_module.date('%Y'), weeknumber = os_module.date('%W') })
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.are.same(
             hoursToAdd,
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         local endTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].endTime
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekday].items[1].endTime
         local endTimeInfo = os_module.date('*t', endTimeTs)
         assert.are.same(23, endTimeInfo.hour)
         assert.are.same(0, endTimeInfo.min)
         assert.are.same(0, endTimeInfo.sec)
 
         local startTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].startTime
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekday].items[1].startTime
         -- Using math.floor for comparison due to potential floating point inaccuracies with seconds
         assert.are.same(math.floor(hoursToAdd * 3600), math.floor(endTimeTs - startTimeTs))
     end)
@@ -79,17 +96,17 @@ describe('addTime', function()
 
         assert.are.same(
             hoursToAdd,
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         local endTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].endTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].endTime
         local endTimeInfo = os_module.date('*t', endTimeTs)
         assert.are.same(23, endTimeInfo.hour)
         assert.are.same(0, endTimeInfo.min)
         assert.are.same(0, endTimeInfo.sec)
 
         local startTimeTs =
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].startTime
+            data.content.data[os_module.date('%Y')][os_module.date('%W')]['default_project']['default_file'].weekdays[targetWeekday].items[1].startTime
         assert.are.same(hoursToAdd * 3600, endTimeTs - startTimeTs)
     end)
 
@@ -101,12 +118,26 @@ describe('addTime', function()
         local targetWeekday = 'Wednesday'
         local hoursToAdd = 4
         maorunTime.addTime({ time = hoursToAdd, weekday = targetWeekday })
+
+        -- Calculate the year and week that addTime would have used
+        local current_ts_for_test = os_module.time()
+        local currentWeekdayNumeric_for_test = os_module.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[targetWeekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
+
         local data =
-            maorunTime.calculate({ year = os_module.date('%Y'), weeknumber = os_module.date('%W') })
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.are.same(
             hoursToAdd,
-            data.content.data[os_module.date('%Y')][os_module.date('%W')].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         -- The problem description says "should resume and re-pause", implying isPaused should be true.
         -- However, addTime typically unpauses. Let's assume it should be unpaused after adding time.
@@ -126,19 +157,34 @@ describe('addTime', function()
 
         maorunTime.addTime({ time = initialHours, weekday = targetWeekday })
         maorunTime.addTime({ time = additionalHours, weekday = targetWeekday })
-        local data =
-            maorunTime.calculate({ year = os_module.date('%Y'), weeknumber = os_module.date('%W') })
-        local yearKey = os_module.date('%Y')
-        local weekKey = os_module.date('%W')
 
-        assert.are.same(2, #data.content.data[yearKey][weekKey].weekdays[targetWeekday].items)
+        -- Calculate the year and week that addTime would have used for targetWeekday
+        local current_ts_for_test = os_module.time() -- Time reference for date calculations
+        local currentWeekdayNumeric_for_test = os_module.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[targetWeekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+
+        assert.are.same(
+            2,
+            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekday].items
+        )
         assert.are.same(
             initialHours,
-            data.content.data[yearKey][weekKey].weekdays[targetWeekday].items[1].diffInHours
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekday].items[1].diffInHours
         )
         assert.are.same(
             additionalHours,
-            data.content.data[yearKey][weekKey].weekdays[targetWeekday].items[2].diffInHours
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekday].items[2].diffInHours
         )
     end)
 end)
