@@ -166,7 +166,7 @@ jobs:
           vusted --coverage ./test
 
       - name: Generate Luacov report
-        run: luacov
+        run: luacov -c .luacov
 
       - name: Commit coverage report
         uses: stefanzweifel/git-auto-commit-action@v5
