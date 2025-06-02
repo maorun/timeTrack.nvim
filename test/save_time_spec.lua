@@ -49,8 +49,6 @@ describe('saveTime', function()
 
     it('should append multiple time entries for the same day via multiple addTime calls', function()
         -- maorunTime.setup({ path = tempPath }) -- Already in before_each
-        local year = os_module.date('%Y')
-        local week_number_str = os_module.date('%W')
         local weekday = 'Tuesday'
         local hours_to_add1 = 3
         local hours_to_add2 = 2.5
@@ -58,9 +56,22 @@ describe('saveTime', function()
         maorunTime.addTime({ time = hours_to_add1, weekday = weekday })
         maorunTime.addTime({ time = hours_to_add2, weekday = weekday })
 
-        local data = maorunTime.calculate({ year = year, weeknumber = week_number_str })
+        -- Calculate the year and week that addTime would have used for weekday
+        local current_ts_for_test = os_module.time()
+        local currentWeekdayNumeric_for_test = os_module.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
+
+        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local items =
-            data.content.data[year][week_number_str]['default_project']['default_file'].weekdays[weekday].items
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items
 
         assert.are.same(2, #items, 'Should have two items for the weekday')
         assert.are.same(hours_to_add1, items[1].diffInHours)
@@ -69,31 +80,53 @@ describe('saveTime', function()
 
     it('should correctly calculate diffInHours (positive)', function()
         -- maorunTime.setup({ path = tempPath }) -- Already in before_each
-        local year = os_module.date('%Y')
-        local week_number_str = os_module.date('%W')
         local weekday = 'Wednesday'
         -- Let addTime determine startTime and endTime based on 23:00 end time.
         local hours_duration = 3.5
         maorunTime.addTime({ time = hours_duration, weekday = weekday })
 
-        local data = maorunTime.calculate({ year = year, weeknumber = week_number_str })
+        -- Calculate the year and week that addTime would have used for weekday
+        local current_ts_for_test = os_module.time()
+        local currentWeekdayNumeric_for_test = os_module.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
+
+        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local item =
-            data.content.data[year][week_number_str]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
         assert.are.same(hours_duration, item.diffInHours)
     end)
 
     it('should correctly save readable time formats (HH:MM)', function()
         -- maorunTime.setup({ path = tempPath }) -- Already in before_each
-        local year = os_module.date('%Y')
-        local week_number_str = os_module.date('%W')
         local weekday = 'Thursday'
         local hours_to_add = 1
 
         maorunTime.addTime({ time = hours_to_add, weekday = weekday })
 
-        local data = maorunTime.calculate({ year = year, weeknumber = week_number_str })
+        -- Calculate the year and week that addTime would have used for weekday
+        local current_ts_for_test = os_module.time()
+        local currentWeekdayNumeric_for_test = os_module.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
+
+        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local item =
-            data.content.data[year][week_number_str]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
 
         assert.is_not_nil(item.startTime, 'startTime should be set')
         assert.is_not_nil(item.endTime, 'endTime should be set')
@@ -120,16 +153,27 @@ describe('saveTime', function()
 
     it('should correctly save a time entry with negative diffInHours via subtractTime', function()
         -- maorunTime.setup({ path = tempPath }) -- Already in before_each
-        local year = os_module.date('%Y')
-        local week_number_str = os_module.date('%W')
         local weekday = 'Friday'
         local hours_to_subtract = 2
 
         maorunTime.subtractTime({ time = hours_to_subtract, weekday = weekday })
 
-        local data = maorunTime.calculate({ year = year, weeknumber = week_number_str })
+        -- Calculate the year and week that subtractTime (via saveTime) would have used
+        local current_ts_for_test = os_module.time()
+        local currentWeekdayNumeric_for_test = os_module.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
+
+        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local item =
-            data.content.data[year][week_number_str]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
 
         assert.is_not_nil(item, 'Item should be saved')
         assert.are.same(-hours_to_subtract, item.diffInHours)

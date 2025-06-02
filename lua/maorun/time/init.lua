@@ -298,7 +298,7 @@ local function TimeStop(opts)
         end
     end
 
-    calculate() -- Calculate regardless of whether items were stopped, to update summaries.
+    calculate({ year = year_str, weeknumber = week_str }) -- Calculate regardless of whether items were stopped, to update summaries.
     save(obj)
 
     local heute_text = 'N/A'
@@ -390,7 +390,7 @@ local function saveTime(startTime, endTime, weekday, clearDay, project, file)
     item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
 
     table.insert(dayItem.items, item)
-    calculate()
+    calculate({ year = year_str, weeknumber = week_str })
     save(obj)
 
     notify({
