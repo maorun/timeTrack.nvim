@@ -150,6 +150,7 @@ jobs:
         run: |
           luarocks install vusted
           luarocks install luacov
+          luarocks install inspect
 
       - name: Run tests for coverage
         shell: bash
