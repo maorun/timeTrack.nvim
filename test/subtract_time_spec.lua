@@ -99,7 +99,8 @@ describe('subtractTime', function()
         local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
@@ -207,7 +208,8 @@ describe('subtractTime', function()
         local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
@@ -267,7 +269,8 @@ describe('subtractTime', function()
         local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
@@ -324,7 +327,8 @@ describe('subtractTime', function()
         local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         -- Check file content for paused state (optional, as isPaused() checks internal state)
         local file_content_raw = Path:new(tempPath):read()

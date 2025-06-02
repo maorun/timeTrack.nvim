@@ -91,7 +91,8 @@ describe('calculate', function()
         local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         -- Assertions
         assert.are.same(
@@ -138,7 +139,7 @@ describe('calculate', function()
         })
 
         local weekday1 = 'Wednesday' -- Changed from Monday
-        local weekday2 = 'Thursday'  -- Changed from Tuesday
+        local weekday2 = 'Thursday' -- Changed from Tuesday
         -- local currentYear = os.date('%Y') -- Will use expected_year_key
         -- local currentWeek = os.date('%W') -- Will use expected_week_key
 
@@ -160,11 +161,18 @@ describe('calculate', function()
         local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         -- Assertions for weekday1 (Monday)
-        assert.is_not_nil(data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday1], "Data for weekday1 should exist")
-        assert.is_not_nil(data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday1].summary, "Summary for weekday1 should exist")
+        assert.is_not_nil(
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday1],
+            'Data for weekday1 should exist'
+        )
+        assert.is_not_nil(
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday1].summary,
+            'Summary for weekday1 should exist'
+        )
         assert.are.same(
             7,
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday1].summary.diffInHours
@@ -175,8 +183,14 @@ describe('calculate', function()
         )
 
         -- Assertions for weekday2 (Tuesday)
-        assert.is_not_nil(data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday2], "Data for weekday2 should exist")
-        assert.is_not_nil(data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday2].summary, "Summary for weekday2 should exist")
+        assert.is_not_nil(
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday2],
+            'Data for weekday2 should exist'
+        )
+        assert.is_not_nil(
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday2].summary,
+            'Summary for weekday2 should exist'
+        )
         assert.are.same(
             9,
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday2].summary.diffInHours
@@ -463,7 +477,8 @@ describe('calculate', function()
         local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         -- Assertions
         local weekData = data.content.data[expected_year_key][expected_week_key]
@@ -514,7 +529,8 @@ describe('setIllDay', function()
         local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local expected_avg = 40 / 7
         local actual_avg =
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekdayForAvg].items[1].diffInHours

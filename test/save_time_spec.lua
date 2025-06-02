@@ -69,7 +69,8 @@ describe('saveTime', function()
         local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local items =
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items
 
@@ -98,7 +99,8 @@ describe('saveTime', function()
         local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local item =
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
         assert.are.same(hours_duration, item.diffInHours)
@@ -124,7 +126,8 @@ describe('saveTime', function()
         local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local item =
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
 
@@ -171,7 +174,8 @@ describe('saveTime', function()
         local expected_year_key = os_module.date('%Y', target_day_ref_ts_for_test)
         local expected_week_key = os_module.date('%W', target_day_ref_ts_for_test)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local item =
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
 
