@@ -157,7 +157,7 @@ jobs:
         run: |
           vusted --coverage ./test
 
-      - name: Debug: List files after vusted
+      - name: Debug List files after vusted
         shell: bash
         run: |
           echo "Listing all files in workspace:"
@@ -170,7 +170,7 @@ jobs:
       - name: Generate Luacov report
         run: luacov ${{ github.workspace }}/test/luacov.stats.out # This generates luacov.report.out from luacov.stats.out
 
-      - name: Debug: List files after luacov
+      - name: Debug List files after luacov
         shell: bash
         run: |
           echo "Listing all files in workspace after luacov:"
