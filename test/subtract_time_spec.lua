@@ -85,30 +85,42 @@ describe('subtractTime', function()
         local defaultHoursForTuesday = 8 -- Assuming default config
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
-        local data = maorunTime.calculate()
 
-        local year = os.date('%Y')
-        local week = os.date('%W')
+        -- Calculate the year and week that subtractTime (via saveTime) would have used for weekday
+        local current_ts_for_test = os.time()
+        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'Items should exist for Tuesday'
         )
         assert.are.same(
             1,
-            #data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'One item should be created for Tuesday'
         )
 
         local item =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours for Tuesday should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Tuesday summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -118,7 +130,7 @@ describe('subtractTime', function()
             'Tuesday summary overhour should be ' .. (-hoursToSubtract - defaultHoursForTuesday)
         )
 
-        local weekSummary = data.content.data[year][week].summary
+        local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
         assert(
             math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForTuesday)) < 0.001,
             'Week summary overhour should reflect Tuesday subtraction'
@@ -182,30 +194,42 @@ describe('subtractTime', function()
         -- before_each already sets up a clean state with no entries
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
-        local data = maorunTime.calculate()
 
-        local year = os.date('%Y')
-        local week = os.date('%W')
+        -- Calculate the year and week that subtractTime (via saveTime) would have used for weekday
+        local current_ts_for_test = os.time()
+        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'Items should exist for Wednesday'
         )
         assert.are.same(
             1,
-            #data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'One item should be created for Wednesday'
         )
 
         local item =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours for Wednesday should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Wednesday summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -216,7 +240,7 @@ describe('subtractTime', function()
             'Wednesday summary overhour calculation'
         )
 
-        local weekSummary = data.content.data[year][week].summary
+        local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
         assert(
             math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForWednesday)) < 0.001,
             'Week summary overhour should reflect Wednesday subtraction'
@@ -231,24 +255,36 @@ describe('subtractTime', function()
 
         maorunTime.addTime({ time = initialHours, weekday = weekday })
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
-        local data = maorunTime.calculate()
 
-        local year = os.date('%Y')
-        local week = os.date('%W')
+        -- Calculate the year and week that addTime/subtractTime (via saveTime) would have used for weekday
+        local current_ts_for_test = os.time()
+        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'Items should exist for Thursday'
         )
         assert.are.same(
             2,
-            #data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'Two items should exist for Thursday (add and subtract)'
         )
 
         local totalDiffInHours = initialHours - hoursToSubtract
         local weekdaySummary =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
         assert(
             math.abs(weekdaySummary.diffInHours - totalDiffInHours) < 0.001,
             'Thursday summary diffInHours should be ' .. totalDiffInHours
@@ -258,7 +294,7 @@ describe('subtractTime', function()
             'Thursday summary overhour should be ' .. (totalDiffInHours - defaultHoursForThursday)
         )
 
-        local weekSummary = data.content.data[year][week].summary
+        local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
         assert(
             math.abs(weekSummary.overhour - (totalDiffInHours - defaultHoursForThursday)) < 0.001,
             'Week summary overhour should reflect combined Thursday operations'
@@ -278,9 +314,21 @@ describe('subtractTime', function()
         maorunTime.TimeResume()
         assert.is_false(maorunTime.isPaused(), 'Time tracking should be resumed')
 
-        local data = maorunTime.calculate()
-        local year = os.date('%Y')
-        local week = os.date('%W')
+        -- Calculate the year and week that subtractTime (via saveTime) would have used for weekday
+        local current_ts_for_test = os.time()
+        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         -- Check file content for paused state (optional, as isPaused() checks internal state)
         local file_content_raw = Path:new(tempPath):read()
@@ -291,24 +339,24 @@ describe('subtractTime', function()
         )
 
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'Items should exist for Friday'
         )
         assert.are.same(
             1,
-            #data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'One item should be created for Friday despite pause/resume'
         )
 
         local item =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours for Friday should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Friday summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -318,7 +366,7 @@ describe('subtractTime', function()
             'Friday summary overhour calculation'
         )
 
-        local weekSummary = data.content.data[year][week].summary
+        local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
         assert(
             math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForFriday)) < 0.001,
             'Week summary overhour should reflect Friday subtraction'

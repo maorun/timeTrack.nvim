@@ -73,23 +73,37 @@ describe('calculate', function()
         })
 
         local targetWeekday = 'Tuesday' -- Hardcode for predictability
-        local currentYear = os.date('%Y')
-        local currentWeek = os.date('%W')
+        -- local currentYear = os.date('%Y') -- Will use expected_year_key
+        -- local currentWeek = os.date('%W') -- Will use expected_week_key
 
         maorunTime.addTime({ time = 7, weekday = targetWeekday })
 
-        local data = maorunTime.calculate()
+        -- Calculate the year and week that addTime would have used for targetWeekday
+        local current_ts_for_test = os.time()
+        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[targetWeekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         -- Assertions
         assert.are.same(
             7,
-            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[targetWeekday].summary.diffInHours
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekday].summary.diffInHours
         )
         assert.are.same(
             1,
-            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[targetWeekday].summary.overhour
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekday].summary.overhour
         )
-        assert.are.same(1, data.content.data[currentYear][currentWeek].summary.overhour) -- Week summary path
+        assert.are.same(1, data.content.data[expected_year_key][expected_week_key].summary.overhour) -- Week summary path
     end)
 
     it('should sum multiple entries for a single day', function()
@@ -124,38 +138,70 @@ describe('calculate', function()
             path = tempPath, -- Default hoursPerWeekday (8 hours per day)
         })
 
-        local weekday1 = 'Monday'
-        local weekday2 = 'Tuesday'
-        local currentYear = os.date('%Y')
-        local currentWeek = os.date('%W')
+        local weekday1 = 'Wednesday' -- Changed from Monday
+        local weekday2 = 'Thursday' -- Changed from Tuesday
+        -- local currentYear = os.date('%Y') -- Will use expected_year_key
+        -- local currentWeek = os.date('%W') -- Will use expected_week_key
 
-        maorunTime.addTime({ time = 7, weekday = weekday1 }) -- Monday
-        maorunTime.addTime({ time = 9, weekday = weekday2 }) -- Tuesday
+        maorunTime.addTime({ time = 7, weekday = weekday1 }) -- Wednesday
+        maorunTime.addTime({ time = 9, weekday = weekday2 }) -- Thursday
 
-        local data = maorunTime.calculate()
+        -- Calculate the year and week that addTime would have used.
+        -- Both weekday1 and weekday2, due to addTime's logic, will fall into the same week.
+        -- So, we can use weekday1 as the reference.
+        local current_ts_for_test = os.time()
+        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday1]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         -- Assertions for weekday1 (Monday)
+        assert.is_not_nil(
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday1],
+            'Data for weekday1 should exist'
+        )
+        assert.is_not_nil(
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday1].summary,
+            'Summary for weekday1 should exist'
+        )
         assert.are.same(
             7,
-            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[weekday1].summary.diffInHours
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday1].summary.diffInHours
         )
         assert.are.same(
             -1,
-            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[weekday1].summary.overhour
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday1].summary.overhour
         )
 
         -- Assertions for weekday2 (Tuesday)
+        assert.is_not_nil(
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday2],
+            'Data for weekday2 should exist'
+        )
+        assert.is_not_nil(
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday2].summary,
+            'Summary for weekday2 should exist'
+        )
         assert.are.same(
             9,
-            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[weekday2].summary.diffInHours
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday2].summary.diffInHours
         )
         assert.are.same(
             1,
-            data.content.data[currentYear][currentWeek]['default_project']['default_file'].weekdays[weekday2].summary.overhour
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday2].summary.overhour
         )
 
         -- Assertion for total summary
-        assert.are.same(0, data.content.data[currentYear][currentWeek].summary.overhour) -- Week summary path
+        assert.are.same(0, data.content.data[expected_year_key][expected_week_key].summary.overhour) -- Week summary path
     end)
 
     it('should incorporate prevWeekOverhour into current week calculation', function()
@@ -412,16 +458,30 @@ describe('calculate', function()
             hoursPerWeekday = customHours,
         })
 
-        local currentYear = os.date('%Y')
-        local currentWeek = os.date('%W')
+        -- local currentYear = os.date('%Y') -- Will use expected_year_key
+        -- local currentWeek = os.date('%W') -- Will use expected_week_key
 
         -- Add time to the target weekday
         maorunTime.addTime({ time = loggedHours, weekday = targetWeekday })
 
-        local data = maorunTime.calculate()
+        -- Calculate the year and week that addTime would have used for targetWeekday
+        local current_ts_for_test = os.time()
+        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[targetWeekday]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+
+        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         -- Assertions
-        local weekData = data.content.data[currentYear][currentWeek]
+        local weekData = data.content.data[expected_year_key][expected_week_key]
         assert.is_not_nil(weekData, 'Week data should exist')
 
         local weekdayData = weekData['default_project']['default_file'].weekdays[targetWeekday]
@@ -456,10 +516,24 @@ describe('setIllDay', function()
         })
 
         local targetWeekdayForAvg = 'Monday'
-        local data = maorunTime.setIllDay(targetWeekdayForAvg) -- Uses default project/file
+        maorunTime.setIllDay(targetWeekdayForAvg) -- Uses default project/file
+
+        local current_ts_for_test = os.time()
+        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
+        local targetWeekdayNumeric_for_test = maorunTime.weekdays[targetWeekdayForAvg]
+        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
+        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local expected_avg = 40 / 7
         local actual_avg =
-            data.content.data[os.date('%Y')][os.date('%W')]['default_project']['default_file'].weekdays[targetWeekdayForAvg].items[1].diffInHours
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetWeekdayForAvg].items[1].diffInHours
         assert(
             math.abs(expected_avg - actual_avg) < 0.001,
             string.format(
@@ -477,15 +551,29 @@ describe('setIllDay', function()
                 Tuesday = 8,
                 Wednesday = 8,
                 Thursday = 7,
-                Friday = 5,
+                Friday = 5, -- Sum = 36, Count = 5, Avg = 7.2
             },
         })
 
         local targetCustomWeekday = 'Friday' -- Using Friday as it has a unique value (5) in this custom map
-        local data = maorunTime.setIllDay(targetCustomWeekday) -- Uses default project/file
+        maorunTime.setIllDay(targetCustomWeekday) -- Uses default project/file
+
+        -- Recalculate expected year/week for targetCustomWeekday
+        current_ts_for_test = os.time()
+        currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
+        targetWeekdayNumeric_for_test = maorunTime.weekdays[targetCustomWeekday]
+        diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
+        if diffDays_for_test < 0 then
+            diffDays_for_test = diffDays_for_test + 7
+        end
+        target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+        expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
+        expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+
+        data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         assert.are.same(
             7.2, -- This average ( (8+8+8+7+5) / 5 = 36/5 = 7.2 ) should still be correct
-            data.content.data[os.date('%Y')][os.date('%W')]['default_project']['default_file'].weekdays[targetCustomWeekday].items[1].diffInHours
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetCustomWeekday].items[1].diffInHours
         )
     end)
 end)
