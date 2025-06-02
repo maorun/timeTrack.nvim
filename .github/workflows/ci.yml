@@ -152,6 +152,14 @@ jobs:
           luarocks install luacov
           luarocks install inspect
 
+      - name: Clean up old coverage files
+        shell: bash
+        run: |
+          echo "Deleting old luacov files if they exist..."
+          rm -f ${{ github.workspace }}/luacov.stats.out
+          rm -f ${{ github.workspace }}/luacov.report.out
+          echo "Old luacov files deleted."
+
       - name: Run tests for coverage
         shell: bash
         run: |
