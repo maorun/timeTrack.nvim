@@ -157,31 +157,13 @@ jobs:
         run: |
           vusted --coverage ./test
 
-      - name: Debug List files after vusted
-        shell: bash
-        run: |
-          echo "Listing all files in workspace:"
-          ls -R ${{ github.workspace }}
-          echo "Checking for luacov.stats.out in root:"
-          ls -al ${{ github.workspace }}/luacov.stats.out || echo "luacov.stats.out not found in root"
-          echo "Checking for luacov.stats.out in test/:"
-          ls -al ${{ github.workspace }}/test/luacov.stats.out || echo "luacov.stats.out not found in test/"
-
       - name: Generate Luacov report
-        run: luacov ${{ github.workspace }}/test/luacov.stats.out # This generates luacov.report.out from luacov.stats.out
-
-      - name: Debug List files after luacov
-        shell: bash
-        run: |
-          echo "Listing all files in workspace after luacov:"
-          ls -R ${{ github.workspace }}
-          echo "Checking for luacov.report.out in root:"
-          ls -al ${{ github.workspace }}/luacov.report.out || echo "luacov.report.out not found in root"
+        run: luacov ${{ github.workspace }}/luacov.stats.out # This generates luacov.report.out from luacov.stats.out
 
       - name: Commit coverage report
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore(ci): update coverage report'
-          file_pattern: luacov.report.out test/luacov.stats.out
+          file_pattern: luacov.report.out luacov.stats.out
           # Consider adding luacov.stats.out to .gitignore if it's always identical to the one from the primary OS run
           # For now, committing both to ensure the report can be regenerated from the committed stats.
