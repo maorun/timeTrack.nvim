@@ -153,12 +153,10 @@ jobs:
           luarocks install inspect
 
       - name: Run tests for coverage
-        shell: bash
         run: |
           vusted --coverage ./test
 
       - name: Debug: List files after vusted
-        shell: bash
         run: |
           echo "Listing all files in workspace:"
           ls -R ${{ github.workspace }}
@@ -171,7 +169,6 @@ jobs:
         run: luacov ${{ github.workspace }}/test/luacov.stats.out # This generates luacov.report.out from luacov.stats.out
 
       - name: Debug: List files after luacov
-        shell: bash
         run: |
           echo "Listing all files in workspace after luacov:"
           ls -R ${{ github.workspace }}
