@@ -171,7 +171,7 @@ jobs:
       - name: Commit coverage report
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'chore(ci): update coverage report'
+          commit_message: 'chore(ci): update coverage report [skip ci]'
           file_pattern: luacov.report.out luacov.stats.out
           # Consider adding luacov.stats.out to .gitignore if it's always identical to the one from the primary OS run
           # For now, committing both to ensure the report can be regenerated from the committed stats.
