@@ -464,18 +464,44 @@ describe('calculate', function()
         -- Add time to the target weekday
         maorunTime.addTime({ time = loggedHours, weekday = targetWeekday })
 
-        -- Calculate the year and week that addTime would have used for targetWeekday
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[targetWeekday]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
-        end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
+        -- Determine the year and week based on the new addTime logic.
+        -- addTime now places the entry in the calendar week of os.time() it sees, on the targetWeekday.
+        local add_time_context_ts = os.time() -- Timestamp representing when addTime effectively ran
+        local current_t_info = os.date('*t', add_time_context_ts)
 
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        -- Calculate Monday of the week of add_time_context_ts
+        -- os.date('*t').wday is Sun=1, Mon=2, ..., Sat=7
+        -- os.date('%u') is Mon=1, ..., Sun=7
+        local days_to_subtract_for_monday = (tonumber(os.date('%u', add_time_context_ts)) - 1)
+        -- Get midnight of current day to avoid time component issues
+        local current_day_midnight_ts = os.time({
+            year = current_t_info.year,
+            month = current_t_info.month,
+            day = current_t_info.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
+        })
+        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
+
+        -- Determine the offset for the targetWeekday from that Monday
+        -- targetWeekday is already defined in the test (e.g., 'Saturday')
+        local offset_from_monday_map = {
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
+        }
+        local target_offset_from_monday = offset_from_monday_map[targetWeekday]
+
+        -- Calculate the actual timestamp on the target weekday in that specific week
+        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
+
+        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
+        local expected_week_key = os.date('%W', target_day_ts_for_keys)
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -518,16 +544,39 @@ describe('setIllDay', function()
         local targetWeekdayForAvg = 'Monday'
         maorunTime.setIllDay(targetWeekdayForAvg) -- Uses default project/file
 
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[targetWeekdayForAvg]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
-        end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        -- Determine the year and week based on the new addTime logic.
+        -- addTime (via setIllDay) now places the entry in the calendar week of os.time() it sees, on the targetWeekday.
+        local add_time_context_ts_1 = os.time() -- Timestamp representing when addTime effectively ran
+        local current_t_info_1 = os.date('*t', add_time_context_ts_1)
+
+        -- Calculate Monday of the week of add_time_context_ts
+        local days_to_subtract_for_monday_1 = (tonumber(os.date('%u', add_time_context_ts_1)) - 1)
+        local current_day_midnight_ts_1 = os.time({
+            year = current_t_info_1.year,
+            month = current_t_info_1.month,
+            day = current_t_info_1.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
+        })
+        local monday_ts_1 = current_day_midnight_ts_1 - (days_to_subtract_for_monday_1 * 24 * 3600)
+
+        local offset_from_monday_map_1 = {
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
+        }
+        local current_target_weekday_1 = targetWeekdayForAvg
+        local target_offset_from_monday_1 = offset_from_monday_map_1[current_target_weekday_1]
+
+        local target_day_ts_for_keys_1 = monday_ts_1 + (target_offset_from_monday_1 * 24 * 3600)
+
+        local expected_year_key = os.date('%Y', target_day_ts_for_keys_1)
+        local expected_week_key = os.date('%W', target_day_ts_for_keys_1)
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -558,22 +607,43 @@ describe('setIllDay', function()
         local targetCustomWeekday = 'Friday' -- Using Friday as it has a unique value (5) in this custom map
         maorunTime.setIllDay(targetCustomWeekday) -- Uses default project/file
 
-        -- Recalculate expected year/week for targetCustomWeekday
-        current_ts_for_test = os.time()
-        currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        targetWeekdayNumeric_for_test = maorunTime.weekdays[targetCustomWeekday]
-        diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
-        end
-        target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-        expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        -- Recalculate expected year/week for targetCustomWeekday using new logic
+        local add_time_context_ts_2 = os.time()
+        local current_t_info_2 = os.date('*t', add_time_context_ts_2)
 
-        data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local days_to_subtract_for_monday_2 = (tonumber(os.date('%u', add_time_context_ts_2)) - 1)
+        local current_day_midnight_ts_2 = os.time({
+            year = current_t_info_2.year,
+            month = current_t_info_2.month,
+            day = current_t_info_2.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
+        })
+        local monday_ts_2 = current_day_midnight_ts_2 - (days_to_subtract_for_monday_2 * 24 * 3600)
+
+        local offset_from_monday_map_2 = {
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
+        }
+        local current_target_weekday_2 = targetCustomWeekday
+        local target_offset_from_monday_2 = offset_from_monday_map_2[current_target_weekday_2]
+
+        local target_day_ts_for_keys_2 = monday_ts_2 + (target_offset_from_monday_2 * 24 * 3600)
+
+        local expected_year_key_2 = os.date('%Y', target_day_ts_for_keys_2)
+        local expected_week_key_2 = os.date('%W', target_day_ts_for_keys_2)
+
+        data =
+            maorunTime.calculate({ year = expected_year_key_2, weeknumber = expected_week_key_2 })
         assert.are.same(
             7.2, -- This average ( (8+8+8+7+5) / 5 = 36/5 = 7.2 ) should still be correct
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[targetCustomWeekday].items[1].diffInHours
+            data.content.data[expected_year_key_2][expected_week_key_2]['default_project']['default_file'].weekdays[targetCustomWeekday].items[1].diffInHours
         )
     end)
 end)

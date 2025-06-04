@@ -423,58 +423,68 @@ local function addTime(opts)
         weekday = wdayToEngName[current_wday_numeric]
     end
 
-    -- local week = years[os.date('%W')] -- Not used with new structure
-    local currentWeekdayNumeric = os.date('*t').wday - 1 -- Sunday=0, Monday=1, etc.
-    local targetWeekdayNumeric = weekdayNumberMap[weekday]
+    -- New logic for target_day_ref_ts
+    -- Get current timestamp and determine Monday of the current week at midnight
+    local current_ts_for_week_calc = os.time()
+    local current_t_info_for_week_calc = os.date('*t', current_ts_for_week_calc)
+    -- Get timestamp for midnight of the day that current_ts_for_week_calc is in
+    local current_day_actual_midnight_ts = os.time({
+        year = current_t_info_for_week_calc.year,
+        month = current_t_info_for_week_calc.month,
+        day = current_t_info_for_week_calc.day,
+        hour = 0,
+        min = 0,
+        sec = 0,
+    })
+    -- Calculate days to subtract to get to Monday (os.date('%u') is 1 for Monday, 7 for Sunday)
+    local days_from_monday = (tonumber(os.date('%u', current_day_actual_midnight_ts)) - 1)
+    local monday_midnight_ts = current_day_actual_midnight_ts - (days_from_monday * 24 * 3600)
 
-    -- If targetWeekdayNumeric is nil, treat as a custom/new weekday
-    if targetWeekdayNumeric == nil then
-        targetWeekdayNumeric = currentWeekdayNumeric
+    -- Determine the offset for the target weekday from Monday
+    local offset_from_monday_map = {
+        Monday = 0,
+        Tuesday = 1,
+        Wednesday = 2,
+        Thursday = 3,
+        Friday = 4,
+        Saturday = 5,
+        Sunday = 6,
+    }
+    local target_offset_days = offset_from_monday_map[weekday]
+    -- If weekday is not in map (e.g. invalid string), target_offset_days will be nil.
+    -- Existing logic defaults weekday if nil, so it should always be a valid key.
+    -- Adding a fallback just in case, though it implies an issue earlier if reached.
+    if target_offset_days == nil then
+        -- Fallback: use current day's offset from Monday if weekday string is unrecognized
+        target_offset_days = days_from_monday
+        -- Or, could log an error: notify("Error: Unrecognized weekday '"..tostring(weekday).."' in addTime. Defaulting to current day.", "error")
     end
 
-    local diffDays = currentWeekdayNumeric - (targetWeekdayNumeric or currentWeekdayNumeric)
-    if diffDays < 0 then
-        diffDays = diffDays + 7
-    end
+    local target_day_actual_midnight_ts = monday_midnight_ts + (target_offset_days * 24 * 3600)
 
-    -- This block is now redundant because saveTime handles path creation.
-    -- if obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
-    --     obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
-    --         items = {},
-    --     }
-    -- end
+    -- 'time' from opts is the duration in hours
+    local duration_in_hours = opts.time
+    local h_to_sub = math.floor(duration_in_hours)
+    local m_float = (duration_in_hours - h_to_sub) * 60
+    local m_to_sub = math.floor(m_float)
+    local s_float = (m_float - m_to_sub) * 60
+    local s_to_sub = math.floor(s_float)
 
-    -- Get current timestamp
-    local current_ts = os.time()
-
-    -- Subtract "diffDays" days from the current timestamp
-    local target_day_ref_ts = current_ts - (diffDays * 24 * 3600)
-    local target_day_t_info = os.date('*t', target_day_ref_ts)
-
-    -- Extract hours/min/sec from "time"
-    local minutes_float = (time - math.floor(time)) * 60
-    local seconds_float = (minutes_float - math.floor(minutes_float)) * 60
-    local hours_to_subtract = math.floor(time)
-    local minutes_to_subtract = math.floor(minutes_float)
-    local seconds_to_subtract = math.floor(seconds_float)
-
-    -- Build a new osdateparam table with only supported fields
-    local endTime_date_table = {
-        year = target_day_t_info.year,
-        month = target_day_t_info.month,
-        day = target_day_t_info.day,
+    -- Construct endTime as 23:00:00 on the target_day_actual_midnight_ts
+    local target_day_t_table = os.date('*t', target_day_actual_midnight_ts) -- Get table for year, month, day
+    local endTime_ts = os.time({
+        year = target_day_t_table.year,
+        month = target_day_t_table.month,
+        day = target_day_t_table.day,
         hour = 23,
         min = 0,
         sec = 0,
-        isdst = target_day_t_info.isdst,
-    }
+        isdst = target_day_t_table.isdst, -- Preserve DST flag from target day
+    })
 
-    local endTime_ts = os.time(endTime_date_table)
+    local startTime_ts = endTime_ts - (h_to_sub * 3600 + m_to_sub * 60 + s_to_sub)
 
-    -- Calculate startTime by subtracting the duration from endTime_ts
-    local startTime_ts = endTime_ts
-        - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
-
+    -- These are then passed to saveTime
     local startTime = startTime_ts
     local endTime = endTime_ts
 
