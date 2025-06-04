@@ -475,16 +475,25 @@ describe('calculate', function()
         local days_to_subtract_for_monday = (tonumber(os.date('%u', add_time_context_ts)) - 1)
         -- Get midnight of current day to avoid time component issues
         local current_day_midnight_ts = os.time({
-            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
-            hour = 0, min = 0, sec = 0
+            year = current_t_info.year,
+            month = current_t_info.month,
+            day = current_t_info.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
         })
         local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
 
         -- Determine the offset for the targetWeekday from that Monday
         -- targetWeekday is already defined in the test (e.g., 'Saturday')
         local offset_from_monday_map = {
-            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
-            Friday = 4, Saturday = 5, Sunday = 6,
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
         }
         local target_offset_from_monday = offset_from_monday_map[targetWeekday]
 
@@ -543,14 +552,23 @@ describe('setIllDay', function()
         -- Calculate Monday of the week of add_time_context_ts
         local days_to_subtract_for_monday_1 = (tonumber(os.date('%u', add_time_context_ts_1)) - 1)
         local current_day_midnight_ts_1 = os.time({
-            year = current_t_info_1.year, month = current_t_info_1.month, day = current_t_info_1.day,
-            hour = 0, min = 0, sec = 0
+            year = current_t_info_1.year,
+            month = current_t_info_1.month,
+            day = current_t_info_1.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
         })
         local monday_ts_1 = current_day_midnight_ts_1 - (days_to_subtract_for_monday_1 * 24 * 3600)
 
         local offset_from_monday_map_1 = {
-            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
-            Friday = 4, Saturday = 5, Sunday = 6,
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
         }
         local current_target_weekday_1 = targetWeekdayForAvg
         local target_offset_from_monday_1 = offset_from_monday_map_1[current_target_weekday_1]
@@ -595,14 +613,23 @@ describe('setIllDay', function()
 
         local days_to_subtract_for_monday_2 = (tonumber(os.date('%u', add_time_context_ts_2)) - 1)
         local current_day_midnight_ts_2 = os.time({
-            year = current_t_info_2.year, month = current_t_info_2.month, day = current_t_info_2.day,
-            hour = 0, min = 0, sec = 0
+            year = current_t_info_2.year,
+            month = current_t_info_2.month,
+            day = current_t_info_2.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
         })
         local monday_ts_2 = current_day_midnight_ts_2 - (days_to_subtract_for_monday_2 * 24 * 3600)
 
         local offset_from_monday_map_2 = {
-            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
-            Friday = 4, Saturday = 5, Sunday = 6,
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
         }
         local current_target_weekday_2 = targetCustomWeekday
         local target_offset_from_monday_2 = offset_from_monday_map_2[current_target_weekday_2]
@@ -612,7 +639,8 @@ describe('setIllDay', function()
         local expected_year_key_2 = os.date('%Y', target_day_ts_for_keys_2)
         local expected_week_key_2 = os.date('%W', target_day_ts_for_keys_2)
 
-        data = maorunTime.calculate({ year = expected_year_key_2, weeknumber = expected_week_key_2 })
+        data =
+            maorunTime.calculate({ year = expected_year_key_2, weeknumber = expected_week_key_2 })
         assert.are.same(
             7.2, -- This average ( (8+8+8+7+5) / 5 = 36/5 = 7.2 ) should still be correct
             data.content.data[expected_year_key_2][expected_week_key_2]['default_project']['default_file'].weekdays[targetCustomWeekday].items[1].diffInHours
