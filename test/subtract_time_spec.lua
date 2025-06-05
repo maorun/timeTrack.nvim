@@ -35,34 +35,54 @@ describe('subtractTime', function()
         local defaultHoursForMonday = 8 -- Assuming default config
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
-        local data = maorunTime.calculate()
 
-        local year = os.date('%Y')
-        local week = os.date('%W')
+        -- Determine the year and week based on the new addTime/subtractTime logic.
+        local context_ts = os.time()
+        local current_t_info = os.date('*t', context_ts)
+        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
+        local current_day_midnight_ts = os.time({
+            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
+            hour = 0, min = 0, sec = 0
+        })
+        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
+        local offset_from_monday_map = {
+            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
+            Friday = 4, Saturday = 5, Sunday = 6,
+        }
+        local current_target_weekday_in_test = weekday
+        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
+        if target_offset_from_monday == nil then
+          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
+        end
+        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
+        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
+        local expected_week_key = os.date('%W', target_day_ts_for_keys)
+
+        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday],
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday],
             'Weekday data should exist'
         )
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'Items should exist'
         )
         assert.are.same(
             1,
-            #data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'One item should be created'
         )
 
         local item =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Weekday summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -72,7 +92,7 @@ describe('subtractTime', function()
             'Weekday summary overhour should be ' .. (-hoursToSubtract - defaultHoursForMonday)
         )
 
-        local weekSummary = data.content.data[year][week].summary
+        local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
         assert(
             math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForMonday)) < 0.001,
             'Week summary overhour should be ' .. (-hoursToSubtract - defaultHoursForMonday)
@@ -86,18 +106,27 @@ describe('subtractTime', function()
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Calculate the year and week that subtractTime (via saveTime) would have used for weekday
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
+        -- Determine the year and week based on the new addTime/subtractTime logic.
+        local context_ts = os.time()
+        local current_t_info = os.date('*t', context_ts)
+        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
+        local current_day_midnight_ts = os.time({
+            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
+            hour = 0, min = 0, sec = 0
+        })
+        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
+        local offset_from_monday_map = {
+            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
+            Friday = 4, Saturday = 5, Sunday = 6,
+        }
+        local current_target_weekday_in_test = weekday
+        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
+        if target_offset_from_monday == nil then
+          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
         end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
+        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
+        local expected_week_key = os.date('%W', target_day_ts_for_keys)
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -144,30 +173,50 @@ describe('subtractTime', function()
             maorunTime.setup({ path = tempPath }).content.hoursPerWeekday[currentWeekday]
 
         maorunTime.subtractTime({ time = hoursToSubtract }) -- No weekday argument
-        local data = maorunTime.calculate()
 
-        local year = os.date('%Y')
-        local week = os.date('%W')
+        -- Determine the year and week based on the new addTime/subtractTime logic.
+        local context_ts = os.time()
+        local current_t_info = os.date('*t', context_ts)
+        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
+        local current_day_midnight_ts = os.time({
+            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
+            hour = 0, min = 0, sec = 0
+        })
+        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
+        local offset_from_monday_map = {
+            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
+            Friday = 4, Saturday = 5, Sunday = 6,
+        }
+        local current_target_weekday_in_test = currentWeekday
+        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
+        if target_offset_from_monday == nil then
+          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
+        end
+        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
+        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
+        local expected_week_key = os.date('%W', target_day_ts_for_keys)
+
+        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[currentWeekday].items,
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items,
             'Items should exist for current day'
         )
         assert.are.same(
             1,
-            #data.content.data[year][week]['default_project']['default_file'].weekdays[currentWeekday].items,
+            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items,
             'One item should be created for current day'
         )
 
         local item =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[currentWeekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours for current day should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[currentWeekday].summary
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Current day summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -178,7 +227,7 @@ describe('subtractTime', function()
             'Current day summary overhour calculation'
         )
 
-        local weekSummary = data.content.data[year][week].summary
+        local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
         assert(
             math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForCurrentDay)) < 0.001,
             'Week summary overhour should reflect current day subtraction'
@@ -195,18 +244,27 @@ describe('subtractTime', function()
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Calculate the year and week that subtractTime (via saveTime) would have used for weekday
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
+        -- Determine the year and week based on the new addTime/subtractTime logic.
+        local context_ts = os.time()
+        local current_t_info = os.date('*t', context_ts)
+        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
+        local current_day_midnight_ts = os.time({
+            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
+            hour = 0, min = 0, sec = 0
+        })
+        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
+        local offset_from_monday_map = {
+            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
+            Friday = 4, Saturday = 5, Sunday = 6,
+        }
+        local current_target_weekday_in_test = weekday
+        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
+        if target_offset_from_monday == nil then
+          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
         end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
+        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
+        local expected_week_key = os.date('%W', target_day_ts_for_keys)
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -256,18 +314,27 @@ describe('subtractTime', function()
         maorunTime.addTime({ time = initialHours, weekday = weekday })
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Calculate the year and week that addTime/subtractTime (via saveTime) would have used for weekday
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
+        -- Determine the year and week based on the new addTime/subtractTime logic.
+        local context_ts = os.time()
+        local current_t_info = os.date('*t', context_ts)
+        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
+        local current_day_midnight_ts = os.time({
+            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
+            hour = 0, min = 0, sec = 0
+        })
+        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
+        local offset_from_monday_map = {
+            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
+            Friday = 4, Saturday = 5, Sunday = 6,
+        }
+        local current_target_weekday_in_test = weekday
+        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
+        if target_offset_from_monday == nil then
+          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
         end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
+        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
+        local expected_week_key = os.date('%W', target_day_ts_for_keys)
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -314,18 +381,27 @@ describe('subtractTime', function()
         maorunTime.TimeResume()
         assert.is_false(maorunTime.isPaused(), 'Time tracking should be resumed')
 
-        -- Calculate the year and week that subtractTime (via saveTime) would have used for weekday
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
+        -- Determine the year and week based on the new addTime/subtractTime logic.
+        local context_ts = os.time()
+        local current_t_info = os.date('*t', context_ts)
+        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
+        local current_day_midnight_ts = os.time({
+            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
+            hour = 0, min = 0, sec = 0
+        })
+        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
+        local offset_from_monday_map = {
+            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
+            Friday = 4, Saturday = 5, Sunday = 6,
+        }
+        local current_target_weekday_in_test = weekday
+        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
+        if target_offset_from_monday == nil then
+          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
         end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
+        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
+        local expected_week_key = os.date('%W', target_day_ts_for_keys)
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
