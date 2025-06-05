@@ -51,14 +51,14 @@ describe('init plugin', function()
         local data = maorunTime.setup({
             path = tempPath,
             hoursPerWeekday = {
-                Montag = 7,
+                Monday = 7,
 
                 Wednesday = 6,
             },
         }).content
 
         assert.are.same({
-            Montag = 7,
+            Monday = 7,
 
             Wednesday = 6,
         }, data.hoursPerWeekday)

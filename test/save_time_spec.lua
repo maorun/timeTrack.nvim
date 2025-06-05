@@ -186,8 +186,9 @@ describe('saveTime', function()
         assert.is_not_nil(item, 'Item should be saved')
         assert.are.same(-hours_to_subtract, item.diffInHours)
 
-        local expected_end_time = item.startTime - (hours_to_subtract * 3600)
-        assert.are.same(expected_end_time, item.endTime)
+        -- For subtractTime, startTime is endTime minus duration
+        local expected_start_time = item.endTime - (hours_to_subtract * 3600)
+        assert.are.same(expected_start_time, item.startTime)
 
         -- Use original_os_date for formatting assertion values
         local start_readable_expected = original_os_date('%H:%M', item.startTime)
