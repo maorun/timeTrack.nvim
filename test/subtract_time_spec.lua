@@ -41,24 +41,38 @@ describe('subtractTime', function()
         local current_t_info = os.date('*t', context_ts)
         local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
         local current_day_midnight_ts = os.time({
-            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
-            hour = 0, min = 0, sec = 0
+            year = current_t_info.year,
+            month = current_t_info.month,
+            day = current_t_info.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
         })
         local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
         local offset_from_monday_map = {
-            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
-            Friday = 4, Saturday = 5, Sunday = 6,
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
         }
         local current_target_weekday_in_test = weekday
         local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
         if target_offset_from_monday == nil then
-          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
+            error(
+                "Error in test setup: current_target_weekday_in_test '"
+                    .. tostring(current_target_weekday_in_test)
+                    .. "' not found in offset_from_monday_map for key calculation."
+            )
         end
         local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
         local expected_year_key = os.date('%Y', target_day_ts_for_keys)
         local expected_week_key = os.date('%W', target_day_ts_for_keys)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday],
@@ -111,18 +125,31 @@ describe('subtractTime', function()
         local current_t_info = os.date('*t', context_ts)
         local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
         local current_day_midnight_ts = os.time({
-            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
-            hour = 0, min = 0, sec = 0
+            year = current_t_info.year,
+            month = current_t_info.month,
+            day = current_t_info.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
         })
         local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
         local offset_from_monday_map = {
-            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
-            Friday = 4, Saturday = 5, Sunday = 6,
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
         }
         local current_target_weekday_in_test = weekday
         local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
         if target_offset_from_monday == nil then
-          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
+            error(
+                "Error in test setup: current_target_weekday_in_test '"
+                    .. tostring(current_target_weekday_in_test)
+                    .. "' not found in offset_from_monday_map for key calculation."
+            )
         end
         local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
         local expected_year_key = os.date('%Y', target_day_ts_for_keys)
@@ -179,24 +206,38 @@ describe('subtractTime', function()
         local current_t_info = os.date('*t', context_ts)
         local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
         local current_day_midnight_ts = os.time({
-            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
-            hour = 0, min = 0, sec = 0
+            year = current_t_info.year,
+            month = current_t_info.month,
+            day = current_t_info.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
         })
         local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
         local offset_from_monday_map = {
-            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
-            Friday = 4, Saturday = 5, Sunday = 6,
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
         }
         local current_target_weekday_in_test = currentWeekday
         local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
         if target_offset_from_monday == nil then
-          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
+            error(
+                "Error in test setup: current_target_weekday_in_test '"
+                    .. tostring(current_target_weekday_in_test)
+                    .. "' not found in offset_from_monday_map for key calculation."
+            )
         end
         local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
         local expected_year_key = os.date('%Y', target_day_ts_for_keys)
         local expected_week_key = os.date('%W', target_day_ts_for_keys)
 
-        local data = maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
             data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items,
@@ -249,18 +290,31 @@ describe('subtractTime', function()
         local current_t_info = os.date('*t', context_ts)
         local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
         local current_day_midnight_ts = os.time({
-            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
-            hour = 0, min = 0, sec = 0
+            year = current_t_info.year,
+            month = current_t_info.month,
+            day = current_t_info.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
         })
         local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
         local offset_from_monday_map = {
-            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
-            Friday = 4, Saturday = 5, Sunday = 6,
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
         }
         local current_target_weekday_in_test = weekday
         local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
         if target_offset_from_monday == nil then
-          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
+            error(
+                "Error in test setup: current_target_weekday_in_test '"
+                    .. tostring(current_target_weekday_in_test)
+                    .. "' not found in offset_from_monday_map for key calculation."
+            )
         end
         local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
         local expected_year_key = os.date('%Y', target_day_ts_for_keys)
@@ -319,18 +373,31 @@ describe('subtractTime', function()
         local current_t_info = os.date('*t', context_ts)
         local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
         local current_day_midnight_ts = os.time({
-            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
-            hour = 0, min = 0, sec = 0
+            year = current_t_info.year,
+            month = current_t_info.month,
+            day = current_t_info.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
         })
         local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
         local offset_from_monday_map = {
-            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
-            Friday = 4, Saturday = 5, Sunday = 6,
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
         }
         local current_target_weekday_in_test = weekday
         local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
         if target_offset_from_monday == nil then
-          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
+            error(
+                "Error in test setup: current_target_weekday_in_test '"
+                    .. tostring(current_target_weekday_in_test)
+                    .. "' not found in offset_from_monday_map for key calculation."
+            )
         end
         local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
         local expected_year_key = os.date('%Y', target_day_ts_for_keys)
@@ -386,18 +453,31 @@ describe('subtractTime', function()
         local current_t_info = os.date('*t', context_ts)
         local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
         local current_day_midnight_ts = os.time({
-            year = current_t_info.year, month = current_t_info.month, day = current_t_info.day,
-            hour = 0, min = 0, sec = 0
+            year = current_t_info.year,
+            month = current_t_info.month,
+            day = current_t_info.day,
+            hour = 0,
+            min = 0,
+            sec = 0,
         })
         local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
         local offset_from_monday_map = {
-            Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3,
-            Friday = 4, Saturday = 5, Sunday = 6,
+            Monday = 0,
+            Tuesday = 1,
+            Wednesday = 2,
+            Thursday = 3,
+            Friday = 4,
+            Saturday = 5,
+            Sunday = 6,
         }
         local current_target_weekday_in_test = weekday
         local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
         if target_offset_from_monday == nil then
-          error("Error in test setup: current_target_weekday_in_test '" .. tostring(current_target_weekday_in_test) .. "' not found in offset_from_monday_map for key calculation.")
+            error(
+                "Error in test setup: current_target_weekday_in_test '"
+                    .. tostring(current_target_weekday_in_test)
+                    .. "' not found in offset_from_monday_map for key calculation."
+            )
         end
         local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
         local expected_year_key = os.date('%Y', target_day_ts_for_keys)

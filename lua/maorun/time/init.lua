@@ -432,7 +432,9 @@ local function addTime(opts)
         year = current_t_info_for_week_calc.year,
         month = current_t_info_for_week_calc.month,
         day = current_t_info_for_week_calc.day,
-        hour = 0, min = 0, sec = 0
+        hour = 0,
+        min = 0,
+        sec = 0,
     })
     -- Calculate days to subtract to get to Monday (os.date('%u') is 1 for Monday, 7 for Sunday)
     local days_from_monday = (tonumber(os.date('%u', current_day_actual_midnight_ts)) - 1)
@@ -440,7 +442,13 @@ local function addTime(opts)
 
     -- Determine the offset for the target weekday from Monday
     local offset_from_monday_map = {
-        Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3, Friday = 4, Saturday = 5, Sunday = 6,
+        Monday = 0,
+        Tuesday = 1,
+        Wednesday = 2,
+        Thursday = 3,
+        Friday = 4,
+        Saturday = 5,
+        Sunday = 6,
     }
     local target_offset_days = offset_from_monday_map[weekday]
     -- If weekday is not in map (e.g. invalid string), target_offset_days will be nil.
@@ -463,12 +471,14 @@ local function addTime(opts)
     local s_to_sub = math.floor(s_float)
 
     -- Construct endTime as 23:00:00 on the target_day_actual_midnight_ts
-    local target_day_t_table = os.date("*t", target_day_actual_midnight_ts) -- Get table for year, month, day
+    local target_day_t_table = os.date('*t', target_day_actual_midnight_ts) -- Get table for year, month, day
     local endTime_ts = os.time({
         year = target_day_t_table.year,
         month = target_day_t_table.month,
         day = target_day_t_table.day,
-        hour = 23, min = 0, sec = 0,
+        hour = 23,
+        min = 0,
+        sec = 0,
         isdst = target_day_t_table.isdst, -- Preserve DST flag from target day
     })
 
@@ -514,13 +524,21 @@ local function subtractTime(opts)
         year = current_t_info_for_week_calc.year,
         month = current_t_info_for_week_calc.month,
         day = current_t_info_for_week_calc.day,
-        hour = 0, min = 0, sec = 0
+        hour = 0,
+        min = 0,
+        sec = 0,
     })
     local days_from_monday = (tonumber(os.date('%u', current_day_actual_midnight_ts)) - 1)
     local monday_midnight_ts = current_day_actual_midnight_ts - (days_from_monday * 24 * 3600)
 
     local offset_from_monday_map = {
-        Monday = 0, Tuesday = 1, Wednesday = 2, Thursday = 3, Friday = 4, Saturday = 5, Sunday = 6,
+        Monday = 0,
+        Tuesday = 1,
+        Wednesday = 2,
+        Thursday = 3,
+        Friday = 4,
+        Saturday = 5,
+        Sunday = 6,
     }
     local target_offset_days = offset_from_monday_map[weekday]
     if target_offset_days == nil then
@@ -529,9 +547,19 @@ local function subtractTime(opts)
         -- If it does, this defaults to the current day's offset from Monday.
         target_offset_days = days_from_monday
         if notify then -- Use notify if available (it should be)
-            notify("Warning: Unrecognized weekday '" .. tostring(weekday) .. "' in subtractTime. Defaulting to current day of the week.", "warn", { title = "TimeTracking Warning" })
+            notify(
+                "Warning: Unrecognized weekday '"
+                    .. tostring(weekday)
+                    .. "' in subtractTime. Defaulting to current day of the week.",
+                'warn',
+                { title = 'TimeTracking Warning' }
+            )
         else
-            print("Warning: Unrecognized weekday '" .. tostring(weekday) .. "' in subtractTime. Defaulting to current day of the week.")
+            print(
+                "Warning: Unrecognized weekday '"
+                    .. tostring(weekday)
+                    .. "' in subtractTime. Defaulting to current day of the week."
+            )
         end
     end
     local target_day_actual_midnight_ts = monday_midnight_ts + (target_offset_days * 24 * 3600)
@@ -554,7 +582,9 @@ local function subtractTime(opts)
         year = target_day_t_info.year,
         month = target_day_t_info.month,
         day = target_day_t_info.day,
-        hour = 23, min = 0, sec = 0,
+        hour = 23,
+        min = 0,
+        sec = 0,
         isdst = target_day_t_info.isdst,
     })
 
