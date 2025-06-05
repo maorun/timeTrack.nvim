@@ -35,6 +35,56 @@ require('maorun.time').setup({
 })
 ```
 
+## Data Storage Format
+The data is stored in a JSON file. The default path is `~/.local/share/nvim/maorun-time.json` (or equivalent `vim.fn.stdpath('data') .. '/maorun-time.json'`).
+
+The structure of the JSON file is as follows:
+
+```json
+{
+  "hoursPerWeekday": {
+    "Monday": 8,
+    "Tuesday": 8,
+    "Wednesday": 8,
+    "Thursday": 8,
+    "Friday": 8,
+    "Saturday": 8,
+    "Sunday": 8
+  },
+  "paused": false,
+  "data": {
+    "YYYY": {
+      "WW": {
+        "summary": {
+          "overhour": 2.5
+        },
+        "projectName": {
+          "fileName": {
+            "weekdays": {
+              "WeekdayName": {
+                "summary": {
+                  "diffInHours": 5.5,
+                  "overhour": -2.5
+                },
+                "items": [
+                  {
+                    "startTime": 1678886400,
+                    "startReadable": "10:00",
+                    "endTime": 1678890000,
+                    "endReadable": "11:00",
+                    "diffInHours": 1.0
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
 ## Suggested keymapping with [which-key](https://github.com/folke/which-key.nvim)
 ```lua
 local wk = require("which-key")
