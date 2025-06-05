@@ -1,6 +1,6 @@
 -- Coverage configuration for luacov
 includes = {
-  "lua/"
+  "./lua/"
 }
 excludes = {
   "/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/*", -- Added wildcard
