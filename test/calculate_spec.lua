@@ -457,10 +457,7 @@ describe('calculate', function()
         local expected_week_key = '11'
 
         maorunTime.addTime({ time = loggedHours, weekday = targetWeekday }) -- addTime uses mocked os.time
-
-        local data =
-            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
-
+        
         -- Assertions
         local weekData = data.content.data[expected_year_key][expected_week_key]
         assert.is_not_nil(weekData, 'Week data should exist')
