@@ -1,3 +1,4 @@
+
 # Timetracking in lua
 
 Automatically starts on FocusGained, BufEnter and VimEnter.
