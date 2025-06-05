@@ -3,7 +3,7 @@ includes = {
   "./lua/"
 }
 excludes = {
-"*/%.local/share/nvim/*",
+"*%/%.local%/share%/nvim%/*",
   "/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/*", -- Added wildcard
   "/usr/share/lua/", -- Standard system Lua path
   "/usr/local/share/lua/", -- Another standard system Lua path
