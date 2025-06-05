@@ -26,14 +26,16 @@ end)
 describe('saveTime', function()
     it('should correctly save a time entry via addTime', function()
         local mock_specific_time = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
         end
 
-        local year = "2023"
-        local week_number_str = "11" -- Monday, Mar 13 is in week 11
+        local year = '2023'
+        local week_number_str = '11' -- Monday, Mar 13 is in week 11
         local weekday = 'Monday'
         local hours_to_add = 2
 
@@ -59,7 +61,9 @@ describe('saveTime', function()
 
     it('should append multiple time entries for the same day via multiple addTime calls', function()
         local mock_specific_time = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
@@ -72,8 +76,8 @@ describe('saveTime', function()
         maorunTime.addTime({ time = hours_to_add1, weekday = weekday })
         maorunTime.addTime({ time = hours_to_add2, weekday = weekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Tuesday, Mar 14 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Tuesday, Mar 14 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -87,7 +91,9 @@ describe('saveTime', function()
 
     it('should correctly calculate diffInHours (positive)', function()
         local mock_specific_time = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
@@ -97,8 +103,8 @@ describe('saveTime', function()
         local hours_duration = 3.5
         maorunTime.addTime({ time = hours_duration, weekday = weekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Wednesday, Mar 15 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Wednesday, Mar 15 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -109,7 +115,9 @@ describe('saveTime', function()
 
     it('should correctly save readable time formats (HH:MM)', function()
         local mock_specific_time = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
@@ -120,8 +128,8 @@ describe('saveTime', function()
 
         maorunTime.addTime({ time = hours_to_add, weekday = weekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Thursday, Mar 16 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Thursday, Mar 16 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -154,7 +162,9 @@ describe('saveTime', function()
 
     it('should correctly save a time entry with negative diffInHours via subtractTime', function()
         local mock_specific_time = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
@@ -165,8 +175,8 @@ describe('saveTime', function()
 
         maorunTime.subtractTime({ time = hours_to_subtract, weekday = weekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Friday, Mar 17 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Friday, Mar 17 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })

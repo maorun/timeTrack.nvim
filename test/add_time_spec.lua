@@ -29,7 +29,9 @@ describe('addTime', function()
     it('should add time to a specific weekday', function()
         -- Mock os.time and os.date
         local mock_specific_time = 1678886400 -- Wednesday, March 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
@@ -40,8 +42,8 @@ describe('addTime', function()
         local hoursToAdd = 2
         maorunTime.addTime({ time = hoursToAdd, weekday = targetWeekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11"
+        local expected_year_key = '2023'
+        local expected_week_key = '11'
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
@@ -64,7 +66,9 @@ describe('addTime', function()
     it('should handle floating point time addition', function()
         -- Mock os.time and os.date
         local mock_specific_time = 1678886400 -- Wednesday, March 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
@@ -75,8 +79,8 @@ describe('addTime', function()
         local hoursToAdd = 2.5
         maorunTime.addTime({ time = hoursToAdd, weekday = targetWeekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11"
+        local expected_year_key = '2023'
+        local expected_week_key = '11'
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
@@ -100,7 +104,9 @@ describe('addTime', function()
     it('should add time to the current day if weekday is nil', function()
         -- Mock os.time and os.date
         local mock_specific_time = 1678886400 -- Wednesday, March 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
@@ -113,8 +119,8 @@ describe('addTime', function()
 
         maorunTime.addTime({ time = hoursToAdd }) -- weekday = nil
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11"
+        local expected_year_key = '2023'
+        local expected_week_key = '11'
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
@@ -137,7 +143,9 @@ describe('addTime', function()
     it('should add time correctly when tracking is paused', function()
         -- Mock os.time and os.date
         local mock_specific_time = 1678886400 -- Wednesday, March 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
@@ -151,8 +159,8 @@ describe('addTime', function()
         local hoursToAdd = 4
         maorunTime.addTime({ time = hoursToAdd, weekday = targetWeekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11"
+        local expected_year_key = '2023'
+        local expected_week_key = '11'
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
@@ -166,7 +174,9 @@ describe('addTime', function()
     it('should add to existing entries, not overwrite by default', function()
         -- Mock os.time and os.date
         local mock_specific_time = 1678886400 -- Wednesday, March 15, 2023 12:00:00 PM GMT
-        os_module.time = function() return mock_specific_time end
+        os_module.time = function()
+            return mock_specific_time
+        end
         os_module.date = function(format, time_val)
             time_val = time_val or mock_specific_time
             return original_os_date(format, time_val)
@@ -181,8 +191,8 @@ describe('addTime', function()
         -- No need to advance time here as the logic should place it on the same Thursday
         maorunTime.addTime({ time = additionalHours, weekday = targetWeekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11"
+        local expected_year_key = '2023'
+        local expected_week_key = '11'
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 

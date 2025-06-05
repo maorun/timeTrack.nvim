@@ -38,7 +38,9 @@ end)
 describe('subtractTime', function()
     it('should subtract a whole number of hours from a specific weekday', function()
         local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os.time = function() return mock_context_ts end
+        os.time = function()
+            return mock_context_ts
+        end
         os.date = function(format, time_val)
             time_val = time_val or mock_context_ts
             return original_os_date(format, time_val)
@@ -50,8 +52,8 @@ describe('subtractTime', function()
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Monday, Mar 13 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Monday, Mar 13 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -97,7 +99,9 @@ describe('subtractTime', function()
 
     it('should subtract fractional hours from a specific weekday', function()
         local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os.time = function() return mock_context_ts end
+        os.time = function()
+            return mock_context_ts
+        end
         os.date = function(format, time_val)
             time_val = time_val or mock_context_ts
             return original_os_date(format, time_val)
@@ -109,8 +113,8 @@ describe('subtractTime', function()
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Tuesday, Mar 14 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Tuesday, Mar 14 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -152,7 +156,9 @@ describe('subtractTime', function()
 
     it('should subtract time from the current day if weekday is not provided', function()
         local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os.time = function() return mock_context_ts end
+        os.time = function()
+            return mock_context_ts
+        end
         os.date = function(format, time_val)
             time_val = time_val or mock_context_ts
             return original_os_date(format, time_val)
@@ -165,8 +171,8 @@ describe('subtractTime', function()
 
         maorunTime.subtractTime({ time = hoursToSubtract }) -- No weekday argument
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Wednesday, Mar 15 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Wednesday, Mar 15 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -209,7 +215,9 @@ describe('subtractTime', function()
 
     it('should correctly subtract time from a day with no prior entries', function()
         local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os.time = function() return mock_context_ts end
+        os.time = function()
+            return mock_context_ts
+        end
         os.date = function(format, time_val)
             time_val = time_val or mock_context_ts
             return original_os_date(format, time_val)
@@ -221,8 +229,8 @@ describe('subtractTime', function()
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Wednesday, Mar 15 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Wednesday, Mar 15 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -265,7 +273,9 @@ describe('subtractTime', function()
 
     it('should correctly update summaries after subtraction and recalculation', function()
         local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os.time = function() return mock_context_ts end
+        os.time = function()
+            return mock_context_ts
+        end
         os.date = function(format, time_val)
             time_val = time_val or mock_context_ts
             return original_os_date(format, time_val)
@@ -279,8 +289,8 @@ describe('subtractTime', function()
         maorunTime.addTime({ time = initialHours, weekday = weekday })
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Thursday, Mar 16 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Thursday, Mar 16 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -316,7 +326,9 @@ describe('subtractTime', function()
 
     it('should function correctly when time tracking is paused and resumed', function()
         local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
-        os.time = function() return mock_context_ts end
+        os.time = function()
+            return mock_context_ts
+        end
         os.date = function(format, time_val)
             time_val = time_val or mock_context_ts
             return original_os_date(format, time_val)
@@ -334,8 +346,8 @@ describe('subtractTime', function()
         maorunTime.TimeResume()
         assert.is_false(maorunTime.isPaused(), 'Time tracking should be resumed')
 
-        local expected_year_key = "2023"
-        local expected_week_key = "11" -- Friday, Mar 17 is in week 11
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Friday, Mar 17 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
