@@ -7,6 +7,10 @@ local os = require('os')
 local Path = require('plenary.path') -- Added for file manipulation
 local tempPath
 
+-- Store original os functions
+local original_os_date = os.date
+local original_os_time = os.time
+
 -- Copied from lua/maorun/time/init.lua for test purposes
 local wdayToEngName = {
     [1] = 'Sunday',
@@ -26,50 +30,30 @@ end)
 
 after_each(function()
     os.remove(tempPath)
+    -- Restore original os functions
+    os.date = original_os_date
+    os.time = original_os_time
 end)
 
 describe('subtractTime', function()
     it('should subtract a whole number of hours from a specific weekday', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Monday'
         local hoursToSubtract = 3
         local defaultHoursForMonday = 8 -- Assuming default config
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Determine the year and week based on the new addTime/subtractTime logic.
-        local context_ts = os.time()
-        local current_t_info = os.date('*t', context_ts)
-        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
-        local current_day_midnight_ts = os.time({
-            year = current_t_info.year,
-            month = current_t_info.month,
-            day = current_t_info.day,
-            hour = 0,
-            min = 0,
-            sec = 0,
-        })
-        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
-        local offset_from_monday_map = {
-            Monday = 0,
-            Tuesday = 1,
-            Wednesday = 2,
-            Thursday = 3,
-            Friday = 4,
-            Saturday = 5,
-            Sunday = 6,
-        }
-        local current_target_weekday_in_test = weekday
-        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
-        if target_offset_from_monday == nil then
-            error(
-                "Error in test setup: current_target_weekday_in_test '"
-                    .. tostring(current_target_weekday_in_test)
-                    .. "' not found in offset_from_monday_map for key calculation."
-            )
-        end
-        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
-        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
-        local expected_week_key = os.date('%W', target_day_ts_for_keys)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Monday, Mar 13 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -114,46 +98,23 @@ describe('subtractTime', function()
     end)
 
     it('should subtract fractional hours from a specific weekday', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Tuesday'
         local hoursToSubtract = 2.5
         local defaultHoursForTuesday = 8 -- Assuming default config
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Determine the year and week based on the new addTime/subtractTime logic.
-        local context_ts = os.time()
-        local current_t_info = os.date('*t', context_ts)
-        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
-        local current_day_midnight_ts = os.time({
-            year = current_t_info.year,
-            month = current_t_info.month,
-            day = current_t_info.day,
-            hour = 0,
-            min = 0,
-            sec = 0,
-        })
-        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
-        local offset_from_monday_map = {
-            Monday = 0,
-            Tuesday = 1,
-            Wednesday = 2,
-            Thursday = 3,
-            Friday = 4,
-            Saturday = 5,
-            Sunday = 6,
-        }
-        local current_target_weekday_in_test = weekday
-        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
-        if target_offset_from_monday == nil then
-            error(
-                "Error in test setup: current_target_weekday_in_test '"
-                    .. tostring(current_target_weekday_in_test)
-                    .. "' not found in offset_from_monday_map for key calculation."
-            )
-        end
-        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
-        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
-        local expected_week_key = os.date('%W', target_day_ts_for_keys)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Tuesday, Mar 14 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -194,47 +155,24 @@ describe('subtractTime', function()
     end)
 
     it('should subtract time from the current day if weekday is not provided', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local hoursToSubtract = 1.5
-        local currentWeekday = wdayToEngName[os.date('*t').wday]
-        local defaultHoursForCurrentDay =
-            maorunTime.setup({ path = tempPath }).content.hoursPerWeekday[currentWeekday]
+        local currentWeekday = original_os_date('%A', mock_context_ts) -- Should be 'Wednesday'
+        local setup_content = maorunTime.setup({ path = tempPath }) -- Ensure setup is called to get hoursPerWeekday
+        local defaultHoursForCurrentDay = setup_content.content.hoursPerWeekday[currentWeekday]
 
         maorunTime.subtractTime({ time = hoursToSubtract }) -- No weekday argument
 
-        -- Determine the year and week based on the new addTime/subtractTime logic.
-        local context_ts = os.time()
-        local current_t_info = os.date('*t', context_ts)
-        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
-        local current_day_midnight_ts = os.time({
-            year = current_t_info.year,
-            month = current_t_info.month,
-            day = current_t_info.day,
-            hour = 0,
-            min = 0,
-            sec = 0,
-        })
-        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
-        local offset_from_monday_map = {
-            Monday = 0,
-            Tuesday = 1,
-            Wednesday = 2,
-            Thursday = 3,
-            Friday = 4,
-            Saturday = 5,
-            Sunday = 6,
-        }
-        local current_target_weekday_in_test = currentWeekday
-        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
-        if target_offset_from_monday == nil then
-            error(
-                "Error in test setup: current_target_weekday_in_test '"
-                    .. tostring(current_target_weekday_in_test)
-                    .. "' not found in offset_from_monday_map for key calculation."
-            )
-        end
-        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
-        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
-        local expected_week_key = os.date('%W', target_day_ts_for_keys)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Wednesday, Mar 15 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -276,49 +214,23 @@ describe('subtractTime', function()
     end)
 
     it('should correctly subtract time from a day with no prior entries', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Wednesday'
         local hoursToSubtract = 4
         local defaultHoursForWednesday = 8 -- Assuming default config
 
-        -- Ensure no prior entries by re-initializing or checking count
-        -- before_each already sets up a clean state with no entries
-
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Determine the year and week based on the new addTime/subtractTime logic.
-        local context_ts = os.time()
-        local current_t_info = os.date('*t', context_ts)
-        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
-        local current_day_midnight_ts = os.time({
-            year = current_t_info.year,
-            month = current_t_info.month,
-            day = current_t_info.day,
-            hour = 0,
-            min = 0,
-            sec = 0,
-        })
-        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
-        local offset_from_monday_map = {
-            Monday = 0,
-            Tuesday = 1,
-            Wednesday = 2,
-            Thursday = 3,
-            Friday = 4,
-            Saturday = 5,
-            Sunday = 6,
-        }
-        local current_target_weekday_in_test = weekday
-        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
-        if target_offset_from_monday == nil then
-            error(
-                "Error in test setup: current_target_weekday_in_test '"
-                    .. tostring(current_target_weekday_in_test)
-                    .. "' not found in offset_from_monday_map for key calculation."
-            )
-        end
-        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
-        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
-        local expected_week_key = os.date('%W', target_day_ts_for_keys)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Wednesday, Mar 15 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -360,6 +272,15 @@ describe('subtractTime', function()
     end)
 
     it('should correctly update summaries after subtraction and recalculation', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Thursday'
         local initialHours = 5
         local hoursToSubtract = 2
@@ -368,40 +289,8 @@ describe('subtractTime', function()
         maorunTime.addTime({ time = initialHours, weekday = weekday })
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Determine the year and week based on the new addTime/subtractTime logic.
-        local context_ts = os.time()
-        local current_t_info = os.date('*t', context_ts)
-        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
-        local current_day_midnight_ts = os.time({
-            year = current_t_info.year,
-            month = current_t_info.month,
-            day = current_t_info.day,
-            hour = 0,
-            min = 0,
-            sec = 0,
-        })
-        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
-        local offset_from_monday_map = {
-            Monday = 0,
-            Tuesday = 1,
-            Wednesday = 2,
-            Thursday = 3,
-            Friday = 4,
-            Saturday = 5,
-            Sunday = 6,
-        }
-        local current_target_weekday_in_test = weekday
-        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
-        if target_offset_from_monday == nil then
-            error(
-                "Error in test setup: current_target_weekday_in_test '"
-                    .. tostring(current_target_weekday_in_test)
-                    .. "' not found in offset_from_monday_map for key calculation."
-            )
-        end
-        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
-        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
-        local expected_week_key = os.date('%W', target_day_ts_for_keys)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Thursday, Mar 16 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -436,6 +325,15 @@ describe('subtractTime', function()
     end)
 
     it('should function correctly when time tracking is paused and resumed', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Friday'
         local hoursToSubtract = 1
         local defaultHoursForFriday = 8 -- Assuming default config
@@ -448,40 +346,8 @@ describe('subtractTime', function()
         maorunTime.TimeResume()
         assert.is_false(maorunTime.isPaused(), 'Time tracking should be resumed')
 
-        -- Determine the year and week based on the new addTime/subtractTime logic.
-        local context_ts = os.time()
-        local current_t_info = os.date('*t', context_ts)
-        local days_to_subtract_for_monday = (tonumber(os.date('%u', context_ts)) - 1)
-        local current_day_midnight_ts = os.time({
-            year = current_t_info.year,
-            month = current_t_info.month,
-            day = current_t_info.day,
-            hour = 0,
-            min = 0,
-            sec = 0,
-        })
-        local monday_ts = current_day_midnight_ts - (days_to_subtract_for_monday * 24 * 3600)
-        local offset_from_monday_map = {
-            Monday = 0,
-            Tuesday = 1,
-            Wednesday = 2,
-            Thursday = 3,
-            Friday = 4,
-            Saturday = 5,
-            Sunday = 6,
-        }
-        local current_target_weekday_in_test = weekday
-        local target_offset_from_monday = offset_from_monday_map[current_target_weekday_in_test]
-        if target_offset_from_monday == nil then
-            error(
-                "Error in test setup: current_target_weekday_in_test '"
-                    .. tostring(current_target_weekday_in_test)
-                    .. "' not found in offset_from_monday_map for key calculation."
-            )
-        end
-        local target_day_ts_for_keys = monday_ts + (target_offset_from_monday * 24 * 3600)
-        local expected_year_key = os.date('%Y', target_day_ts_for_keys)
-        local expected_week_key = os.date('%W', target_day_ts_for_keys)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Friday, Mar 17 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
