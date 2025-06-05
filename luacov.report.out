@@ -7346,7 +7346,7 @@
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/mediator.lua
 ==============================================================================
        local function getUniqueId(obj)
-*****0   return tonumber(tostring(obj):match(':%s*[0xX]*(%x+)'), 16)
+    34   return tonumber(tostring(obj):match(':%s*[0xX]*(%x+)'), 16)
        end
 
        local function Subscriber(fn, options)
@@ -11644,7 +11644,7 @@
          end,
 
          set = function(self, key, value)
-    19     registry[current_namespace][key] = value
+*****0     registry[current_namespace][key] = value
          end
        }
 
@@ -14989,7 +14989,7 @@ File                                                                            
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/modifiers.lua                   3    8      27.27%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/state.lua                       4    47     7.84%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/util.lua                        75   103    42.13%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/mediator.lua                             38   27     58.46%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/mediator.lua                             39   26     60.00%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/List.lua                              62   156    28.44%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/class.lua                             20   82     19.61%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/dir.lua                               65   188    25.69%
@@ -14997,7 +14997,7 @@ File                                                                            
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/tablex.lua                            27   377    6.68%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/types.lua                             5    57     8.06%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/utils.lua                             9    292    2.99%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/say/init.lua                             13   15     46.43%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/say/init.lua                             12   16     42.86%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/vusted/run.lua                           5    18     21.74%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua                                         339  69     83.09%
 test/add_time_spec.lua                                                                                           139  0      100.00%
