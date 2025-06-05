@@ -1,5 +1,809 @@
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/animate/init.lua
+/app/lua/maorun/time/init.lua
+==============================================================================
+     8 local Path = require('plenary.path')
+     8 local os_sep = require('plenary.path').path.sep
+     8 local notify = require('notify')
+
+     8 local wdayToEngName = {
+           [1] = 'Sunday',
+           [2] = 'Monday',
+           [3] = 'Tuesday',
+           [4] = 'Wednesday',
+           [5] = 'Thursday',
+           [6] = 'Friday',
+           [7] = 'Saturday',
+       }
+
+       local function save(obj)
+   473     Path:new(obj.path):write(vim.fn.json_encode(obj.content), 'w')
+       end
+
+     8 local obj = {
+           path = nil,
+       }
+
+     8 local defaultHoursPerWeekday = {
+           Monday = 8,
+           Tuesday = 8,
+           Wednesday = 8,
+           Thursday = 8,
+           Friday = 8,
+           Saturday = 0,
+           Sunday = 0,
+       }
+
+     8 local weekdayNumberMap = {
+           Sunday = 0,
+           Monday = 1,
+           Tuesday = 2,
+           Wednesday = 3,
+           Thursday = 4,
+           Friday = 5,
+           Saturday = 6,
+       }
+
+     8 local defaults = {
+    16     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
+     8     hoursPerWeekday = defaultHoursPerWeekday,
+       }
+     8 local config = defaults
+
+       local function init(user_config)
+   498     config = vim.tbl_deep_extend('force', defaults, user_config or {})
+   249     if user_config.hoursPerWeekday ~= nil then
+   206         config.hoursPerWeekday = user_config.hoursPerWeekday
+           end
+   249     obj.path = config.path
+   249     local p = Path:new(obj.path)
+   747     if not p:exists() then
+    14         p:touch({ parents = true })
+           end
+
+   747     local data = Path:new(obj.path):read()
+   249     if data ~= '' then
+   129         obj.content = vim.json.decode(data)
+           else
+   120         obj.content = {}
+           end
+           -- Ensure hoursPerWeekday is initialized if not present (e.g. new file)
+   249     if obj.content['hoursPerWeekday'] == nil then
+   123         obj.content['hoursPerWeekday'] = config.hoursPerWeekday
+           end
+
+   249     if obj.content['data'] == nil then
+   120         obj.content['data'] = {}
+           end
+
+   249     local year_str = os.date('%Y')
+   249     local week_str = os.date('%W')
+   249     local project_name = 'default_project' -- Hardcoded for now
+   249     local file_name = 'default_file' -- Hardcoded for now
+
+   249     if obj.content['data'][year_str] == nil then
+   135         obj.content['data'][year_str] = {}
+           end
+   249     if obj.content['data'][year_str][week_str] == nil then
+   135         obj.content['data'][year_str][week_str] = {}
+           end
+   249     if obj.content['data'][year_str][week_str][project_name] == nil then
+   135         obj.content['data'][year_str][week_str][project_name] = {}
+           end
+   249     if obj.content['data'][year_str][week_str][project_name][file_name] == nil then
+   135         obj.content['data'][year_str][week_str][project_name][file_name] = {
+   135             weekdays = {}, -- Will store weekday -> {summary={}, items={...}}
+                   -- The weekly summary (overhour) is not initialized here,
+                   -- it will be handled by the calculate function.
+   135         }
+           end
+   249     return obj
+       end
+
+       ---@param opts {weeknumber: string|osdate, year: string|osdate}|nil
+       local function calculate(opts)
+   184     opts = vim.tbl_deep_extend('keep', opts or {}, {
+   180         year = os.date('%Y'),
+   180         weeknumber = os.date('%W'),
+    92     })
+
+    92     local year_str = opts.year
+    92     local week_str = opts.weeknumber
+
+    92     if not obj.content['data'][year_str] or not obj.content['data'][year_str][week_str] then
+               -- No data for this year/week, nothing to calculate
+*****0         return
+           end
+
+    92     local current_week_data = obj.content['data'][year_str][week_str]
+
+           -- Initialize week summary if it doesn't exist under current_week_data.summary
+    92     if current_week_data.summary == nil then
+    40         current_week_data.summary = {}
+           end
+
+    92     local prevWeekOverhour = 0
+           -- Ensure year_str data exists before trying to access previous week
+    92     if obj.content['data'][year_str] then
+    92         local prev_week_number_str = string.format('%02d', tonumber(week_str) - 1)
+    92         if obj.content['data'][year_str][prev_week_number_str] then
+     2             local prev_week_data = obj.content['data'][year_str][prev_week_number_str]
+     2             if prev_week_data and prev_week_data.summary and prev_week_data.summary.overhour then
+     2                 prevWeekOverhour = prev_week_data.summary.overhour
+                   end
+               end
+           end
+
+    92     current_week_data.summary.overhour = prevWeekOverhour -- Initialize with previous week's carry-over
+           -- local total_time_in_week = 0 -- Can be used if we want to store total logged time for the week explicitly
+
+           -- Iterate over projects in the current week
+   290     for project_name, project_data in pairs(current_week_data) do
+   198         if project_name ~= 'summary' then -- Skip the summary table itself
+                   -- Iterate over files in the current project
+   216             for file_name, file_data in pairs(project_data) do
+   110                 if file_data.weekdays then
+                           -- Iterate over weekdays in the current file
+   204                     for weekday_name, day_data in pairs(file_data.weekdays) do
+    94                         local time_in_weekday = 0
+    94                         if day_data.items then
+   199                             for _, item_entry in pairs(day_data.items) do
+   105                                 if item_entry.diffInHours ~= nil then
+   102                                     time_in_weekday = time_in_weekday + item_entry.diffInHours
+                                       end
+                                   end
+                               end
+
+                               -- Update summary for this specific day under project -> file -> weekday
+    94                         if day_data.summary == nil then
+     1                             day_data.summary = {}
+                               end
+    94                         day_data.summary.diffInHours = time_in_weekday
+
+    94                         local expected_hours = obj.content['hoursPerWeekday'][weekday_name] or 0
+    94                         day_data.summary.overhour = time_in_weekday - expected_hours
+
+                               -- Accumulate this day's overhour to the overall week summary
+    94                         current_week_data.summary.overhour = current_week_data.summary.overhour
+    94                             + day_data.summary.overhour
+                               -- total_time_in_week = total_time_in_week + time_in_weekday -- Accumulate total logged time
+                           end
+                       end
+                   end
+               end
+           end
+           -- If you want to store the total logged time for the week in the summary:
+           -- current_week_data.summary.totalLoggedTime = total_time_in_week
+       end
+
+       local function TimePause()
+    10     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+    10     obj.content.paused = true
+    10     save(obj)
+    20     notify({
+               'Timetracking paused',
+    10     }, 'info', { title = 'TimeTracking - Pause' })
+       end
+
+       local function TimeResume()
+     7     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+     7     obj.content.paused = false
+     7     save(obj)
+    14     notify({
+               'Timetracking resumed',
+     7     }, 'info', { title = 'TimeTracking - Resume' })
+       end
+       local function isPaused()
+    72     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+    72     return obj.content.paused
+       end
+
+       ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
+       local function TimeStart(opts)
+     9     opts = opts or {}
+     9     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+    18     if isPaused() then
+*****0         return
+           end
+
+     9     local weekday = opts.weekday
+     9     local time = opts.time
+     9     local project = opts.project or 'default_project'
+     9     local file = opts.file or 'default_file'
+
+     9     if weekday == nil then
+    15         local current_wday_numeric = os.date('*t', os.time()).wday
+     5         weekday = wdayToEngName[current_wday_numeric]
+           end
+     9     if time == nil then
+*****0         time = os.time()
+           end
+
+     9     local year_str = os.date('%Y', time) -- Use time for year_str for consistency if time is provided
+     9     local week_str = os.date('%W', time) -- Use time for week_str for consistency
+
+           -- Ensure path exists (init might have only created for current os.date)
+     9     if obj.content['data'][year_str] == nil then
+*****0         obj.content['data'][year_str] = {}
+           end
+     9     if obj.content['data'][year_str][week_str] == nil then
+*****0         obj.content['data'][year_str][week_str] = {}
+           end
+     9     if obj.content['data'][year_str][week_str][project] == nil then
+     1         obj.content['data'][year_str][week_str][project] = {}
+           end
+     9     if obj.content['data'][year_str][week_str][project][file] == nil then
+     1         obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
+           end
+     9     if obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
+     8         obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
+     8             summary = {},
+     8             items = {},
+     8         }
+           end
+
+     9     local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+     9     local canStart = true
+    10     for _, item in pairs(dayItem.items) do
+     1         canStart = canStart and (item.startTime ~= nil and item.endTime ~= nil)
+           end
+     9     if canStart then
+     8         local timeReadable = os.date('*t', time)
+    16         table.insert(dayItem.items, {
+     8             startTime = time,
+     8             startReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min),
+               })
+           end
+     9     save(obj)
+       end
+
+       ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
+       local function TimeStop(opts)
+     7     opts = opts or {}
+     7     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+    14     if isPaused() then
+*****0         return
+           end
+
+     7     local weekday = opts.weekday
+     7     local time = opts.time
+     7     local project = opts.project or 'default_project'
+     7     local file = opts.file or 'default_file'
+
+     7     if weekday == nil then
+    12         local current_wday_numeric = os.date('*t', os.time()).wday
+     4         weekday = wdayToEngName[current_wday_numeric]
+           end
+     7     if time == nil then
+*****0         time = os.time()
+           end
+
+     7     local year_str = os.date('%Y', time)
+     7     local week_str = os.date('%W', time)
+
+           -- Check if the path to the day's items exists in the new structure
+     7     local dayItem_path_exists = obj.content['data'][year_str]
+     7         and obj.content['data'][year_str][week_str]
+     7         and obj.content['data'][year_str][week_str][project]
+     7         and obj.content['data'][year_str][week_str][project][file]
+     7         and obj.content['data'][year_str][week_str][project][file]['weekdays']
+     7         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+     7         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
+
+     7     if dayItem_path_exists then
+     6         local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+    12         for _, item in pairs(dayItem.items) do
+     6             if item.endTime == nil then
+     5                 item.endTime = time
+     5                 local timeReadable = os.date('*t', time)
+     5                 item.endReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min)
+     5                 item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
+                   end
+               end
+           end
+
+     7     calculate({ year = year_str, weeknumber = week_str }) -- Calculate regardless of whether items were stopped, to update summaries.
+     7     save(obj)
+
+     7     local heute_text = 'N/A'
+     7     if dayItem_path_exists then
+               -- Accessing dayItem here is safe because dayItem_path_exists is true
+     6         local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+     6         if dayItem.summary and dayItem.summary.overhour then
+     6             heute_text = string.format('%.2f', dayItem.summary.overhour)
+               end
+           end
+
+     7     local gesamt_text = 'N/A'
+           -- Check path for overall week summary - this might be inaccurate until 'calculate' is updated
+           if
+     7         obj.content['data'][year_str]
+     7         and obj.content['data'][year_str][week_str]
+     7         and obj.content['data'][year_str][week_str].summary -- This summary is at week level
+     7         and obj.content['data'][year_str][week_str].summary.overhour
+           then
+*****0         gesamt_text =
+     7             string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour)
+           end
+
+    14     notify({
+     7         'Heute: ' .. heute_text .. ' Stunden',
+     7         'Gesamt: ' .. gesamt_text .. ' Stunden',
+     7     }, 'info', { title = 'TimeTracking - Stop' })
+       end
+
+       -- calculate an average over the hoursPerWeekday
+       local function calculateAverage()
+     2     local sum = 0
+     2     local count = 0
+    14     for _, value in pairs(config.hoursPerWeekday) do
+    12         sum = sum + value
+    12         count = count + 1
+           end
+     2     return sum / count
+       end
+
+       local function saveTime(startTime, endTime, weekday, clearDay, project, file, isSubtraction)
+    42     project = project or 'default_project'
+    42     file = file or 'default_file'
+    42     isSubtraction = isSubtraction or false -- Default to false if not provided
+    42     local year_str = os.date('%Y', startTime) -- Use startTime to determine year/week
+    42     local week_str = os.date('%W', startTime)
+
+           -- Ensure path exists
+    42     if obj.content['data'][year_str] == nil then
+*****0         obj.content['data'][year_str] = {}
+           end
+    42     if obj.content['data'][year_str][week_str] == nil then
+*****0         obj.content['data'][year_str][week_str] = {}
+           end
+    42     if obj.content['data'][year_str][week_str][project] == nil then
+     5         obj.content['data'][year_str][week_str][project] = {}
+           end
+    42     if obj.content['data'][year_str][week_str][project][file] == nil then
+     6         obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
+           end
+    42     if obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
+    34         obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
+    34             summary = {},
+    34             items = {},
+    34         }
+           end
+
+           -- Handle clearDay logic - if true, existing items for the day are cleared.
+           -- The original saveTime had a complex `clearDay` check in the first 'if'.
+           -- Assuming if clearDay is passed as non-nil (and not 'nope'), it means we should clear.
+           -- The addTime function passes clearDay as 'yes' or nil. 'nope' was for subtractTime.
+           -- For simplicity here, if clearDay is true (boolean), we clear.
+           -- The addTime/setTime logic will need to ensure clearDay is passed appropriately.
+           -- The original logic for clearDay was: `if clearDay == nil and ... == nil then init day`.
+           -- This seems more about init than clearing. The actual clearing is done by `clearDay()` func.
+           -- Let's stick to the new structure path first. The `clearDay` param in `saveTime` might be redundant
+           -- if `clearDay()` function is used before `addTime` in `setTime`.
+           -- For now, `clearDay` in `saveTime` doesn't actively clear, it's more for path init.
+
+    42     local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+    42     local timeReadableStart = os.date('*t', startTime)
+    42     local item = {
+    42         startTime = startTime,
+    42         startReadable = string.format('%02d:%02d', timeReadableStart.hour, timeReadableStart.min),
+    42         endTime = endTime,
+           }
+    42     local timeReadableEnd = os.date('*t', endTime)
+    42     item.endReadable = string.format('%02d:%02d', timeReadableEnd.hour, timeReadableEnd.min)
+
+    42     item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
+    42     if isSubtraction then
+     9         item.diffInHours = -item.diffInHours
+           end
+
+    42     table.insert(dayItem.items, item)
+    42     calculate({ year = year_str, weeknumber = week_str })
+    42     save(obj)
+
+    84     notify({
+    42         'Heute: ' .. string.format('%.2f', dayItem.summary.overhour) .. ' Stunden',
+               'Gesamt: '
+    42             .. string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour)
+    42             .. ' Stunden',
+    42     }, 'info', { title = 'TimeTracking - SaveTime' }) -- Changed title for clarity
+       end
+
+       -- adds time into the current week
+       ---@param opts { time: number, weekday: string|osdate, clearDay?: string, project?: string, file?: string }
+       local function addTime(opts)
+    33     local time = opts.time
+    33     local weekday = opts.weekday
+    33     local clearDay = opts.clearDay -- This is 'yes' or nil from setTime/setIllDay, or 'nope'
+    33     local project = opts.project or 'default_project'
+    33     local file = opts.file or 'default_file'
+
+           -- The original clearDay logic: if nil, it's 'nope'; if 'yes', it's nil for saveTime's old check.
+           -- This is confusing. Let's simplify: `clearDay` in `addTime` means "should the day be cleared before adding".
+           -- `setTime` calls `clearDay()` then `addTime()`. So `addTime` itself doesn't need to handle clearing.
+           -- The `clearDay` parameter passed to `saveTime` from here will be the original `opts.clearDay` value.
+           -- saveTime's responsibility is just to save, path creation is fine.
+
+    33     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+
+    33     local current_mocked_ts = os.time() -- This will be GMT if tests mock os.time correctly
+    33     local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
+
+           -- Calculate GMT midnight for the current mocked day
+*****0     local current_day_gmt_midnight_ts = current_mocked_ts
+*****0         - (
+    33             current_mocked_t_info.hour * 3600
+    33             + current_mocked_t_info.min * 60
+    33             + current_mocked_t_info.sec
+    33         )
+
+    33     local targetWeekdayName = opts.weekday
+    33     if targetWeekdayName == nil then
+     1         targetWeekdayName = wdayToEngName[current_mocked_t_info.wday]
+           end
+
+           -- Determine Target Weekday and its GMT Midnight
+           -- Note: os.date('*t').wday is 1 for Sunday, ..., 7 for Saturday
+    33     local weekday_name_to_num_1_7 = {
+               Sunday = 1,
+               Monday = 2,
+               Tuesday = 3,
+               Wednesday = 4,
+               Thursday = 5,
+               Friday = 6,
+               Saturday = 7,
+           }
+    33     local current_wday_numeric_1_7 = current_mocked_t_info.wday
+    33     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
+
+    33     if target_wday_numeric_1_7 == nil then
+               -- Fallback for unrecognized weekday string, though ideally should not happen
+               -- if opts.weekday is validated or comes from wdayToEngName
+*****0         notify(
+                   "Warning: Unrecognized weekday '"
+*****0                 .. tostring(targetWeekdayName)
+*****0                 .. "' in addTime. Defaulting to current day.",
+                   'warn'
+               )
+*****0         target_wday_numeric_1_7 = current_wday_numeric_1_7
+           end
+
+    33     local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
+    33     local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
+
+           -- Calculate duration in total seconds
+    33     local total_seconds_duration = math.floor(opts.time * 3600)
+
+           -- Calculate startTime_ts and endTime_ts using GMT arithmetic
+    33     local add_endTime_ts = target_day_gmt_midnight_ts + (23 * 3600) -- 23:00:00 GMT on target day
+    33     local add_startTime_ts = add_endTime_ts - total_seconds_duration
+
+    33     local startTime = add_startTime_ts
+    33     local endTime = add_endTime_ts
+
+    33     local paused = isPaused()
+    33     if paused then
+     1         TimeResume()
+           end
+
+           -- Pass project and file to saveTime
+    33     saveTime(startTime, endTime, targetWeekdayName, clearDay, project, file, false)
+
+    33     if paused then
+     1         TimePause()
+           end
+    33     return obj
+       end
+
+       -- subtracts time from the current week
+       ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
+       local function subtractTime(opts)
+     9     local time = opts.time
+     9     local weekday = opts.weekday
+     9     local project = opts.project or 'default_project'
+     9     local file = opts.file or 'default_file'
+
+     9     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+
+     9     local current_mocked_ts = os.time() -- This will be GMT if tests mock os.time correctly
+     9     local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
+
+           -- Calculate GMT midnight for the current mocked day
+*****0     local current_day_gmt_midnight_ts = current_mocked_ts
+*****0         - (
+     9             current_mocked_t_info.hour * 3600
+     9             + current_mocked_t_info.min * 60
+     9             + current_mocked_t_info.sec
+     9         )
+
+     9     local targetWeekdayName = opts.weekday
+     9     if targetWeekdayName == nil then
+     1         targetWeekdayName = wdayToEngName[current_mocked_t_info.wday]
+           end
+
+           -- Determine Target Weekday and its GMT Midnight
+           -- Note: os.date('*t').wday is 1 for Sunday, ..., 7 for Saturday
+     9     local weekday_name_to_num_1_7 = {
+               Sunday = 1,
+               Monday = 2,
+               Tuesday = 3,
+               Wednesday = 4,
+               Thursday = 5,
+               Friday = 6,
+               Saturday = 7,
+           }
+     9     local current_wday_numeric_1_7 = current_mocked_t_info.wday
+     9     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
+
+     9     if target_wday_numeric_1_7 == nil then
+               -- Fallback for unrecognized weekday string
+*****0         notify(
+                   "Warning: Unrecognized weekday '"
+*****0                 .. tostring(targetWeekdayName)
+*****0                 .. "' in subtractTime. Defaulting to current day.",
+                   'warn'
+               )
+*****0         target_wday_numeric_1_7 = current_wday_numeric_1_7
+           end
+
+     9     local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
+     9     local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
+
+           -- Calculate duration in total seconds
+     9     local total_seconds_duration = math.floor(opts.time * 3600)
+
+           -- Calculate startTime_to_save and endTime_to_save using GMT arithmetic
+     9     local sub_day_end_reference_ts = target_day_gmt_midnight_ts + (23 * 3600) -- 23:00:00 GMT on target day
+     9     local sub_startTime_to_save = sub_day_end_reference_ts - total_seconds_duration
+     9     local sub_endTime_to_save = sub_day_end_reference_ts
+
+     9     local startTime = sub_startTime_to_save
+     9     local endTime = sub_endTime_to_save
+
+     9     local paused = isPaused()
+     9     if paused then
+     1         TimeResume()
+           end
+
+           -- Pass project, file. 'nope' for clearDay indicates not to clear.
+     9     saveTime(startTime, endTime, targetWeekdayName, 'nope', project, file, true)
+
+     9     if paused then
+     1         TimePause()
+           end
+
+     9     return obj
+       end
+
+       local function setIllDay(weekday)
+     4     addTime({
+     4         time = calculateAverage(),
+     2         weekday = weekday,
+               clearDay = 'yes',
+           })
+     2     return obj
+       end
+
+       local function clearDay(weekday, project, file)
+     1     project = project or 'default_project'
+     1     file = file or 'default_file'
+     1     local year_str = os.date('%Y')
+     1     local week_str = os.date('%W')
+
+           if
+     1         obj.content['data'][year_str]
+     1         and obj.content['data'][year_str][week_str]
+     1         and obj.content['data'][year_str][week_str][project]
+     1         and obj.content['data'][year_str][week_str][project][file]
+     1         and obj.content['data'][year_str][week_str][project][file]['weekdays']
+     1         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+           then
+               local dayItems =
+     1             obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
+     1         if dayItems then
+     3             for key, _ in pairs(dayItems) do
+     2                 dayItems[key] = nil
+                   end
+               end
+           end
+     1     calculate({ year = year_str, weeknumber = week_str }) -- Recalculate for the current/affected week
+     1     save(obj)
+       end
+
+       ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
+       local function setTime(opts)
+     1     opts = opts or {}
+     1     local project = opts.project or 'default_project'
+     1     local file = opts.file or 'default_file'
+
+     1     clearDay(opts.weekday, project, file) -- Pass project and file to clearDay
+     2     addTime({
+     1         time = opts.time,
+     1         weekday = opts.weekday,
+               clearDay = 'yes', -- 'yes' indicates to saveTime that items might have been cleared
+     1         project = project,
+     1         file = file,
+           })
+       end
+
+     8 local timeGroup = vim.api.nvim_create_augroup('Maorun-Time', {})
+    16 vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter', 'VimEnter' }, {
+     8     group = timeGroup,
+           desc = 'Start Timetracking on VimEnter or BufEnter (if second vim was leaved)',
+           callback = function()
+*****0         TimeStart()
+           end,
+       })
+    16 vim.api.nvim_create_autocmd('VimLeave', {
+     8     group = timeGroup,
+           desc = 'End Timetracking on VimLeave',
+           callback = function()
+*****0         TimeStop()
+           end,
+       })
+
+       ---@param opts { hours?: boolean, weekday?: boolean, project?: boolean, file?: boolean }
+       ---@param callback fun(hours:number, weekday: string, project:string, file:string) the function to call
+       local function select(opts, callback)
+*****0     opts = vim.tbl_deep_extend('force', { -- Use 'force' to ensure defaults are applied
+               hours = true,
+               weekday = true,
+               project = true,
+               file = true,
+*****0     }, opts or {})
+
+*****0     local selected_project = 'default_project'
+*****0     local selected_file = 'default_file'
+
+           local function get_file_input()
+*****0         if opts.file then
+*****0             vim.ui.input({ prompt = 'File name? (default: default_file) ' }, function(input)
+*****0                 selected_file = (input and input ~= '') and input or 'default_file'
+*****0                 get_weekday_selection() -- Proceed to weekday selection
+                   end)
+               else
+*****0             get_weekday_selection() -- Skip file input
+               end
+           end
+
+           local function get_project_input()
+*****0         if opts.project then
+*****0             vim.ui.input({ prompt = 'Project name? (default: default_project) ' }, function(input)
+*****0                 selected_project = (input and input ~= '') and input or 'default_project'
+*****0                 get_file_input() -- Proceed to file input
+                   end)
+               else
+*****0             get_file_input() -- Skip project input
+               end
+           end
+
+*****0     local selections = {}
+*****0     local selectionNumbers = {}
+*****0     for _, value in pairs(weekdayNumberMap) do
+*****0         if not selectionNumbers[value] then
+*****0             selectionNumbers[value] = 1
+*****0             selections[#selections + 1] = _
+               end
+           end
+
+           ---@param weekday string
+           local function selectHours(weekday_param)
+*****0         if opts.hours then
+*****0             vim.ui.input({
+                       prompt = 'How many hours? ',
+                   }, function(input)
+*****0                 local n = tonumber(input)
+*****0                 if n == nil or input == nil or input == '' then
+*****0                     return
+                       end
+*****0                 callback(n, weekday_param, selected_project, selected_file)
+                   end)
+               else
+                   -- If hours are not required, pass a default or handle appropriately
+*****0             callback(0, weekday_param, selected_project, selected_file) -- Assuming 0 hours if not prompted
+               end
+           end
+
+           local function get_weekday_selection()
+*****0         if opts.weekday then
+*****0             if pcall(require, 'telescope') then
+*****0                 local telescopeSelect = require('maorun.time.weekday_select')
+*****0                 telescopeSelect({
+                           prompt_title = 'Which day?',
+                           list = selections,
+                           action = function(selected_weekday)
+*****0                         selectHours(selected_weekday)
+                           end,
+                       })
+                   else
+*****0                 vim.ui.select(selections, {
+                           prompt = 'Which day? ',
+                       }, function(selected_weekday)
+*****0                     selectHours(selected_weekday)
+                       end)
+                   end
+               else
+                   -- If weekday is not required, pass a default or handle appropriately
+                   -- This case might need clarification: what weekday to use if not selected?
+                   -- For now, assuming it means no time entry if weekday selection is skipped.
+                   -- Or, pass a default like current day, but callback expects a weekday.
+                   -- Let's assume callback is only made if weekday is selected.
+                   -- If opts.weekday is false, the chain stops or uses a predefined weekday.
+                   -- For now, if weekday is false, we directly call callback with defaults (e.g. for project/file only ops)
+                   -- callback(0, nil, selected_project, selected_file) -- This line is problematic if weekday is essential
+                   -- Safest is to ensure weekday selection happens if callback needs it.
+                   -- The current design implies `select` is primarily for operations that involve weekday and hours.
+                   -- If only project/file are needed for some future op, `select` might need more changes.
+                   -- Given the context of addTime, substractTime, setTime, weekday and hours are essential.
+               end
+           end
+
+           -- Start the chain of inputs
+*****0     get_project_input()
+       end
+
+     8 Time = {
+           add = function()
+*****0         select(
+                   {},
+                   function(hours, weekday, project, file) -- Add project and file to callback params
+*****0                 addTime({ time = hours, weekday = weekday, project = project, file = file })
+                   end
+               )
+           end,
+     8     addTime = addTime,
+           subtract = function()
+*****0         select({}, function(hours, weekday, project, file) -- Add project and file
+*****0             subtractTime({ time = hours, weekday = weekday, project = project, file = file })
+               end)
+           end,
+     8     subtractTime = subtractTime,
+     8     clearDay = clearDay, -- clearDay now takes project and file, but this public Time.clearDay would need them.
+           -- This might require another vim.ui.select or direct args. For now, it's an issue.
+           -- TODO: Adjust public Time.clearDay or make it internal / part of setTime only.
+     8     TimePause = TimePause,
+     8     TimeResume = TimeResume,
+     8     TimeStop = TimeStop,
+           set = function()
+*****0         select({}, function(hours, weekday, project, file) -- Add project and file
+*****0             setTime({ time = hours, weekday = weekday, project = project, file = file })
+               end)
+           end,
+     8     setTime = setTime,
+     8     setIllDay = setIllDay,
+     8     setHoliday = setIllDay,
+           calculate = function(opts) -- Accept opts
+*****0         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+*****0         calculate(opts)
+*****0         save(obj)
+*****0         return obj
+           end,
+     8 }
+
+     8 return {
+     8     setup = init,
+     8     TimeStart = TimeStart,
+     8     TimeStop = TimeStop,
+     8     TimePause = TimePause,
+     8     TimeResume = TimeResume,
+     8     setIllDay = setIllDay,
+     8     setHoliday = setIllDay,
+     8     addTime = addTime,
+     8     subtractTime = subtractTime,
+     8     setTime = setTime,
+     8     clearDay = clearDay,
+     8     isPaused = isPaused,
+           calculate = function(opts) -- Accept opts
+    42         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
+    42         calculate(opts)
+    42         save(obj)
+    42         return obj
+           end,
+
+     8     weekdays = weekdayNumberMap,
+     8 }
+
+==============================================================================
+/home/jules/.local/share/nvim/test/notify/lua/notify/animate/init.lua
 ==============================================================================
      8 local M = {}
 
@@ -8,7 +812,7 @@
      8 return M
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/animate/spring.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/animate/spring.lua
 ==============================================================================
        -- Adapted from https://gist.github.com/Fraktality/1033625223e13c01aa7144abe4aaf54d
        -- Explanation found here https://www.ryanjuckett.com/damped-springs/
@@ -68,7 +872,7 @@
        end
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/config/highlights.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/config/highlights.lua
 ==============================================================================
      8 local M = {}
 
@@ -113,7 +917,7 @@
      8 return M
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/config/init.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/config/init.lua
 ==============================================================================
        ---@tag notify.config
 
@@ -326,7 +1130,7 @@
      8 return Config
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/init.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/init.lua
 ==============================================================================
        ---@text
        --- A fancy, configurable notification manager for NeoVim
@@ -527,7 +1331,7 @@
 
     16 setmetatable(notify, {
          __call = function(_, m, l, o)
-   132     if vim.in_fast_event() or vim.fn.has("vim_starting") == 1 then
+   133     if vim.in_fast_event() or vim.fn.has("vim_starting") == 1 then
    132       vim.schedule(function()
 *****0         notify.notify(m, l, o)
              end)
@@ -540,7 +1344,7 @@
      8 return notify
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/instance.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/instance.lua
 ==============================================================================
      8 local stages = require("notify.stages")
      8 local config = require("notify.config")
@@ -772,7 +1576,7 @@
        end
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/service/buffer/highlights.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/service/buffer/highlights.lua
 ==============================================================================
      8 local util = require("notify.util")
 
@@ -947,7 +1751,7 @@
        end
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/service/buffer/init.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/service/buffer/init.lua
 ==============================================================================
      8 local api = vim.api
 
@@ -1110,7 +1914,7 @@
        end
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/service/init.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/service/init.lua
 ==============================================================================
      8 local util = require("notify.util")
      8 local NotificationBuf = require("notify.service.buffer")
@@ -1229,7 +2033,7 @@
        end
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/service/notification.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/service/notification.lua
 ==============================================================================
        ---@class notify.Notification
        ---@field id integer
@@ -1313,7 +2117,7 @@
        end
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/stages/init.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/stages/init.lua
 ==============================================================================
      8 local M = {}
 
@@ -1337,7 +2141,7 @@
      8 return M
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/stages/util.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/stages/util.lua
 ==============================================================================
      8 local max, min = math.max, math.min
      8 local util = require("notify.util")
@@ -1545,7 +2349,7 @@
      8 return M
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/util/init.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/util/init.lua
 ==============================================================================
      8 local M = {}
 
@@ -1686,7 +2490,7 @@
      8 return M
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/util/queue.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/util/queue.lua
 ==============================================================================
        ---@class FIFOQueue
      8 local FIFOQueue = {}
@@ -1744,7 +2548,7 @@
        end
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/notify/lua/notify/windows/init.lua
+/home/jules/.local/share/nvim/test/notify/lua/notify/windows/init.lua
 ==============================================================================
      8 local api = vim.api
      8 local animate = require("notify.animate")
@@ -2076,7 +2880,7 @@
        end
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/plenary/lua/plenary/bit.lua
+/home/jules/.local/share/nvim/test/plenary/lua/plenary/bit.lua
 ==============================================================================
        -- Shortcircuit to returning bit if it already exists
      8 if bit then return bit end
@@ -2419,7 +3223,7 @@
 *****0 return M.bit
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/plenary/lua/plenary/functional.lua
+/home/jules/.local/share/nvim/test/plenary/lua/plenary/functional.lua
 ==============================================================================
      8 local f = {}
 
@@ -2500,7 +3304,7 @@
      8 return f
 
 ==============================================================================
-/home/runner/.local/share/nvim/test/plenary/lua/plenary/path.lua
+/home/jules/.local/share/nvim/test/plenary/lua/plenary/path.lua
 ==============================================================================
        --- Path.lua
        ---
@@ -2764,7 +3568,7 @@
 
 *****0     path_string = table.concat(path_objs, sep)
          else
-  1300     assert(type(path_input) == "string", vim.inspect(path_input))
+  1301     assert(type(path_input) == "string", vim.inspect(path_input))
    650     path_string = path_input
          end
 
@@ -3451,7 +4255,7 @@
      8 return Path
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/block.lua
+/usr/local/share/lua/5.1/busted/block.lua
 ==============================================================================
 *****0 local getfenv = require 'busted.compatibility'.getfenv
 *****0 local unpack = require 'busted.compatibility'.unpack
@@ -3619,14 +4423,14 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/context.lua
+/usr/local/share/lua/5.1/busted/context.lua
 ==============================================================================
 *****0 local tablex = require 'pl.tablex'
 
        local function save()
      8   local g = {}
-   376   for k,_ in next, _G, nil do
-   368     g[k] = rawget(_G, k)
+   368   for k,_ in next, _G, nil do
+   360     g[k] = rawget(_G, k)
          end
      8   return {
      8     gmt = debug.getmetatable(_G),
@@ -3637,17 +4441,17 @@
 
        local function restore(state)
      8   setmetatable(_G, state.gmt)
-   384   for k,_ in next, _G, nil do
-   376     rawset(_G, k, state.g[k])
+   376   for k,_ in next, _G, nil do
+   368     rawset(_G, k, state.g[k])
          end
-   376   for k, v in next, state.g, nil do
+   368   for k, v in next, state.g, nil do
            -- reset globals that were set to nil during the insulation block
-   368     if rawget(_G, k) == nil then
+   360     if rawget(_G, k) == nil then
 *****0       rawset(_G, k, v)
            end
          end
-  1056   for k,_ in pairs(package.loaded) do
-  1048     package.loaded[k] = state.loaded[k]
+  1025   for k,_ in pairs(package.loaded) do
+  1017     package.loaded[k] = state.loaded[k]
          end
        end
 
@@ -3759,7 +4563,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/core.lua
+/usr/local/share/lua/5.1/busted/core.lua
 ==============================================================================
 *****0 local getfenv = require 'busted.compatibility'.getfenv
 *****0 local setfenv = require 'busted.compatibility'.setfenv
@@ -4083,7 +4887,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/environment.lua
+/usr/local/share/lua/5.1/busted/environment.lua
 ==============================================================================
 *****0 local setfenv = require 'busted.compatibility'.setfenv
 
@@ -4132,7 +4936,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/execute.lua
+/usr/local/share/lua/5.1/busted/execute.lua
 ==============================================================================
      1 local shuffle = require 'busted.utils'.shuffle
      1 local urandom = require 'busted.utils'.urandom
@@ -4208,7 +5012,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/init.lua
+/usr/local/share/lua/5.1/busted/init.lua
 ==============================================================================
        local function init(busted)
 *****0   local block = require 'busted.block'(busted)
@@ -4349,7 +5153,7 @@
        })
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/languages/en.lua
+/usr/local/share/lua/5.1/busted/languages/en.lua
 ==============================================================================
      1 local s = require('say')
 
@@ -4403,7 +5207,7 @@
      1 }
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/luajit.lua
+/usr/local/share/lua/5.1/busted/luajit.lua
 ==============================================================================
      1 local isJit = (tostring(assert):match('builtin') ~= nil)
 
@@ -4471,7 +5275,7 @@
          end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/files/lua.lua
+/usr/local/share/lua/5.1/busted/modules/files/lua.lua
 ==============================================================================
      1 local path = require 'pl.path'
 
@@ -4498,7 +5302,7 @@
      1 return ret
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/files/moonscript.lua
+/usr/local/share/lua/5.1/busted/modules/files/moonscript.lua
 ==============================================================================
      1 local path = require 'pl.path'
 
@@ -4609,7 +5413,7 @@
      1 return ret
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/filter_loader.lua
+/usr/local/share/lua/5.1/busted/modules/filter_loader.lua
 ==============================================================================
        return function()
          local function filter(busted, options)
@@ -4772,7 +5576,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/output_handler_loader.lua
+/usr/local/share/lua/5.1/busted/modules/output_handler_loader.lua
 ==============================================================================
 *****0 local path = require 'pl.path'
 *****0 local hasMoon, moonscript = pcall(require, 'moonscript')
@@ -4813,7 +5617,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/test_file_loader.lua
+/usr/local/share/lua/5.1/busted/modules/test_file_loader.lua
 ==============================================================================
      1 local s = require 'say'
 
@@ -4919,7 +5723,7 @@
 
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/outputHandlers/TAP.lua
+/usr/local/share/lua/5.1/busted/outputHandlers/TAP.lua
 ==============================================================================
      1 local pretty = require 'pl.pretty'
      1 local io = io
@@ -5026,7 +5830,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/outputHandlers/base.lua
+/usr/local/share/lua/5.1/busted/outputHandlers/base.lua
 ==============================================================================
      1 local table_concat = table.concat
      1 local table_insert = table.insert
@@ -5211,7 +6015,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/outputHandlers/vusted/default.lua
+/usr/local/share/lua/5.1/busted/outputHandlers/vusted/default.lua
 ==============================================================================
        return function(options)
      1   local busted = require("busted")
@@ -5305,7 +6109,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/runner.lua
+/usr/local/share/lua/5.1/busted/runner.lua
 ==============================================================================
        -- Busted command-line runner
 
@@ -5530,7 +6334,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/status.lua
+/usr/local/share/lua/5.1/busted/status.lua
 ==============================================================================
        local function get_status(status)
    523   local smap = {
@@ -5577,7 +6381,7 @@
        end
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/utils.lua
+/usr/local/share/lua/5.1/busted/utils.lua
 ==============================================================================
 *****0 return {
          copy_interpreter_args = function(arguments)
@@ -5618,7 +6422,7 @@
        }
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/inspect.lua
+/usr/local/share/lua/5.1/inspect.lua
 ==============================================================================
      1 local _tl_compat; if (tonumber((_VERSION or ''):match('[%d.]*$')) or 0) < 5.3 then local p, m = pcall(require, 'compat53.module'); if p then _tl_compat = m end end; local math = _tl_compat and _tl_compat.math or math; local string = _tl_compat and _tl_compat.string or string; local table = _tl_compat and _tl_compat.table or table
      1 local inspect = {Options = {}, }
@@ -5959,7 +6763,7 @@
      1 return inspect
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/assert.lua
+/usr/local/share/lua/5.1/luassert/assert.lua
 ==============================================================================
 *****0 local s = require 'say'
 *****0 local astate = require 'luassert.state'
@@ -6143,7 +6947,7 @@
 *****0 return setmetatable(obj, __meta)
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/assertions.lua
+/usr/local/share/lua/5.1/luassert/assertions.lua
 ==============================================================================
        -- module will not return anything, only register assertions with the main assert engine
 
@@ -6481,7 +7285,7 @@
 *****0 assert:register("assertion", "falsy", falsy, "assertion.falsy.positive", "assertion.falsy.negative")
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/formatters/init.lua
+/usr/local/share/lua/5.1/luassert/formatters/init.lua
 ==============================================================================
        -- module will not return anything, only register formatters with the main assert engine
 *****0 local assert = require('luassert.assert')
@@ -6740,7 +7544,7 @@
 *****0 assert:set_parameter("TableErrorHighlightColor", isatty and "red" or "none")
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/match.lua
+/usr/local/share/lua/5.1/luassert/match.lua
 ==============================================================================
 *****0 local namespace = require 'luassert.namespaces'
 *****0 local util = require 'luassert.util'
@@ -6823,7 +7627,7 @@
 *****0 return setmetatable(match, mt)
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/modifiers.lua
+/usr/local/share/lua/5.1/luassert/modifiers.lua
 ==============================================================================
        -- module will not return anything, only register assertions/modifiers with the main assert engine
 *****0 local assert = require('luassert.assert')
@@ -6846,7 +7650,7 @@
 *****0 assert:register("modifier", "no", is_not)
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/state.lua
+/usr/local/share/lua/5.1/luassert/state.lua
 ==============================================================================
        -- maintains a state of the assert engine in a linked-list fashion
        -- records; formatters, parameters, spies and stubs
@@ -6977,7 +7781,7 @@
 *****0 return state
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/util.lua
+/usr/local/share/lua/5.1/luassert/util.lua
 ==============================================================================
 *****0 local util = {}
 *****0 local arglist_mt = {}
@@ -7343,7 +8147,7 @@
 *****0 return util
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/mediator.lua
+/usr/local/share/lua/5.1/mediator.lua
 ==============================================================================
        local function getUniqueId(obj)
     34   return tonumber(tostring(obj):match(':%s*[0xX]*(%x+)'), 16)
@@ -7506,7 +8310,7 @@
 *****0 return Mediator
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/List.lua
+/usr/local/share/lua/5.1/pl/List.lua
 ==============================================================================
        --- Python-style list class.
        --
@@ -8076,7 +8880,7 @@
 
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/class.lua
+/usr/local/share/lua/5.1/pl/class.lua
 ==============================================================================
        --- Provides a reusable and convenient framework for creating classes in Lua.
        -- Two possible notations:
@@ -8345,7 +9149,7 @@
 
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/dir.lua
+/usr/local/share/lua/5.1/pl/dir.lua
 ==============================================================================
        --- Listing files in directories and creating/removing directory paths.
        --
@@ -8876,7 +9680,7 @@
      1 return dir
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/path.lua
+/usr/local/share/lua/5.1/pl/path.lua
 ==============================================================================
        --- Path manipulation and file queries.
        --
@@ -9470,7 +10274,7 @@
 *****0 return path
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/tablex.lua
+/usr/local/share/lua/5.1/pl/tablex.lua
 ==============================================================================
        --- Extended operations on Lua tables.
        --
@@ -9563,8 +10367,8 @@
 *****0 function tablex.copy (t)
      9     assert_arg_iterable(1,t)
      9     local res = {}
-   905     for k,v in pairs(t) do
-   896         res[k] = v
+   873     for k,v in pairs(t) do
+   864         res[k] = v
            end
      9     return res
        end
@@ -10473,7 +11277,7 @@
 *****0 return tablex
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/types.lua
+/usr/local/share/lua/5.1/pl/types.lua
 ==============================================================================
        ---- Dealing with Detailed Type Information
 
@@ -10660,7 +11464,7 @@
 *****0 return types
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/utils.lua
+/usr/local/share/lua/5.1/pl/utils.lua
 ==============================================================================
        --- Generally useful routines.
        -- See  @{01-introduction.md.Generally_useful_functions|the Guide}.
@@ -11615,7 +12419,7 @@
 
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/say/init.lua
+/usr/local/share/lua/5.1/say/init.lua
 ==============================================================================
 *****0 local unpack = table.unpack or unpack
 
@@ -11644,7 +12448,7 @@
          end,
 
          set = function(self, key, value)
-*****0     registry[current_namespace][key] = value
+    19     registry[current_namespace][key] = value
          end
        }
 
@@ -11684,7 +12488,7 @@
 *****0 return setmetatable(s, __meta)
 
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/vusted/run.lua
+/usr/local/share/lua/5.1/vusted/run.lua
 ==============================================================================
        return function()
          -- HACK: for wipe out "$@" arg buffer
@@ -11728,810 +12532,6 @@
          end
      1   exit(code)
        end
-
-==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua
-==============================================================================
-     8 local Path = require('plenary.path')
-     8 local os_sep = require('plenary.path').path.sep
-     8 local notify = require('notify')
-
-     8 local wdayToEngName = {
-           [1] = 'Sunday',
-           [2] = 'Monday',
-           [3] = 'Tuesday',
-           [4] = 'Wednesday',
-           [5] = 'Thursday',
-           [6] = 'Friday',
-           [7] = 'Saturday',
-       }
-
-       local function save(obj)
-   473     Path:new(obj.path):write(vim.fn.json_encode(obj.content), 'w')
-       end
-
-     8 local obj = {
-           path = nil,
-       }
-
-     8 local defaultHoursPerWeekday = {
-           Monday = 8,
-           Tuesday = 8,
-           Wednesday = 8,
-           Thursday = 8,
-           Friday = 8,
-           Saturday = 0,
-           Sunday = 0,
-       }
-
-     8 local weekdayNumberMap = {
-           Sunday = 0,
-           Monday = 1,
-           Tuesday = 2,
-           Wednesday = 3,
-           Thursday = 4,
-           Friday = 5,
-           Saturday = 6,
-       }
-
-     8 local defaults = {
-    16     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
-     8     hoursPerWeekday = defaultHoursPerWeekday,
-       }
-     8 local config = defaults
-
-       local function init(user_config)
-   498     config = vim.tbl_deep_extend('force', defaults, user_config or {})
-   249     if user_config.hoursPerWeekday ~= nil then
-   206         config.hoursPerWeekday = user_config.hoursPerWeekday
-           end
-   249     obj.path = config.path
-   249     local p = Path:new(obj.path)
-   747     if not p:exists() then
-    14         p:touch({ parents = true })
-           end
-
-   747     local data = Path:new(obj.path):read()
-   249     if data ~= '' then
-   129         obj.content = vim.json.decode(data)
-           else
-   120         obj.content = {}
-           end
-           -- Ensure hoursPerWeekday is initialized if not present (e.g. new file)
-   249     if obj.content['hoursPerWeekday'] == nil then
-   123         obj.content['hoursPerWeekday'] = config.hoursPerWeekday
-           end
-
-   249     if obj.content['data'] == nil then
-   120         obj.content['data'] = {}
-           end
-
-   249     local year_str = os.date('%Y')
-   249     local week_str = os.date('%W')
-   249     local project_name = 'default_project' -- Hardcoded for now
-   249     local file_name = 'default_file' -- Hardcoded for now
-
-   249     if obj.content['data'][year_str] == nil then
-   135         obj.content['data'][year_str] = {}
-           end
-   249     if obj.content['data'][year_str][week_str] == nil then
-   135         obj.content['data'][year_str][week_str] = {}
-           end
-   249     if obj.content['data'][year_str][week_str][project_name] == nil then
-   135         obj.content['data'][year_str][week_str][project_name] = {}
-           end
-   249     if obj.content['data'][year_str][week_str][project_name][file_name] == nil then
-   135         obj.content['data'][year_str][week_str][project_name][file_name] = {
-   135             weekdays = {}, -- Will store weekday -> {summary={}, items={...}}
-                   -- The weekly summary (overhour) is not initialized here,
-                   -- it will be handled by the calculate function.
-   135         }
-           end
-   249     return obj
-       end
-
-       ---@param opts {weeknumber: string|osdate, year: string|osdate}|nil
-       local function calculate(opts)
-   184     opts = vim.tbl_deep_extend('keep', opts or {}, {
-   180         year = os.date('%Y'),
-   180         weeknumber = os.date('%W'),
-    92     })
-
-    92     local year_str = opts.year
-    92     local week_str = opts.weeknumber
-
-    92     if not obj.content['data'][year_str] or not obj.content['data'][year_str][week_str] then
-               -- No data for this year/week, nothing to calculate
-*****0         return
-           end
-
-    92     local current_week_data = obj.content['data'][year_str][week_str]
-
-           -- Initialize week summary if it doesn't exist under current_week_data.summary
-    92     if current_week_data.summary == nil then
-    40         current_week_data.summary = {}
-           end
-
-    92     local prevWeekOverhour = 0
-           -- Ensure year_str data exists before trying to access previous week
-    92     if obj.content['data'][year_str] then
-    92         local prev_week_number_str = string.format('%02d', tonumber(week_str) - 1)
-    92         if obj.content['data'][year_str][prev_week_number_str] then
-     2             local prev_week_data = obj.content['data'][year_str][prev_week_number_str]
-     2             if prev_week_data and prev_week_data.summary and prev_week_data.summary.overhour then
-     2                 prevWeekOverhour = prev_week_data.summary.overhour
-                   end
-               end
-           end
-
-    92     current_week_data.summary.overhour = prevWeekOverhour -- Initialize with previous week's carry-over
-           -- local total_time_in_week = 0 -- Can be used if we want to store total logged time for the week explicitly
-
-           -- Iterate over projects in the current week
-   290     for project_name, project_data in pairs(current_week_data) do
-   198         if project_name ~= 'summary' then -- Skip the summary table itself
-                   -- Iterate over files in the current project
-   216             for file_name, file_data in pairs(project_data) do
-   110                 if file_data.weekdays then
-                           -- Iterate over weekdays in the current file
-   204                     for weekday_name, day_data in pairs(file_data.weekdays) do
-    94                         local time_in_weekday = 0
-    94                         if day_data.items then
-   199                             for _, item_entry in pairs(day_data.items) do
-   105                                 if item_entry.diffInHours ~= nil then
-   102                                     time_in_weekday = time_in_weekday + item_entry.diffInHours
-                                       end
-                                   end
-                               end
-
-                               -- Update summary for this specific day under project -> file -> weekday
-    94                         if day_data.summary == nil then
-     1                             day_data.summary = {}
-                               end
-    94                         day_data.summary.diffInHours = time_in_weekday
-
-    94                         local expected_hours = obj.content['hoursPerWeekday'][weekday_name] or 0
-    94                         day_data.summary.overhour = time_in_weekday - expected_hours
-
-                               -- Accumulate this day's overhour to the overall week summary
-    94                         current_week_data.summary.overhour = current_week_data.summary.overhour
-    94                             + day_data.summary.overhour
-                               -- total_time_in_week = total_time_in_week + time_in_weekday -- Accumulate total logged time
-                           end
-                       end
-                   end
-               end
-           end
-           -- If you want to store the total logged time for the week in the summary:
-           -- current_week_data.summary.totalLoggedTime = total_time_in_week
-       end
-
-       local function TimePause()
-    10     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    10     obj.content.paused = true
-    10     save(obj)
-    20     notify({
-               'Timetracking paused',
-    10     }, 'info', { title = 'TimeTracking - Pause' })
-       end
-
-       local function TimeResume()
-     7     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-     7     obj.content.paused = false
-     7     save(obj)
-    14     notify({
-               'Timetracking resumed',
-     7     }, 'info', { title = 'TimeTracking - Resume' })
-       end
-       local function isPaused()
-    72     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    72     return obj.content.paused
-       end
-
-       ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
-       local function TimeStart(opts)
-     9     opts = opts or {}
-     9     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    18     if isPaused() then
-*****0         return
-           end
-
-     9     local weekday = opts.weekday
-     9     local time = opts.time
-     9     local project = opts.project or 'default_project'
-     9     local file = opts.file or 'default_file'
-
-     9     if weekday == nil then
-    15         local current_wday_numeric = os.date('*t', os.time()).wday
-     5         weekday = wdayToEngName[current_wday_numeric]
-           end
-     9     if time == nil then
-*****0         time = os.time()
-           end
-
-     9     local year_str = os.date('%Y', time) -- Use time for year_str for consistency if time is provided
-     9     local week_str = os.date('%W', time) -- Use time for week_str for consistency
-
-           -- Ensure path exists (init might have only created for current os.date)
-     9     if obj.content['data'][year_str] == nil then
-*****0         obj.content['data'][year_str] = {}
-           end
-     9     if obj.content['data'][year_str][week_str] == nil then
-*****0         obj.content['data'][year_str][week_str] = {}
-           end
-     9     if obj.content['data'][year_str][week_str][project] == nil then
-     1         obj.content['data'][year_str][week_str][project] = {}
-           end
-     9     if obj.content['data'][year_str][week_str][project][file] == nil then
-     1         obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
-           end
-     9     if obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
-     8         obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
-     8             summary = {},
-     8             items = {},
-     8         }
-           end
-
-     9     local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-     9     local canStart = true
-    10     for _, item in pairs(dayItem.items) do
-     1         canStart = canStart and (item.startTime ~= nil and item.endTime ~= nil)
-           end
-     9     if canStart then
-     8         local timeReadable = os.date('*t', time)
-    16         table.insert(dayItem.items, {
-     8             startTime = time,
-     8             startReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min),
-               })
-           end
-     9     save(obj)
-       end
-
-       ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
-       local function TimeStop(opts)
-     7     opts = opts or {}
-     7     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    14     if isPaused() then
-*****0         return
-           end
-
-     7     local weekday = opts.weekday
-     7     local time = opts.time
-     7     local project = opts.project or 'default_project'
-     7     local file = opts.file or 'default_file'
-
-     7     if weekday == nil then
-    12         local current_wday_numeric = os.date('*t', os.time()).wday
-     4         weekday = wdayToEngName[current_wday_numeric]
-           end
-     7     if time == nil then
-*****0         time = os.time()
-           end
-
-     7     local year_str = os.date('%Y', time)
-     7     local week_str = os.date('%W', time)
-
-           -- Check if the path to the day's items exists in the new structure
-     7     local dayItem_path_exists = obj.content['data'][year_str]
-     7         and obj.content['data'][year_str][week_str]
-     7         and obj.content['data'][year_str][week_str][project]
-     7         and obj.content['data'][year_str][week_str][project][file]
-     7         and obj.content['data'][year_str][week_str][project][file]['weekdays']
-     7         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-     7         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
-
-     7     if dayItem_path_exists then
-     6         local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-    12         for _, item in pairs(dayItem.items) do
-     6             if item.endTime == nil then
-     5                 item.endTime = time
-     5                 local timeReadable = os.date('*t', time)
-     5                 item.endReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min)
-     5                 item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
-                   end
-               end
-           end
-
-     7     calculate({ year = year_str, weeknumber = week_str }) -- Calculate regardless of whether items were stopped, to update summaries.
-     7     save(obj)
-
-     7     local heute_text = 'N/A'
-     7     if dayItem_path_exists then
-               -- Accessing dayItem here is safe because dayItem_path_exists is true
-     6         local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-     6         if dayItem.summary and dayItem.summary.overhour then
-     6             heute_text = string.format('%.2f', dayItem.summary.overhour)
-               end
-           end
-
-     7     local gesamt_text = 'N/A'
-           -- Check path for overall week summary - this might be inaccurate until 'calculate' is updated
-           if
-     7         obj.content['data'][year_str]
-     7         and obj.content['data'][year_str][week_str]
-     7         and obj.content['data'][year_str][week_str].summary -- This summary is at week level
-     7         and obj.content['data'][year_str][week_str].summary.overhour
-           then
-*****0         gesamt_text =
-     7             string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour)
-           end
-
-    14     notify({
-     7         'Heute: ' .. heute_text .. ' Stunden',
-     7         'Gesamt: ' .. gesamt_text .. ' Stunden',
-     7     }, 'info', { title = 'TimeTracking - Stop' })
-       end
-
-       -- calculate an average over the hoursPerWeekday
-       local function calculateAverage()
-     2     local sum = 0
-     2     local count = 0
-    14     for _, value in pairs(config.hoursPerWeekday) do
-    12         sum = sum + value
-    12         count = count + 1
-           end
-     2     return sum / count
-       end
-
-       local function saveTime(startTime, endTime, weekday, clearDay, project, file, isSubtraction)
-    42     project = project or 'default_project'
-    42     file = file or 'default_file'
-    42     isSubtraction = isSubtraction or false -- Default to false if not provided
-    42     local year_str = os.date('%Y', startTime) -- Use startTime to determine year/week
-    42     local week_str = os.date('%W', startTime)
-
-           -- Ensure path exists
-    42     if obj.content['data'][year_str] == nil then
-*****0         obj.content['data'][year_str] = {}
-           end
-    42     if obj.content['data'][year_str][week_str] == nil then
-*****0         obj.content['data'][year_str][week_str] = {}
-           end
-    42     if obj.content['data'][year_str][week_str][project] == nil then
-     5         obj.content['data'][year_str][week_str][project] = {}
-           end
-    42     if obj.content['data'][year_str][week_str][project][file] == nil then
-     6         obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
-           end
-    42     if obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
-    34         obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
-    34             summary = {},
-    34             items = {},
-    34         }
-           end
-
-           -- Handle clearDay logic - if true, existing items for the day are cleared.
-           -- The original saveTime had a complex `clearDay` check in the first 'if'.
-           -- Assuming if clearDay is passed as non-nil (and not 'nope'), it means we should clear.
-           -- The addTime function passes clearDay as 'yes' or nil. 'nope' was for subtractTime.
-           -- For simplicity here, if clearDay is true (boolean), we clear.
-           -- The addTime/setTime logic will need to ensure clearDay is passed appropriately.
-           -- The original logic for clearDay was: `if clearDay == nil and ... == nil then init day`.
-           -- This seems more about init than clearing. The actual clearing is done by `clearDay()` func.
-           -- Let's stick to the new structure path first. The `clearDay` param in `saveTime` might be redundant
-           -- if `clearDay()` function is used before `addTime` in `setTime`.
-           -- For now, `clearDay` in `saveTime` doesn't actively clear, it's more for path init.
-
-    42     local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-    42     local timeReadableStart = os.date('*t', startTime)
-    42     local item = {
-    42         startTime = startTime,
-    42         startReadable = string.format('%02d:%02d', timeReadableStart.hour, timeReadableStart.min),
-    42         endTime = endTime,
-           }
-    42     local timeReadableEnd = os.date('*t', endTime)
-    42     item.endReadable = string.format('%02d:%02d', timeReadableEnd.hour, timeReadableEnd.min)
-
-    42     item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
-    42     if isSubtraction then
-     9         item.diffInHours = -item.diffInHours
-           end
-
-    42     table.insert(dayItem.items, item)
-    42     calculate({ year = year_str, weeknumber = week_str })
-    42     save(obj)
-
-    84     notify({
-    42         'Heute: ' .. string.format('%.2f', dayItem.summary.overhour) .. ' Stunden',
-               'Gesamt: '
-    42             .. string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour)
-    42             .. ' Stunden',
-    42     }, 'info', { title = 'TimeTracking - SaveTime' }) -- Changed title for clarity
-       end
-
-       -- adds time into the current week
-       ---@param opts { time: number, weekday: string|osdate, clearDay?: string, project?: string, file?: string }
-       local function addTime(opts)
-    33     local time = opts.time
-    33     local weekday = opts.weekday
-    33     local clearDay = opts.clearDay -- This is 'yes' or nil from setTime/setIllDay, or 'nope'
-    33     local project = opts.project or 'default_project'
-    33     local file = opts.file or 'default_file'
-
-           -- The original clearDay logic: if nil, it's 'nope'; if 'yes', it's nil for saveTime's old check.
-           -- This is confusing. Let's simplify: `clearDay` in `addTime` means "should the day be cleared before adding".
-           -- `setTime` calls `clearDay()` then `addTime()`. So `addTime` itself doesn't need to handle clearing.
-           -- The `clearDay` parameter passed to `saveTime` from here will be the original `opts.clearDay` value.
-           -- saveTime's responsibility is just to save, path creation is fine.
-
-    33     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-
-    33     local current_mocked_ts = os.time() -- This will be GMT if tests mock os.time correctly
-    33     local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
-
-           -- Calculate GMT midnight for the current mocked day
-*****0     local current_day_gmt_midnight_ts = current_mocked_ts
-*****0         - (
-    33             current_mocked_t_info.hour * 3600
-    33             + current_mocked_t_info.min * 60
-    33             + current_mocked_t_info.sec
-    33         )
-
-    33     local targetWeekdayName = opts.weekday
-    33     if targetWeekdayName == nil then
-     1         targetWeekdayName = wdayToEngName[current_mocked_t_info.wday]
-           end
-
-           -- Determine Target Weekday and its GMT Midnight
-           -- Note: os.date('*t').wday is 1 for Sunday, ..., 7 for Saturday
-    33     local weekday_name_to_num_1_7 = {
-               Sunday = 1,
-               Monday = 2,
-               Tuesday = 3,
-               Wednesday = 4,
-               Thursday = 5,
-               Friday = 6,
-               Saturday = 7,
-           }
-    33     local current_wday_numeric_1_7 = current_mocked_t_info.wday
-    33     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
-
-    33     if target_wday_numeric_1_7 == nil then
-               -- Fallback for unrecognized weekday string, though ideally should not happen
-               -- if opts.weekday is validated or comes from wdayToEngName
-*****0         notify(
-                   "Warning: Unrecognized weekday '"
-*****0                 .. tostring(targetWeekdayName)
-*****0                 .. "' in addTime. Defaulting to current day.",
-                   'warn'
-               )
-*****0         target_wday_numeric_1_7 = current_wday_numeric_1_7
-           end
-
-    33     local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
-    33     local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
-
-           -- Calculate duration in total seconds
-    33     local total_seconds_duration = math.floor(opts.time * 3600)
-
-           -- Calculate startTime_ts and endTime_ts using GMT arithmetic
-    33     local add_endTime_ts = target_day_gmt_midnight_ts + (23 * 3600) -- 23:00:00 GMT on target day
-    33     local add_startTime_ts = add_endTime_ts - total_seconds_duration
-
-    33     local startTime = add_startTime_ts
-    33     local endTime = add_endTime_ts
-
-    33     local paused = isPaused()
-    33     if paused then
-     1         TimeResume()
-           end
-
-           -- Pass project and file to saveTime
-    33     saveTime(startTime, endTime, targetWeekdayName, clearDay, project, file, false)
-
-    33     if paused then
-     1         TimePause()
-           end
-    33     return obj
-       end
-
-       -- subtracts time from the current week
-       ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
-       local function subtractTime(opts)
-     9     local time = opts.time
-     9     local weekday = opts.weekday
-     9     local project = opts.project or 'default_project'
-     9     local file = opts.file or 'default_file'
-
-     9     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-
-     9     local current_mocked_ts = os.time() -- This will be GMT if tests mock os.time correctly
-     9     local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
-
-           -- Calculate GMT midnight for the current mocked day
-*****0     local current_day_gmt_midnight_ts = current_mocked_ts
-*****0         - (
-     9             current_mocked_t_info.hour * 3600
-     9             + current_mocked_t_info.min * 60
-     9             + current_mocked_t_info.sec
-     9         )
-
-     9     local targetWeekdayName = opts.weekday
-     9     if targetWeekdayName == nil then
-     1         targetWeekdayName = wdayToEngName[current_mocked_t_info.wday]
-           end
-
-           -- Determine Target Weekday and its GMT Midnight
-           -- Note: os.date('*t').wday is 1 for Sunday, ..., 7 for Saturday
-     9     local weekday_name_to_num_1_7 = {
-               Sunday = 1,
-               Monday = 2,
-               Tuesday = 3,
-               Wednesday = 4,
-               Thursday = 5,
-               Friday = 6,
-               Saturday = 7,
-           }
-     9     local current_wday_numeric_1_7 = current_mocked_t_info.wday
-     9     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
-
-     9     if target_wday_numeric_1_7 == nil then
-               -- Fallback for unrecognized weekday string
-*****0         notify(
-                   "Warning: Unrecognized weekday '"
-*****0                 .. tostring(targetWeekdayName)
-*****0                 .. "' in subtractTime. Defaulting to current day.",
-                   'warn'
-               )
-*****0         target_wday_numeric_1_7 = current_wday_numeric_1_7
-           end
-
-     9     local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
-     9     local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
-
-           -- Calculate duration in total seconds
-     9     local total_seconds_duration = math.floor(opts.time * 3600)
-
-           -- Calculate startTime_to_save and endTime_to_save using GMT arithmetic
-     9     local sub_day_end_reference_ts = target_day_gmt_midnight_ts + (23 * 3600) -- 23:00:00 GMT on target day
-     9     local sub_startTime_to_save = sub_day_end_reference_ts - total_seconds_duration
-     9     local sub_endTime_to_save = sub_day_end_reference_ts
-
-     9     local startTime = sub_startTime_to_save
-     9     local endTime = sub_endTime_to_save
-
-     9     local paused = isPaused()
-     9     if paused then
-     1         TimeResume()
-           end
-
-           -- Pass project, file. 'nope' for clearDay indicates not to clear.
-     9     saveTime(startTime, endTime, targetWeekdayName, 'nope', project, file, true)
-
-     9     if paused then
-     1         TimePause()
-           end
-
-     9     return obj
-       end
-
-       local function setIllDay(weekday)
-     4     addTime({
-     4         time = calculateAverage(),
-     2         weekday = weekday,
-               clearDay = 'yes',
-           })
-     2     return obj
-       end
-
-       local function clearDay(weekday, project, file)
-     1     project = project or 'default_project'
-     1     file = file or 'default_file'
-     1     local year_str = os.date('%Y')
-     1     local week_str = os.date('%W')
-
-           if
-     1         obj.content['data'][year_str]
-     1         and obj.content['data'][year_str][week_str]
-     1         and obj.content['data'][year_str][week_str][project]
-     1         and obj.content['data'][year_str][week_str][project][file]
-     1         and obj.content['data'][year_str][week_str][project][file]['weekdays']
-     1         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-           then
-               local dayItems =
-     1             obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
-     1         if dayItems then
-     3             for key, _ in pairs(dayItems) do
-     2                 dayItems[key] = nil
-                   end
-               end
-           end
-     1     calculate({ year = year_str, weeknumber = week_str }) -- Recalculate for the current/affected week
-     1     save(obj)
-       end
-
-       ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
-       local function setTime(opts)
-     1     opts = opts or {}
-     1     local project = opts.project or 'default_project'
-     1     local file = opts.file or 'default_file'
-
-     1     clearDay(opts.weekday, project, file) -- Pass project and file to clearDay
-     2     addTime({
-     1         time = opts.time,
-     1         weekday = opts.weekday,
-               clearDay = 'yes', -- 'yes' indicates to saveTime that items might have been cleared
-     1         project = project,
-     1         file = file,
-           })
-       end
-
-     8 local timeGroup = vim.api.nvim_create_augroup('Maorun-Time', {})
-    16 vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter', 'VimEnter' }, {
-     8     group = timeGroup,
-           desc = 'Start Timetracking on VimEnter or BufEnter (if second vim was leaved)',
-           callback = function()
-*****0         TimeStart()
-           end,
-       })
-    16 vim.api.nvim_create_autocmd('VimLeave', {
-     8     group = timeGroup,
-           desc = 'End Timetracking on VimLeave',
-           callback = function()
-*****0         TimeStop()
-           end,
-       })
-
-       ---@param opts { hours?: boolean, weekday?: boolean, project?: boolean, file?: boolean }
-       ---@param callback fun(hours:number, weekday: string, project:string, file:string) the function to call
-       local function select(opts, callback)
-*****0     opts = vim.tbl_deep_extend('force', { -- Use 'force' to ensure defaults are applied
-               hours = true,
-               weekday = true,
-               project = true,
-               file = true,
-*****0     }, opts or {})
-
-*****0     local selected_project = 'default_project'
-*****0     local selected_file = 'default_file'
-
-           local function get_file_input()
-*****0         if opts.file then
-*****0             vim.ui.input({ prompt = 'File name? (default: default_file) ' }, function(input)
-*****0                 selected_file = (input and input ~= '') and input or 'default_file'
-*****0                 get_weekday_selection() -- Proceed to weekday selection
-                   end)
-               else
-*****0             get_weekday_selection() -- Skip file input
-               end
-           end
-
-           local function get_project_input()
-*****0         if opts.project then
-*****0             vim.ui.input({ prompt = 'Project name? (default: default_project) ' }, function(input)
-*****0                 selected_project = (input and input ~= '') and input or 'default_project'
-*****0                 get_file_input() -- Proceed to file input
-                   end)
-               else
-*****0             get_file_input() -- Skip project input
-               end
-           end
-
-*****0     local selections = {}
-*****0     local selectionNumbers = {}
-*****0     for _, value in pairs(weekdayNumberMap) do
-*****0         if not selectionNumbers[value] then
-*****0             selectionNumbers[value] = 1
-*****0             selections[#selections + 1] = _
-               end
-           end
-
-           ---@param weekday string
-           local function selectHours(weekday_param)
-*****0         if opts.hours then
-*****0             vim.ui.input({
-                       prompt = 'How many hours? ',
-                   }, function(input)
-*****0                 local n = tonumber(input)
-*****0                 if n == nil or input == nil or input == '' then
-*****0                     return
-                       end
-*****0                 callback(n, weekday_param, selected_project, selected_file)
-                   end)
-               else
-                   -- If hours are not required, pass a default or handle appropriately
-*****0             callback(0, weekday_param, selected_project, selected_file) -- Assuming 0 hours if not prompted
-               end
-           end
-
-           local function get_weekday_selection()
-*****0         if opts.weekday then
-*****0             if pcall(require, 'telescope') then
-*****0                 local telescopeSelect = require('maorun.time.weekday_select')
-*****0                 telescopeSelect({
-                           prompt_title = 'Which day?',
-                           list = selections,
-                           action = function(selected_weekday)
-*****0                         selectHours(selected_weekday)
-                           end,
-                       })
-                   else
-*****0                 vim.ui.select(selections, {
-                           prompt = 'Which day? ',
-                       }, function(selected_weekday)
-*****0                     selectHours(selected_weekday)
-                       end)
-                   end
-               else
-                   -- If weekday is not required, pass a default or handle appropriately
-                   -- This case might need clarification: what weekday to use if not selected?
-                   -- For now, assuming it means no time entry if weekday selection is skipped.
-                   -- Or, pass a default like current day, but callback expects a weekday.
-                   -- Let's assume callback is only made if weekday is selected.
-                   -- If opts.weekday is false, the chain stops or uses a predefined weekday.
-                   -- For now, if weekday is false, we directly call callback with defaults (e.g. for project/file only ops)
-                   -- callback(0, nil, selected_project, selected_file) -- This line is problematic if weekday is essential
-                   -- Safest is to ensure weekday selection happens if callback needs it.
-                   -- The current design implies `select` is primarily for operations that involve weekday and hours.
-                   -- If only project/file are needed for some future op, `select` might need more changes.
-                   -- Given the context of addTime, substractTime, setTime, weekday and hours are essential.
-               end
-           end
-
-           -- Start the chain of inputs
-*****0     get_project_input()
-       end
-
-     8 Time = {
-           add = function()
-*****0         select(
-                   {},
-                   function(hours, weekday, project, file) -- Add project and file to callback params
-*****0                 addTime({ time = hours, weekday = weekday, project = project, file = file })
-                   end
-               )
-           end,
-     8     addTime = addTime,
-           subtract = function()
-*****0         select({}, function(hours, weekday, project, file) -- Add project and file
-*****0             subtractTime({ time = hours, weekday = weekday, project = project, file = file })
-               end)
-           end,
-     8     subtractTime = subtractTime,
-     8     clearDay = clearDay, -- clearDay now takes project and file, but this public Time.clearDay would need them.
-           -- This might require another vim.ui.select or direct args. For now, it's an issue.
-           -- TODO: Adjust public Time.clearDay or make it internal / part of setTime only.
-     8     TimePause = TimePause,
-     8     TimeResume = TimeResume,
-     8     TimeStop = TimeStop,
-           set = function()
-*****0         select({}, function(hours, weekday, project, file) -- Add project and file
-*****0             setTime({ time = hours, weekday = weekday, project = project, file = file })
-               end)
-           end,
-     8     setTime = setTime,
-     8     setIllDay = setIllDay,
-     8     setHoliday = setIllDay,
-           calculate = function(opts) -- Accept opts
-*****0         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-*****0         calculate(opts)
-*****0         save(obj)
-*****0         return obj
-           end,
-     8 }
-
-     8 return {
-     8     setup = init,
-     8     TimeStart = TimeStart,
-     8     TimeStop = TimeStop,
-     8     TimePause = TimePause,
-     8     TimeResume = TimeResume,
-     8     setIllDay = setIllDay,
-     8     setHoliday = setIllDay,
-     8     addTime = addTime,
-     8     subtractTime = subtractTime,
-     8     setTime = setTime,
-     8     clearDay = clearDay,
-     8     isPaused = isPaused,
-           calculate = function(opts) -- Accept opts
-    42         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    42         calculate(opts)
-    42         save(obj)
-    42         return obj
-           end,
-
-     8     weekdays = weekdayNumberMap,
-     8 }
 
 ==============================================================================
 test/add_time_spec.lua
@@ -13328,11 +13328,11 @@ test/helper.lua
      7     local lspconfig_path = join_paths(package_root, 'notify')
     14     vim.opt.runtimepath:append(lspconfig_path)
     14     if vim.fn.isdirectory(lspconfig_path) ~= 1 then
-     2         vim.fn.system({
+*****0         vim.fn.system({
                    'git',
                    'clone',
                    'https://github.com/rcarriga/nvim-notify',
-     1             lspconfig_path,
+                   lspconfig_path,
                })
            end
        end
@@ -13342,11 +13342,11 @@ test/helper.lua
      7     local lspconfig_path = join_paths(package_root, 'plenary')
     14     vim.opt.runtimepath:append(lspconfig_path)
     15     if vim.fn.isdirectory(lspconfig_path) ~= 1 then
-     2         vim.fn.system({
+*****0         vim.fn.system({
                    'git',
                    'clone',
                    'https://github.com/nvim-lua/plenary.nvim',
-     1             lspconfig_path,
+                   lspconfig_path,
                })
            end
        end
@@ -14942,72 +14942,72 @@ test/time_start_stop_spec.lua
 Summary
 ==============================================================================
 
-File                                                                                                             Hits Missed Coverage
--------------------------------------------------------------------------------------------------------------------------------------
-/home/runner/.local/share/nvim/test/notify/lua/notify/animate/init.lua                                           3    0      100.00%
-/home/runner/.local/share/nvim/test/notify/lua/notify/animate/spring.lua                                         5    26     16.13%
-/home/runner/.local/share/nvim/test/notify/lua/notify/config/highlights.lua                                      8    0      100.00%
-/home/runner/.local/share/nvim/test/notify/lua/notify/config/init.lua                                            17   68     20.00%
-/home/runner/.local/share/nvim/test/notify/lua/notify/init.lua                                                   18   45     28.57%
-/home/runner/.local/share/nvim/test/notify/lua/notify/instance.lua                                               8    109    6.84%
-/home/runner/.local/share/nvim/test/notify/lua/notify/service/buffer/highlights.lua                              6    76     7.32%
-/home/runner/.local/share/nvim/test/notify/lua/notify/service/buffer/init.lua                                    18   64     21.95%
-/home/runner/.local/share/nvim/test/notify/lua/notify/service/init.lua                                           9    50     15.25%
-/home/runner/.local/share/nvim/test/notify/lua/notify/service/notification.lua                                   6    16     27.27%
-/home/runner/.local/share/nvim/test/notify/lua/notify/stages/init.lua                                            3    1      75.00%
-/home/runner/.local/share/nvim/test/notify/lua/notify/stages/util.lua                                            10   92     9.80%
-/home/runner/.local/share/nvim/test/notify/lua/notify/util/init.lua                                              18   57     24.00%
-/home/runner/.local/share/nvim/test/notify/lua/notify/util/queue.lua                                             8    20     28.57%
-/home/runner/.local/share/nvim/test/notify/lua/notify/windows/init.lua                                           19   169    10.11%
-/home/runner/.local/share/nvim/test/plenary/lua/plenary/bit.lua                                                  1    126    0.79%
-/home/runner/.local/share/nvim/test/plenary/lua/plenary/functional.lua                                           17   25     40.48%
-/home/runner/.local/share/nvim/test/plenary/lua/plenary/path.lua                                                 146  344    29.80%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/block.lua                         70   25     73.68%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/context.lua                       47   35     57.32%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/core.lua                          76   115    39.79%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/environment.lua                   6    15     28.57%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/execute.lua                       19   21     47.50%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/init.lua                          23   56     29.11%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/languages/en.lua                  27   0      100.00%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/luajit.lua                        19   11     63.33%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/files/lua.lua             10   1      90.91%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/files/moonscript.lua      6    46     11.54%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/filter_loader.lua         35   48     42.17%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/output_handler_loader.lua 9    10     47.37%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/modules/test_file_loader.lua      44   10     81.48%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/outputHandlers/TAP.lua            33   31     51.56%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/outputHandlers/base.lua           63   36     63.64%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/outputHandlers/vusted/default.lua 18   29     38.30%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/runner.lua                        57   76     42.86%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/status.lua                        15   2      88.24%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/busted/utils.lua                         11   10     52.38%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/inspect.lua                              57   105    35.19%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/assert.lua                      19   62     23.46%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/assertions.lua                  46   174    20.91%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/formatters/init.lua             20   114    14.93%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/match.lua                       1    31     3.12%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/modifiers.lua                   3    8      27.27%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/state.lua                       4    47     7.84%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/luassert/util.lua                        75   103    42.13%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/mediator.lua                             39   26     60.00%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/List.lua                              62   156    28.44%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/class.lua                             20   82     19.61%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/dir.lua                               65   188    25.69%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/path.lua                              36   222    13.95%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/tablex.lua                            27   377    6.68%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/types.lua                             5    57     8.06%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/pl/utils.lua                             9    292    2.99%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/say/init.lua                             12   16     42.86%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/share/lua/5.1/vusted/run.lua                           5    18     21.74%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua                                         339  69     83.09%
-test/add_time_spec.lua                                                                                           139  0      100.00%
-test/calculate_spec.lua                                                                                          346  15     95.84%
-test/helper.lua                                                                                                  21   0      100.00%
-test/plugin_spec.lua                                                                                             119  1      99.17%
-test/project_file_tracking_spec.lua                                                                              153  4      97.45%
-test/save_time_spec.lua                                                                                          123  0      100.00%
-test/subtract_time_spec.lua                                                                                      247  0      100.00%
-test/time_pause_resume_spec.lua                                                                                  45   1      97.83%
-test/time_start_stop_spec.lua                                                                                    212  5      97.70%
--------------------------------------------------------------------------------------------------------------------------------------
-Total                                                                                                            3157 4038   43.88%
+File                                                                               Hits Missed Coverage
+-------------------------------------------------------------------------------------------------------
+/app/lua/maorun/time/init.lua                                                      339  69     83.09%
+/home/jules/.local/share/nvim/test/notify/lua/notify/animate/init.lua              3    0      100.00%
+/home/jules/.local/share/nvim/test/notify/lua/notify/animate/spring.lua            5    26     16.13%
+/home/jules/.local/share/nvim/test/notify/lua/notify/config/highlights.lua         8    0      100.00%
+/home/jules/.local/share/nvim/test/notify/lua/notify/config/init.lua               17   68     20.00%
+/home/jules/.local/share/nvim/test/notify/lua/notify/init.lua                      18   45     28.57%
+/home/jules/.local/share/nvim/test/notify/lua/notify/instance.lua                  8    109    6.84%
+/home/jules/.local/share/nvim/test/notify/lua/notify/service/buffer/highlights.lua 6    76     7.32%
+/home/jules/.local/share/nvim/test/notify/lua/notify/service/buffer/init.lua       18   64     21.95%
+/home/jules/.local/share/nvim/test/notify/lua/notify/service/init.lua              9    50     15.25%
+/home/jules/.local/share/nvim/test/notify/lua/notify/service/notification.lua      6    16     27.27%
+/home/jules/.local/share/nvim/test/notify/lua/notify/stages/init.lua               3    1      75.00%
+/home/jules/.local/share/nvim/test/notify/lua/notify/stages/util.lua               10   92     9.80%
+/home/jules/.local/share/nvim/test/notify/lua/notify/util/init.lua                 18   57     24.00%
+/home/jules/.local/share/nvim/test/notify/lua/notify/util/queue.lua                8    20     28.57%
+/home/jules/.local/share/nvim/test/notify/lua/notify/windows/init.lua              19   169    10.11%
+/home/jules/.local/share/nvim/test/plenary/lua/plenary/bit.lua                     1    126    0.79%
+/home/jules/.local/share/nvim/test/plenary/lua/plenary/functional.lua              17   25     40.48%
+/home/jules/.local/share/nvim/test/plenary/lua/plenary/path.lua                    146  344    29.80%
+/usr/local/share/lua/5.1/busted/block.lua                                          70   25     73.68%
+/usr/local/share/lua/5.1/busted/context.lua                                        47   35     57.32%
+/usr/local/share/lua/5.1/busted/core.lua                                           76   115    39.79%
+/usr/local/share/lua/5.1/busted/environment.lua                                    6    15     28.57%
+/usr/local/share/lua/5.1/busted/execute.lua                                        19   21     47.50%
+/usr/local/share/lua/5.1/busted/init.lua                                           23   56     29.11%
+/usr/local/share/lua/5.1/busted/languages/en.lua                                   27   0      100.00%
+/usr/local/share/lua/5.1/busted/luajit.lua                                         19   11     63.33%
+/usr/local/share/lua/5.1/busted/modules/files/lua.lua                              10   1      90.91%
+/usr/local/share/lua/5.1/busted/modules/files/moonscript.lua                       6    46     11.54%
+/usr/local/share/lua/5.1/busted/modules/filter_loader.lua                          35   48     42.17%
+/usr/local/share/lua/5.1/busted/modules/output_handler_loader.lua                  9    10     47.37%
+/usr/local/share/lua/5.1/busted/modules/test_file_loader.lua                       44   10     81.48%
+/usr/local/share/lua/5.1/busted/outputHandlers/TAP.lua                             33   31     51.56%
+/usr/local/share/lua/5.1/busted/outputHandlers/base.lua                            63   36     63.64%
+/usr/local/share/lua/5.1/busted/outputHandlers/vusted/default.lua                  18   29     38.30%
+/usr/local/share/lua/5.1/busted/runner.lua                                         57   76     42.86%
+/usr/local/share/lua/5.1/busted/status.lua                                         15   2      88.24%
+/usr/local/share/lua/5.1/busted/utils.lua                                          11   10     52.38%
+/usr/local/share/lua/5.1/inspect.lua                                               57   105    35.19%
+/usr/local/share/lua/5.1/luassert/assert.lua                                       19   62     23.46%
+/usr/local/share/lua/5.1/luassert/assertions.lua                                   46   174    20.91%
+/usr/local/share/lua/5.1/luassert/formatters/init.lua                              20   114    14.93%
+/usr/local/share/lua/5.1/luassert/match.lua                                        1    31     3.12%
+/usr/local/share/lua/5.1/luassert/modifiers.lua                                    3    8      27.27%
+/usr/local/share/lua/5.1/luassert/state.lua                                        4    47     7.84%
+/usr/local/share/lua/5.1/luassert/util.lua                                         75   103    42.13%
+/usr/local/share/lua/5.1/mediator.lua                                              39   26     60.00%
+/usr/local/share/lua/5.1/pl/List.lua                                               62   156    28.44%
+/usr/local/share/lua/5.1/pl/class.lua                                              20   82     19.61%
+/usr/local/share/lua/5.1/pl/dir.lua                                                65   188    25.69%
+/usr/local/share/lua/5.1/pl/path.lua                                               36   222    13.95%
+/usr/local/share/lua/5.1/pl/tablex.lua                                             27   377    6.68%
+/usr/local/share/lua/5.1/pl/types.lua                                              5    57     8.06%
+/usr/local/share/lua/5.1/pl/utils.lua                                              9    292    2.99%
+/usr/local/share/lua/5.1/say/init.lua                                              13   15     46.43%
+/usr/local/share/lua/5.1/vusted/run.lua                                            5    18     21.74%
+test/add_time_spec.lua                                                             139  0      100.00%
+test/calculate_spec.lua                                                            346  15     95.84%
+test/helper.lua                                                                    17   2      89.47%
+test/plugin_spec.lua                                                               119  1      99.17%
+test/project_file_tracking_spec.lua                                                153  4      97.45%
+test/save_time_spec.lua                                                            123  0      100.00%
+test/subtract_time_spec.lua                                                        247  0      100.00%
+test/time_pause_resume_spec.lua                                                    45   1      97.83%
+test/time_start_stop_spec.lua                                                      212  5      97.70%
+-------------------------------------------------------------------------------------------------------
+Total                                                                              3154 4039   43.85%

@@ -3,10 +3,12 @@ includes = {
   "lua/"
 }
 excludes = {
-  ".luarocks/", -- Exclude anything from .luarocks paths
+  "/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/*", -- Added wildcard
   "/usr/share/lua/", -- Standard system Lua path
   "/usr/local/share/lua/", -- Another standard system Lua path
-  "/.local/share/nvim/", -- User Neovim path (often contains other plugins)
+  "/home/runner/.local/share/nvim/*", -- Added wildcard
+  "/home/runner/.local/share/nvim/test/*", -- Added wildcard
+  "/home/runner/.cache/nvim/*", -- Added wildcard
   "site-packages/", -- Common for Python virtual envs, but good to have if Lua interop exists
   "share/nvim/runtime/", -- Standard Neovim runtime files
   "pack/packer/" -- Common packer path
