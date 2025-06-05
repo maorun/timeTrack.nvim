@@ -339,9 +339,10 @@ local function calculateAverage()
     return sum / count
 end
 
-local function saveTime(startTime, endTime, weekday, clearDay, project, file)
+local function saveTime(startTime, endTime, weekday, clearDay, project, file, isSubtraction)
     project = project or 'default_project'
     file = file or 'default_file'
+    isSubtraction = isSubtraction or false -- Default to false if not provided
     local year_str = os.date('%Y', startTime) -- Use startTime to determine year/week
     local week_str = os.date('%W', startTime)
 
@@ -388,6 +389,9 @@ local function saveTime(startTime, endTime, weekday, clearDay, project, file)
     item.endReadable = string.format('%02d:%02d', timeReadableEnd.hour, timeReadableEnd.min)
 
     item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
+    if isSubtraction then
+        item.diffInHours = -item.diffInHours
+    end
 
     table.insert(dayItem.items, item)
     calculate({ year = year_str, weeknumber = week_str })
@@ -417,76 +421,61 @@ local function addTime(opts)
     -- saveTime's responsibility is just to save, path creation is fine.
 
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    -- local years = obj.content['data'][os.date('%Y')] -- Not used with new structure that uses year_str, week_str from time
-    if weekday == nil then
-        local current_wday_numeric = os.date('*t', os.time()).wday
-        weekday = wdayToEngName[current_wday_numeric]
+
+    local current_mocked_ts = os.time() -- This will be GMT if tests mock os.time correctly
+    local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
+
+    -- Calculate GMT midnight for the current mocked day
+    local current_day_gmt_midnight_ts = current_mocked_ts
+        - (
+            current_mocked_t_info.hour * 3600
+            + current_mocked_t_info.min * 60
+            + current_mocked_t_info.sec
+        )
+
+    local targetWeekdayName = opts.weekday
+    if targetWeekdayName == nil then
+        targetWeekdayName = wdayToEngName[current_mocked_t_info.wday]
     end
 
-    -- New logic for target_day_ref_ts
-    -- Get current timestamp and determine Monday of the current week at midnight
-    local current_ts_for_week_calc = os.time()
-    local current_t_info_for_week_calc = os.date('*t', current_ts_for_week_calc)
-    -- Get timestamp for midnight of the day that current_ts_for_week_calc is in
-    local current_day_actual_midnight_ts = os.time({
-        year = current_t_info_for_week_calc.year,
-        month = current_t_info_for_week_calc.month,
-        day = current_t_info_for_week_calc.day,
-        hour = 0,
-        min = 0,
-        sec = 0,
-    })
-    -- Calculate days to subtract to get to Monday (os.date('%u') is 1 for Monday, 7 for Sunday)
-    local days_from_monday = (tonumber(os.date('%u', current_day_actual_midnight_ts)) - 1)
-    local monday_midnight_ts = current_day_actual_midnight_ts - (days_from_monday * 24 * 3600)
-
-    -- Determine the offset for the target weekday from Monday
-    local offset_from_monday_map = {
-        Monday = 0,
-        Tuesday = 1,
-        Wednesday = 2,
-        Thursday = 3,
-        Friday = 4,
-        Saturday = 5,
-        Sunday = 6,
+    -- Determine Target Weekday and its GMT Midnight
+    -- Note: os.date('*t').wday is 1 for Sunday, ..., 7 for Saturday
+    local weekday_name_to_num_1_7 = {
+        Sunday = 1,
+        Monday = 2,
+        Tuesday = 3,
+        Wednesday = 4,
+        Thursday = 5,
+        Friday = 6,
+        Saturday = 7,
     }
-    local target_offset_days = offset_from_monday_map[weekday]
-    -- If weekday is not in map (e.g. invalid string), target_offset_days will be nil.
-    -- Existing logic defaults weekday if nil, so it should always be a valid key.
-    -- Adding a fallback just in case, though it implies an issue earlier if reached.
-    if target_offset_days == nil then
-        -- Fallback: use current day's offset from Monday if weekday string is unrecognized
-        target_offset_days = days_from_monday
-        -- Or, could log an error: notify("Error: Unrecognized weekday '"..tostring(weekday).."' in addTime. Defaulting to current day.", "error")
+    local current_wday_numeric_1_7 = current_mocked_t_info.wday
+    local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
+
+    if target_wday_numeric_1_7 == nil then
+        -- Fallback for unrecognized weekday string, though ideally should not happen
+        -- if opts.weekday is validated or comes from wdayToEngName
+        notify(
+            "Warning: Unrecognized weekday '"
+                .. tostring(targetWeekdayName)
+                .. "' in addTime. Defaulting to current day.",
+            'warn'
+        )
+        target_wday_numeric_1_7 = current_wday_numeric_1_7
     end
 
-    local target_day_actual_midnight_ts = monday_midnight_ts + (target_offset_days * 24 * 3600)
+    local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
+    local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
 
-    -- 'time' from opts is the duration in hours
-    local duration_in_hours = opts.time
-    local h_to_sub = math.floor(duration_in_hours)
-    local m_float = (duration_in_hours - h_to_sub) * 60
-    local m_to_sub = math.floor(m_float)
-    local s_float = (m_float - m_to_sub) * 60
-    local s_to_sub = math.floor(s_float)
+    -- Calculate duration in total seconds
+    local total_seconds_duration = math.floor(opts.time * 3600)
 
-    -- Construct endTime as 23:00:00 on the target_day_actual_midnight_ts
-    local target_day_t_table = os.date('*t', target_day_actual_midnight_ts) -- Get table for year, month, day
-    local endTime_ts = os.time({
-        year = target_day_t_table.year,
-        month = target_day_t_table.month,
-        day = target_day_t_table.day,
-        hour = 23,
-        min = 0,
-        sec = 0,
-        isdst = target_day_t_table.isdst, -- Preserve DST flag from target day
-    })
+    -- Calculate startTime_ts and endTime_ts using GMT arithmetic
+    local add_endTime_ts = target_day_gmt_midnight_ts + (23 * 3600) -- 23:00:00 GMT on target day
+    local add_startTime_ts = add_endTime_ts - total_seconds_duration
 
-    local startTime_ts = endTime_ts - (h_to_sub * 3600 + m_to_sub * 60 + s_to_sub)
-
-    -- These are then passed to saveTime
-    local startTime = startTime_ts
-    local endTime = endTime_ts
+    local startTime = add_startTime_ts
+    local endTime = add_endTime_ts
 
     local paused = isPaused()
     if paused then
@@ -494,7 +483,7 @@ local function addTime(opts)
     end
 
     -- Pass project and file to saveTime
-    saveTime(startTime, endTime, weekday, clearDay, project, file)
+    saveTime(startTime, endTime, targetWeekdayName, clearDay, project, file, false)
 
     if paused then
         TimePause()
@@ -511,75 +500,61 @@ local function subtractTime(opts)
     local file = opts.file or 'default_file'
 
     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-    -- local years = obj.content['data'][os.date('%Y')] -- Not used
-    if weekday == nil then
-        local current_wday_numeric = os.date('*t', os.time()).wday
-        weekday = wdayToEngName[current_wday_numeric]
+
+    local current_mocked_ts = os.time() -- This will be GMT if tests mock os.time correctly
+    local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
+
+    -- Calculate GMT midnight for the current mocked day
+    local current_day_gmt_midnight_ts = current_mocked_ts
+        - (
+            current_mocked_t_info.hour * 3600
+            + current_mocked_t_info.min * 60
+            + current_mocked_t_info.sec
+        )
+
+    local targetWeekdayName = opts.weekday
+    if targetWeekdayName == nil then
+        targetWeekdayName = wdayToEngName[current_mocked_t_info.wday]
     end
 
-    -- local week = years[os.date('%W')] -- Not used
-    local currentWeekdayNumeric = os.date('*t').wday - 1 -- Sunday=0, Monday=1, etc.
-    local targetWeekdayNumeric = weekdayNumberMap[weekday]
-
-    if targetWeekdayNumeric == nil then
-        -- Use notify if available, or print an error. Let's assume notify is available as it's used elsewhere.
-        if notify then
-            notify(
-                "Error: Weekday '"
-                    .. tostring(weekday)
-                    .. "' is not recognized in weekdayNumberMap.",
-                'error',
-                { title = 'TimeTracking Error' }
-            )
-        else
-            print(
-                "Error: Weekday '"
-                    .. tostring(weekday)
-                    .. "' is not recognized in weekdayNumberMap."
-            )
-        end
-        return -- Stop execution if weekday is invalid
-    end
-
-    local diffDays = currentWeekdayNumeric - targetWeekdayNumeric
-    if diffDays < 0 then
-        diffDays = diffDays + 7
-    end
-
-    -- This block is now redundant because saveTime handles path creation.
-    -- if obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
-    --     obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
-    --         items = {},
-    --     }
-    -- end
-
-    local current_ts = os.time()
-
-    local target_day_ref_ts = current_ts - (diffDays * 24 * 3600)
-    local target_day_t_info = os.date('*t', target_day_ref_ts)
-
-    local minutes_float = (time - math.floor(time)) * 60
-    local seconds_float = (minutes_float - math.floor(minutes_float)) * 60
-    local hours_to_subtract = math.floor(time)
-    local minutes_to_subtract = math.floor(minutes_float)
-    local seconds_to_subtract = math.floor(seconds_float)
-
-    local endTime_date_table = {
-        year = target_day_t_info.year,
-        month = target_day_t_info.month,
-        day = target_day_t_info.day,
-        hour = 23,
-        min = 0,
-        sec = 0,
-        isdst = target_day_t_info.isdst,
+    -- Determine Target Weekday and its GMT Midnight
+    -- Note: os.date('*t').wday is 1 for Sunday, ..., 7 for Saturday
+    local weekday_name_to_num_1_7 = {
+        Sunday = 1,
+        Monday = 2,
+        Tuesday = 3,
+        Wednesday = 4,
+        Thursday = 5,
+        Friday = 6,
+        Saturday = 7,
     }
+    local current_wday_numeric_1_7 = current_mocked_t_info.wday
+    local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
 
-    local startTime_ts = os.time(endTime_date_table)
-    local endTime_ts = startTime_ts
-        - (hours_to_subtract * 3600 + minutes_to_subtract * 60 + seconds_to_subtract)
+    if target_wday_numeric_1_7 == nil then
+        -- Fallback for unrecognized weekday string
+        notify(
+            "Warning: Unrecognized weekday '"
+                .. tostring(targetWeekdayName)
+                .. "' in subtractTime. Defaulting to current day.",
+            'warn'
+        )
+        target_wday_numeric_1_7 = current_wday_numeric_1_7
+    end
 
-    local startTime = startTime_ts
-    local endTime = endTime_ts
+    local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
+    local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
+
+    -- Calculate duration in total seconds
+    local total_seconds_duration = math.floor(opts.time * 3600)
+
+    -- Calculate startTime_to_save and endTime_to_save using GMT arithmetic
+    local sub_day_end_reference_ts = target_day_gmt_midnight_ts + (23 * 3600) -- 23:00:00 GMT on target day
+    local sub_startTime_to_save = sub_day_end_reference_ts - total_seconds_duration
+    local sub_endTime_to_save = sub_day_end_reference_ts
+
+    local startTime = sub_startTime_to_save
+    local endTime = sub_endTime_to_save
 
     local paused = isPaused()
     if paused then
@@ -587,7 +562,7 @@ local function subtractTime(opts)
     end
 
     -- Pass project, file. 'nope' for clearDay indicates not to clear.
-    saveTime(startTime, endTime, weekday, 'nope', project, file)
+    saveTime(startTime, endTime, targetWeekdayName, 'nope', project, file, true)
 
     if paused then
         TimePause()
