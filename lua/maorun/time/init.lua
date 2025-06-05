@@ -426,8 +426,12 @@ local function addTime(opts)
     local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
 
     -- Calculate GMT midnight for the current mocked day
-    local current_day_gmt_midnight_ts = current_mocked_ts -
-        (current_mocked_t_info.hour * 3600 + current_mocked_t_info.min * 60 + current_mocked_t_info.sec)
+    local current_day_gmt_midnight_ts = current_mocked_ts
+        - (
+            current_mocked_t_info.hour * 3600
+            + current_mocked_t_info.min * 60
+            + current_mocked_t_info.sec
+        )
 
     local targetWeekdayName = opts.weekday
     if targetWeekdayName == nil then
@@ -451,7 +455,12 @@ local function addTime(opts)
     if target_wday_numeric_1_7 == nil then
         -- Fallback for unrecognized weekday string, though ideally should not happen
         -- if opts.weekday is validated or comes from wdayToEngName
-        notify("Warning: Unrecognized weekday '" .. tostring(targetWeekdayName) .. "' in addTime. Defaulting to current day.", "warn")
+        notify(
+            "Warning: Unrecognized weekday '"
+                .. tostring(targetWeekdayName)
+                .. "' in addTime. Defaulting to current day.",
+            'warn'
+        )
         target_wday_numeric_1_7 = current_wday_numeric_1_7
     end
 
@@ -496,8 +505,12 @@ local function subtractTime(opts)
     local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
 
     -- Calculate GMT midnight for the current mocked day
-    local current_day_gmt_midnight_ts = current_mocked_ts -
-        (current_mocked_t_info.hour * 3600 + current_mocked_t_info.min * 60 + current_mocked_t_info.sec)
+    local current_day_gmt_midnight_ts = current_mocked_ts
+        - (
+            current_mocked_t_info.hour * 3600
+            + current_mocked_t_info.min * 60
+            + current_mocked_t_info.sec
+        )
 
     local targetWeekdayName = opts.weekday
     if targetWeekdayName == nil then
@@ -520,7 +533,12 @@ local function subtractTime(opts)
 
     if target_wday_numeric_1_7 == nil then
         -- Fallback for unrecognized weekday string
-        notify("Warning: Unrecognized weekday '" .. tostring(targetWeekdayName) .. "' in subtractTime. Defaulting to current day.", "warn")
+        notify(
+            "Warning: Unrecognized weekday '"
+                .. tostring(targetWeekdayName)
+                .. "' in subtractTime. Defaulting to current day.",
+            'warn'
+        )
         target_wday_numeric_1_7 = current_wday_numeric_1_7
     end
 
