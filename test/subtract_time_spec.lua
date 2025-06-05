@@ -7,6 +7,10 @@ local os = require('os')
 local Path = require('plenary.path') -- Added for file manipulation
 local tempPath
 
+-- Store original os functions
+local original_os_date = os.date
+local original_os_time = os.time
+
 -- Copied from lua/maorun/time/init.lua for test purposes
 local wdayToEngName = {
     [1] = 'Sunday',
@@ -26,43 +30,57 @@ end)
 
 after_each(function()
     os.remove(tempPath)
+    -- Restore original os functions
+    os.date = original_os_date
+    os.time = original_os_time
 end)
 
 describe('subtractTime', function()
     it('should subtract a whole number of hours from a specific weekday', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Monday'
         local hoursToSubtract = 3
         local defaultHoursForMonday = 8 -- Assuming default config
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
-        local data = maorunTime.calculate()
 
-        local year = os.date('%Y')
-        local week = os.date('%W')
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Monday, Mar 13 is in week 11
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday],
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday],
             'Weekday data should exist'
         )
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'Items should exist'
         )
         assert.are.same(
             1,
-            #data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
             'One item should be created'
         )
 
         local item =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Weekday summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -72,7 +90,7 @@ describe('subtractTime', function()
             'Weekday summary overhour should be ' .. (-hoursToSubtract - defaultHoursForMonday)
         )
 
-        local weekSummary = data.content.data[year][week].summary
+        local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
         assert(
             math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForMonday)) < 0.001,
             'Week summary overhour should be ' .. (-hoursToSubtract - defaultHoursForMonday)
@@ -80,24 +98,23 @@ describe('subtractTime', function()
     end)
 
     it('should subtract fractional hours from a specific weekday', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Tuesday'
         local hoursToSubtract = 2.5
         local defaultHoursForTuesday = 8 -- Assuming default config
 
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Calculate the year and week that subtractTime (via saveTime) would have used for weekday
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
-        end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Tuesday, Mar 14 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -138,36 +155,47 @@ describe('subtractTime', function()
     end)
 
     it('should subtract time from the current day if weekday is not provided', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local hoursToSubtract = 1.5
-        local currentWeekday = wdayToEngName[os.date('*t').wday]
-        local defaultHoursForCurrentDay =
-            maorunTime.setup({ path = tempPath }).content.hoursPerWeekday[currentWeekday]
+        local currentWeekday = original_os_date('%A', mock_context_ts) -- Should be 'Wednesday'
+        local setup_content = maorunTime.setup({ path = tempPath }) -- Ensure setup is called to get hoursPerWeekday
+        local defaultHoursForCurrentDay = setup_content.content.hoursPerWeekday[currentWeekday]
 
         maorunTime.subtractTime({ time = hoursToSubtract }) -- No weekday argument
-        local data = maorunTime.calculate()
 
-        local year = os.date('%Y')
-        local week = os.date('%W')
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Wednesday, Mar 15 is in week 11
+
+        local data =
+            maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[year][week]['default_project']['default_file'].weekdays[currentWeekday].items,
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items,
             'Items should exist for current day'
         )
         assert.are.same(
             1,
-            #data.content.data[year][week]['default_project']['default_file'].weekdays[currentWeekday].items,
+            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items,
             'One item should be created for current day'
         )
 
         local item =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[currentWeekday].items[1]
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours for current day should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[year][week]['default_project']['default_file'].weekdays[currentWeekday].summary
+            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Current day summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -178,7 +206,7 @@ describe('subtractTime', function()
             'Current day summary overhour calculation'
         )
 
-        local weekSummary = data.content.data[year][week].summary
+        local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
         assert(
             math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForCurrentDay)) < 0.001,
             'Week summary overhour should reflect current day subtraction'
@@ -186,27 +214,23 @@ describe('subtractTime', function()
     end)
 
     it('should correctly subtract time from a day with no prior entries', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Wednesday'
         local hoursToSubtract = 4
         local defaultHoursForWednesday = 8 -- Assuming default config
 
-        -- Ensure no prior entries by re-initializing or checking count
-        -- before_each already sets up a clean state with no entries
-
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Calculate the year and week that subtractTime (via saveTime) would have used for weekday
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
-        end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Wednesday, Mar 15 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -248,6 +272,15 @@ describe('subtractTime', function()
     end)
 
     it('should correctly update summaries after subtraction and recalculation', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Thursday'
         local initialHours = 5
         local hoursToSubtract = 2
@@ -256,18 +289,8 @@ describe('subtractTime', function()
         maorunTime.addTime({ time = initialHours, weekday = weekday })
         maorunTime.subtractTime({ time = hoursToSubtract, weekday = weekday })
 
-        -- Calculate the year and week that addTime/subtractTime (via saveTime) would have used for weekday
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
-        end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Thursday, Mar 16 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
@@ -302,6 +325,15 @@ describe('subtractTime', function()
     end)
 
     it('should function correctly when time tracking is paused and resumed', function()
+        local mock_context_ts = 1678886400 -- Wed, Mar 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_context_ts
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_context_ts
+            return original_os_date(format, time_val)
+        end
+
         local weekday = 'Friday'
         local hoursToSubtract = 1
         local defaultHoursForFriday = 8 -- Assuming default config
@@ -314,18 +346,8 @@ describe('subtractTime', function()
         maorunTime.TimeResume()
         assert.is_false(maorunTime.isPaused(), 'Time tracking should be resumed')
 
-        -- Calculate the year and week that subtractTime (via saveTime) would have used for weekday
-        local current_ts_for_test = os.time()
-        local currentWeekdayNumeric_for_test = os.date('*t', current_ts_for_test).wday - 1
-        local targetWeekdayNumeric_for_test = maorunTime.weekdays[weekday]
-        local diffDays_for_test = currentWeekdayNumeric_for_test - targetWeekdayNumeric_for_test
-        if diffDays_for_test < 0 then
-            diffDays_for_test = diffDays_for_test + 7
-        end
-        local target_day_ref_ts_for_test = current_ts_for_test - (diffDays_for_test * 24 * 3600)
-
-        local expected_year_key = os.date('%Y', target_day_ref_ts_for_test)
-        local expected_week_key = os.date('%W', target_day_ref_ts_for_test)
+        local expected_year_key = '2023'
+        local expected_week_key = '11' -- Friday, Mar 17 is in week 11
 
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
