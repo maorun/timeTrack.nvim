@@ -6,6 +6,7 @@ Table of Contents                           *timeTrack.nvim-table-of-contents*
 1. Timetracking in lua                    |timeTrack.nvim-timetracking-in-lua|
   - Installation             |timeTrack.nvim-timetracking-in-lua-installation|
   - Usage                           |timeTrack.nvim-timetracking-in-lua-usage|
+  - Data Storage Format|timeTrack.nvim-timetracking-in-lua-data-storage-format|
   - Suggested keymapping with which-key|timeTrack.nvim-timetracking-in-lua-suggested-keymapping-with-which-key|
   - Development               |timeTrack.nvim-timetracking-in-lua-development|
   - Test Coverage           |timeTrack.nvim-timetracking-in-lua-test-coverage|
@@ -49,6 +50,60 @@ USAGE                               *timeTrack.nvim-timetracking-in-lua-usage*
             Monday = 6,
         }
     })
+<
+
+
+DATA STORAGE FORMAT   *timeTrack.nvim-timetracking-in-lua-data-storage-format*
+
+The data is stored in a JSON file. The default path is
+`~/.local/share/nvim/maorun-time.json` (or equivalent `vim.fn.stdpath('data')
+.. '/maorun-time.json'`).
+
+The structure of the JSON file is as follows:
+
+>json
+    {
+      "hoursPerWeekday": {
+        "Monday": 8,
+        "Tuesday": 8,
+        "Wednesday": 8,
+        "Thursday": 8,
+        "Friday": 8,
+        "Saturday": 8,
+        "Sunday": 8
+      },
+      "paused": false,
+      "data": {
+        "YYYY": {
+          "WW": {
+            "summary": {
+              "overhour": 2.5
+            },
+            "projectName": {
+              "fileName": {
+                "weekdays": {
+                  "WeekdayName": {
+                    "summary": {
+                      "diffInHours": 5.5,
+                      "overhour": -2.5
+                    },
+                    "items": [
+                      {
+                        "startTime": 1678886400,
+                        "startReadable": "10:00",
+                        "endTime": 1678890000,
+                        "endReadable": "11:00",
+                        "diffInHours": 1.0
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 <
 
 
