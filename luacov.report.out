@@ -10951,10 +10951,10 @@
        -- local param4 = assert_arg(4,'!@#$%^&*','string',path.isdir,'not a directory')
        --      --> error: argument 4: '!@#$%^&*' not a directory
 *****0 function utils.assert_arg (n,val,tp,verify,msg,lev)
-     3     if type(val) ~= tp then
+   438     if type(val) ~= tp then
 *****0         error(("argument %d expected a '%s', got a '%s'"):format(n,tp,type(val)),lev or 2)
            end
-     5     if verify and not verify(val) then
+   439     if verify and not verify(val) then
 *****0         error(("argument %d: '%s' %s"):format(n,val,msg),lev or 2)
            end
    438     return val
