@@ -1,7 +1,5 @@
 includes = {
-  "./lua/"
+  "lua/"
 }
 excludes = {
-"*%/%.local%/share%/nvim%/*",
-  "^/home/runner/%.local/share/nvim/.*",
 }
