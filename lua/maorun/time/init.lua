@@ -754,7 +754,6 @@ vim.api.nvim_create_autocmd('VimLeave', {
     group = timeGroup,
     desc = 'End Timetracking on VimLeave (general stop)',
     callback = function()
-        -- This could be made more specific if needed, but for now,
         -- a general TimeStop() ensures all active timers are stopped.
         -- BufLeave should have handled the last active buffer.
         TimeStop()
