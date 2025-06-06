@@ -2,4 +2,5 @@ includes = {
   "lua/"
 }
 excludes = {
+  "*"
 }
