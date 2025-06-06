@@ -1,5 +1,6 @@
 includes = {
+  "./lua/"
 }
 excludes = {
-"lua/"
+"/home/runner/.local/share/nvim/test/notify/lua/notify/animate/init.lua"
 }
