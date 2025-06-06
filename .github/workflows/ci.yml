@@ -151,6 +151,7 @@ jobs:
           luarocks install vusted
           luarocks install luacov
           luarocks install inspect
+          luarocks show luacov
 
       - name: Clean up old coverage files
         shell: bash
