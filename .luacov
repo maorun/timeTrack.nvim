@@ -3,5 +3,5 @@ include = {
 }
 exclude = {
   "^/home/runner/.local/*",
-  "*/.luarocks/*",
+  "*/.luarocks/*"
 }
