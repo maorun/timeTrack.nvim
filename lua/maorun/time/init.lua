@@ -95,7 +95,7 @@ local function get_project_and_file_info(buffer_path_or_bufnr)
         local parent_dir_obj = file_path_obj:parent()
         if parent_dir_obj and parent_dir_obj.name and parent_dir_obj.name ~= '' then
             if parent_dir_obj:is_root() or parent_dir_obj.name == Path:new('/'):name() then -- Check against root name, plenary might return empty for root name
-                 project_name = "_root_" -- Or "filesystem_root"
+                project_name = '_root_' -- Or "filesystem_root"
             else
                 project_name = parent_dir_obj.name
             end
@@ -105,7 +105,7 @@ local function get_project_and_file_info(buffer_path_or_bufnr)
     end
 
     -- Ensure file_name is not nil or empty before returning
-    if file_name and file_name ~= "" then
+    if file_name and file_name ~= '' then
         return { project = project_name, file = file_name }
     else
         -- This case should ideally be caught earlier, but as a safeguard:
