@@ -1,6 +1,6 @@
 include = {
   "./lua/"
-}
+},
 exclude = {
 "/home/runner/.local/share/nvim/test/notify/lua/notify/animate/init.lua"
 }
