@@ -1,6 +1,5 @@
 includes = {
-  "lua/"
+  "lua/*"
 }
 excludes = {
-  "*"
 }
