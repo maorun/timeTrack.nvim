@@ -1,7 +1,7 @@
--- Coverage configuration for luacov
 includes = {
   "./lua/"
 }
 excludes = {
-"*%/%.local%/share%/nvim%/*"
+"*%/%.local%/share%/nvim%/*",
+  "^/home/runner/%.local/share/nvim/.*",
 }
