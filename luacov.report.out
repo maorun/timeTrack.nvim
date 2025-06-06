@@ -49,6 +49,73 @@
      }
    8 local config = defaults
 
+     local function get_project_and_file_info(buffer_path_or_bufnr)
+         local filepath_str
+***0     if type(buffer_path_or_bufnr) == 'number' then
+***0         filepath_str = vim.api.nvim_buf_get_name(buffer_path_or_bufnr)
+***0     elseif type(buffer_path_or_bufnr) == 'string' then
+***0         filepath_str = buffer_path_or_bufnr
+         else
+***0         return nil -- Invalid input type
+         end
+
+***0     if filepath_str == nil or filepath_str == '' then
+***0         return nil
+         end
+
+***0     local file_path_obj = Path:new(filepath_str)
+***0     if not file_path_obj then -- Ensure Path object was created
+***0         return nil
+         end
+
+***0     local file_name = file_path_obj.name
+***0     if file_name == nil or file_name == '' then
+***0         return nil -- No valid file name (e.g. a directory path was passed)
+         end
+
+         local project_name = nil
+***0     local current_dir = file_path_obj:parent()
+
+         -- Loop upwards to find .git directory or stop at root
+***0     while current_dir and current_dir:absolute() ~= '' and current_dir:absolute() ~= '/' do
+***0         if current_dir:joinpath('.git'):exists() then
+***0             project_name = current_dir.name
+                 break
+             end
+***0         local parent_dir = current_dir:parent()
+             -- Break if parent is the same as current (indicates root or error)
+***0         if parent_dir and parent_dir:absolute() == current_dir:absolute() then
+                 break
+             end
+***0         current_dir = parent_dir
+***0         if not current_dir then -- Safety break if parent() returns nil unexpectedly
+                 break
+             end
+         end
+
+***0     if project_name == nil then
+             -- Fallback: use parent directory name if .git not found
+***0         local parent_dir_obj = file_path_obj:parent()
+***0         if parent_dir_obj and parent_dir_obj.name and parent_dir_obj.name ~= '' then
+***0             if parent_dir_obj:is_root() or parent_dir_obj.name == Path:new('/'):name() then -- Check against root name, plenary might return empty for root name
+***0                 project_name = '_root_' -- Or "filesystem_root"
+                 else
+***0                 project_name = parent_dir_obj.name
+                 end
+             else
+***0             project_name = 'default_project' -- Ultimate fallback
+             end
+         end
+
+         -- Ensure file_name is not nil or empty before returning
+***0     if file_name and file_name ~= '' then
+***0         return { project = project_name, file = file_name }
+         else
+             -- This case should ideally be caught earlier, but as a safeguard:
+***0         return nil
+         end
+     end
+
      local function init(user_config)
  498     config = vim.tbl_deep_extend('force', defaults, user_config or {})
  249     if user_config.hoursPerWeekday ~= nil then
@@ -625,18 +692,73 @@
          })
      end
 
-   8 local timeGroup = vim.api.nvim_create_augroup('Maorun-Time', {})
-  16 vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter', 'VimEnter' }, {
+   8 local timeGroup = vim.api.nvim_create_augroup('Maorun-Time', { clear = true }) -- clear = true is good practice
+
+     -- VimEnter: Start time for the initial buffer
+  16 vim.api.nvim_create_autocmd('VimEnter', {
    8     group = timeGroup,
-         desc = 'Start Timetracking on VimEnter or BufEnter (if second vim was leaved)',
+         desc = 'Start Timetracking on VimEnter for the initial buffer',
          callback = function()
-***0         TimeStart()
+***0         local current_buf = vim.api.nvim_get_current_buf()
+***0         local info = get_project_and_file_info(current_buf)
+***0         if info then
+***0             TimeStart({ project = info.project, file = info.file })
+             else
+***0             TimeStart() -- Use defaults if no info
+             end
          end,
      })
+
+     -- BufEnter: Start time for the entered buffer
+  16 vim.api.nvim_create_autocmd('BufEnter', {
+   8     group = timeGroup,
+         desc = 'Start Timetracking when entering a buffer',
+         callback = function(args)
+***0         local info = get_project_and_file_info(args.buf)
+***0         if info then
+***0             TimeStart({ project = info.project, file = info.file })
+             else
+***0             TimeStart() -- Use defaults if no info
+             end
+         end,
+     })
+
+     -- FocusGained: Start time for the current buffer when Neovim gains focus
+  16 vim.api.nvim_create_autocmd('FocusGained', {
+   8     group = timeGroup,
+         desc = 'Start Timetracking when Neovim gains focus',
+         callback = function()
+***0         local current_buf = vim.api.nvim_get_current_buf()
+***0         local info = get_project_and_file_info(current_buf)
+***0         if info then
+***0             TimeStart({ project = info.project, file = info.file })
+             else
+***0             TimeStart() -- Use defaults if no info
+             end
+         end,
+     })
+
+     -- BufLeave: Stop time for the buffer being left
+  16 vim.api.nvim_create_autocmd('BufLeave', {
+   8     group = timeGroup,
+         desc = 'Stop Timetracking for the buffer being left',
+         callback = function(args)
+***0         local info = get_project_and_file_info(args.buf)
+***0         if info then
+***0             TimeStop({ project = info.project, file = info.file })
+             else
+***0             TimeStop() -- Use defaults if no info
+             end
+         end,
+     })
+
+     -- VimLeave: General stop for all tracking
   16 vim.api.nvim_create_autocmd('VimLeave', {
    8     group = timeGroup,
-         desc = 'End Timetracking on VimLeave',
+         desc = 'End Timetracking on VimLeave (general stop)',
          callback = function()
+             -- a general TimeStop() ensures all active timers are stopped.
+             -- BufLeave should have handled the last active buffer.
 ***0         TimeStop()
          end,
      })
@@ -808,6 +930,6 @@ Summary
 
 File                                                                     Hits Missed Coverage
 ---------------------------------------------------------------------------------------------
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua 339  69     83.09%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua 345  117    74.68%
 ---------------------------------------------------------------------------------------------
-Total                                                                    339  69     83.09%
+Total                                                                    345  117    74.68%
