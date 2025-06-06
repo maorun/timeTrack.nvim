@@ -157,8 +157,8 @@ jobs:
         shell: bash
         run: |
           echo "Deleting old luacov files if they exist..."
-          rm -f ${{ github.workspace }}/luacov.stats.out
-          rm -f ${{ github.workspace }}/luacov.report.out
+          rm -f luacov.stats.out
+          rm -f luacov.report.out
           echo "Old luacov files deleted."
 
       - name: Run tests for coverage
