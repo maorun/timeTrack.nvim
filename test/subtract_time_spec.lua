@@ -1,6 +1,6 @@
 local helper = require('test.helper')
-helper.plenary_dep()
-helper.notify_dep()
+-- helper.plenary_dep() -- Removed, as it doesn't exist in helper.lua
+-- helper.notify_dep() -- Removed, as it doesn't exist in helper.lua
 
 local maorunTime = require('maorun.time')
 local os = require('os')

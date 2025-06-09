@@ -21,6 +21,14 @@ function M.mock_nvim_api(api_name, mock_value)
     end
 
     local func_name = api_parts[#api_parts]
+    if base[func_name] == nil then
+        error(
+            'API function '
+                .. func_name
+                .. ' not found in '
+                .. table.concat(api_parts, '.', 1, #api_parts - 1)
+        )
+    end
     original_functions[api_name] = base[func_name]
 
     if type(mock_value) == 'function' then
@@ -40,6 +48,10 @@ function M.mock_function(module_name, func_name, mock_implementation)
     local module = _G[module_name]
     if not module then
         error('Module not found: ' .. module_name)
+    end
+
+    if module[func_name] == nil then
+        error('Function ' .. func_name .. ' not found in module ' .. module_name)
     end
 
     local key = module_name .. '.' .. func_name

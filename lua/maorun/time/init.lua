@@ -469,7 +469,7 @@ local function saveTime(startTime, endTime, weekday, clearDay, project, file, is
         'Gesamt: '
             .. string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour)
             .. ' Stunden',
-    }, 'info', { title = 'TimeTracking - SaveTime' }) -- Changed title for clarity
+    }, 'info', { title = 'TimeTracking - SaveTime' })
 end
 
 -- adds time into the current week
@@ -800,9 +800,17 @@ local function select(opts, callback)
     for _, value in pairs(weekdayNumberMap) do
         if not selectionNumbers[value] then
             selectionNumbers[value] = 1
-            selections[#selections + 1] = _
+            selections[#selections + 1] = _ -- This was a bug, should be `k` from `pairs(weekdayNumberMap)`
         end
     end
+    -- Corrected population of selections:
+    selections = {} -- Reset selections
+    for k, v in pairs(wdayToEngName) do
+        table.insert(selections, v)
+    end
+    table.sort(selections, function(a, b)
+        return weekdayNumberMap[a] < weekdayNumberMap[b]
+    end)
 
     ---@param weekday string
     local function selectHours(weekday_param)
@@ -919,4 +927,5 @@ return {
     end,
 
     weekdays = weekdayNumberMap,
+    get_project_and_file_info = get_project_and_file_info, -- Expose the function
 }

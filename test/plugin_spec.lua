@@ -1,9 +1,11 @@
 local helper = require('test.helper')
-helper.plenary_dep()
-helper.notify_dep()
+-- helper.plenary_dep() -- Removed, as it doesn't exist in helper.lua
+-- helper.notify_dep() -- Removed, as it doesn't exist in helper.lua
 
+-- local plugin = require('maorun.plugin') -- Removed as maorun.plugin does not exist and 'plugin' is unused
 local maorunTime = require('maorun.time')
-local os = require('os')
+local os = require('os') -- Added as it's used in before_each/after_each
+
 local tempPath
 
 local wdayToEngName = {
@@ -85,14 +87,10 @@ describe('init plugin', function()
 end)
 
 it('should add/subtract time to a specific day', function()
-    -- local data_obj = maorunTime.setup({ path = tempPath }) -- Get the full object for easier access
-    -- For this test, maorunTime functions return the main 'obj', so .content is needed.
     maorunTime.setup({ path = tempPath })
 
     local current_wday_numeric = os.date('*t', os.time()).wday
-    local current_weekday = wdayToEngName[current_wday_numeric] -- Standardized English name
-    local current_wday_numeric = os.date('*t', os.time()).wday
-    local current_weekday = wdayToEngName[current_wday_numeric] -- Standardized English name
+    local current_weekday = wdayToEngName[current_wday_numeric]
 
     local data = maorunTime.addTime({
         time = 2,
@@ -101,14 +99,10 @@ it('should add/subtract time to a specific day', function()
 
     local year = os.date('%Y')
     local weekNum = os.date('%W')
-    local year = os.date('%Y')
-    local weekNum = os.date('%W')
-    -- Access the data through the new structure for assertions
     local week_content_path = data.content.data[year][weekNum]['default_project']['default_file']
-    local week_summary_path = data.content.data[year][weekNum].summary -- Week summary is still at week level
+    local week_summary_path = data.content.data[year][weekNum].summary
 
     local configured_hours_day = data.content.hoursPerWeekday[current_weekday]
-
     local expected_daily_overhour_1st_add = 2 - configured_hours_day
     assert.are.same(
         expected_daily_overhour_1st_add,
@@ -119,7 +113,7 @@ it('should add/subtract time to a specific day', function()
         week_summary_path,
         'Week summary should exist after calculate (called by addTime via saveTime)'
     )
-    if week_summary_path then -- Guard against nil if calculate didn't run or create it
+    if week_summary_path then
         assert.are.same(
             expected_daily_overhour_1st_add,
             week_summary_path.overhour,
@@ -128,14 +122,13 @@ it('should add/subtract time to a specific day', function()
     end
 
     data = maorunTime.addTime({
-        time = 2, -- Current test adds 2, not 3 as per original instruction example
+        time = 2,
         weekday = current_weekday,
     })
-    -- Re-access paths as 'data' object might be new
     week_content_path = data.content.data[year][weekNum]['default_project']['default_file']
     week_summary_path = data.content.data[year][weekNum].summary
 
-    local total_logged_hours_after_2nd_add = 4 -- (2 from first add + 2 from second)
+    local total_logged_hours_after_2nd_add = 4
     local expected_daily_overhour_2nd_add = total_logged_hours_after_2nd_add - configured_hours_day
     assert.are.same(
         expected_daily_overhour_2nd_add,
@@ -154,7 +147,7 @@ it('should add/subtract time to a specific day', function()
     week_content_path = data.content.data[year][weekNum]['default_project']['default_file']
     week_summary_path = data.content.data[year][weekNum].summary
 
-    local final_logged_hours_after_subtract = 2 -- (4 - 2)
+    local final_logged_hours_after_subtract = 2
     local expected_daily_overhour_after_subtract = final_logged_hours_after_subtract
         - configured_hours_day
     assert.are.same(
@@ -176,20 +169,15 @@ describe('pause / resume time-tracking', function()
         maorunTime.setup({
             path = tempPath,
         })
-
         maorunTime.TimePause()
-
         assert.is_true(maorunTime.isPaused())
     end)
     it('should resume time tracking', function()
         maorunTime.setup({
             path = tempPath,
         })
-
         maorunTime.TimePause()
-
         maorunTime.TimeResume()
-
         assert.is_false(maorunTime.isPaused())
     end)
 end)

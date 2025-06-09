@@ -1,6 +1,6 @@
 local helper = require('test.helper')
-helper.plenary_dep() -- Ensure plenary is cloned/available
-helper.notify_dep() -- Might as well ensure notify is also there, like other specs
+-- helper.plenary_dep() -- Ensure plenary is cloned/available -- Removed, as it doesn't exist in helper.lua
+-- helper.notify_dep() -- Might as well ensure notify is also there, like other specs -- Removed, as it doesn't exist in helper.lua
 
 local time_init_module = require('maorun.time.init')
 local fs = require('plenary.path') -- This should now work if plenary_dep sets up paths or if LUA_PATH is correct

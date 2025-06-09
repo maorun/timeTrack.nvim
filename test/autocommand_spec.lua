@@ -10,25 +10,27 @@ describe('BufEnter Autocommand', function()
 
     before_each(function()
         mock_TimeStart_calls = {}
-        -- Mock TimeStart globally for the module
+        _G.time_init = require('maorun.time.init') -- Ensure module is globally accessible for helper
+        _G.time_init.setup({ path = '/tmp/maorun-time-test-autocmd.json' }) -- Initialize with a fixed path
         helper.mock_function('time_init', 'TimeStart', mock_TimeStart_spy)
     end)
 
     after_each(function()
         helper.teardown()
+        local Path = require('plenary.path') -- Ensure Path is available for cleanup
+        if Path:new('/tmp/maorun-time-test-autocmd.json'):exists() then
+            os.remove('/tmp/maorun-time-test-autocmd.json')
+        end
     end)
 
     describe('Test Case 1: BufEnter triggers TimeStart with project and file info', function()
         it('should call TimeStart with project and file info', function()
-            -- Mock get_project_and_file_info
-            local expected_info = { project = 'TestProject', file = 'TestFile.lua' }
-            helper.mock_function('time_init', 'get_project_and_file_info', function(bufnr)
-                assert.is_number(
-                    bufnr,
-                    'get_project_and_file_info should be called with a buffer number'
-                )
-                return expected_info
+            -- Mock nvim_buf_get_name to control input to the real get_project_and_file_info
+            helper.mock_nvim_api('vim.api.nvim_buf_get_name', function(bufnr)
+                return 'TestProject/TestFile.lua' -- Mocked file path
             end)
+            -- Define expected_info based on how the real get_project_and_file_info should process the mocked path
+            local expected_info = { project = 'TestProject', file = 'TestFile.lua' }
 
             -- Create a dummy buffer
             local buf = vim.api.nvim_create_buf(false, true)
@@ -55,13 +57,9 @@ describe('BufEnter Autocommand', function()
 
     describe('Test Case 2: BufEnter triggers TimeStart with default values', function()
         it('should call TimeStart with no arguments (or default handling)', function()
-            -- Mock get_project_and_file_info to return nil
-            helper.mock_function('time_init', 'get_project_and_file_info', function(bufnr)
-                assert.is_number(
-                    bufnr,
-                    'get_project_and_file_info should be called with a buffer number'
-                )
-                return nil
+            -- Mock nvim_buf_get_name to return an empty path, causing real get_project_and_file_info to return nil
+            helper.mock_nvim_api('vim.api.nvim_buf_get_name', function(bufnr)
+                return '' -- Mocked empty file path
             end)
 
             -- Create a dummy buffer

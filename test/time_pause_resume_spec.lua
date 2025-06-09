@@ -15,9 +15,11 @@ describe('Time Pause and Resume', function()
         -- The structure of this JSON should match what `save(obj)` would write,
         -- meaning `paused` should be a top-level key in `obj.content`.
         local Path = require('plenary.path')
-        local test_time_file_path = vim.fn.stdpath('data')
-            .. Path.path.sep
-            .. 'maorun-time-test.json'
+        local data_dir_path_str = vim.fn.stdpath('data')
+        local data_dir = Path:new(data_dir_path_str)
+        data_dir:mkdir({ parents = true, exist_ok = true }) -- Ensure data directory exists
+
+        local test_time_file_path = data_dir_path_str .. Path.path.sep .. 'maorun-time-test.json'
         -- Initialize with paused = false and default hours, similar to how `init` and `save` would structure it.
         local initial_data = {
             paused = false,
