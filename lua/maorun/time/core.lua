@@ -6,7 +6,8 @@ local utils = require('maorun.time.utils')
 local M = {}
 
 function M.init(user_config)
-    config_module.config = vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
+    config_module.config =
+        vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
     if user_config and user_config.hoursPerWeekday ~= nil then
         config_module.config.hoursPerWeekday = user_config.hoursPerWeekday
     end
@@ -68,7 +69,10 @@ function M.calculate(opts)
     local year_str = opts.year
     local week_str = opts.weeknumber
 
-    if not config_module.obj.content['data'][year_str] or not config_module.obj.content['data'][year_str][week_str] then
+    if
+        not config_module.obj.content['data'][year_str]
+        or not config_module.obj.content['data'][year_str][week_str]
+    then
         return
     end
 
@@ -110,7 +114,8 @@ function M.calculate(opts)
                         end
                         day_data.summary.diffInHours = time_in_weekday
 
-                        local expected_hours = config_module.obj.content['hoursPerWeekday'][weekday_name] or 0
+                        local expected_hours = config_module.obj.content['hoursPerWeekday'][weekday_name]
+                            or 0
                         day_data.summary.overhour = time_in_weekday - expected_hours
 
                         current_week_data.summary.overhour = current_week_data.summary.overhour
@@ -123,7 +128,10 @@ function M.calculate(opts)
 end
 
 function M.TimePause()
-    M.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
+    M.init({
+        path = config_module.obj.path,
+        hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+    })
     config_module.obj.content.paused = true
     utils.save()
     notify({
@@ -132,7 +140,10 @@ function M.TimePause()
 end
 
 function M.TimeResume()
-    M.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
+    M.init({
+        path = config_module.obj.path,
+        hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+    })
     config_module.obj.content.paused = false
     utils.save()
     notify({
@@ -147,7 +158,10 @@ function M.isPaused()
     -- If not, this might need to call M.init or rely on it being called.
     -- For safety, a light init if obj.content is not populated can be added.
     if not config_module.obj.content or not config_module.obj.content.paused then
-         M.init({ path = config_module.obj.path, hoursPerWeekday = config_module.config.hoursPerWeekday })
+        M.init({
+            path = config_module.obj.path,
+            hoursPerWeekday = config_module.config.hoursPerWeekday,
+        })
     end
     return config_module.obj.content.paused
 end
@@ -189,14 +203,19 @@ function M.TimeStart(opts)
     if config_module.obj.content['data'][year_str][week_str][project][file] == nil then
         config_module.obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
     end
-    if config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
-        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
-            summary = {},
-            items = {},
-        }
+    if
+        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+        == nil
+    then
+        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] =
+            {
+                summary = {},
+                items = {},
+            }
     end
 
-    local dayItem = config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+    local dayItem =
+        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
     local canStart = true
     for _, item in pairs(dayItem.items) do
         canStart = canStart and (item.startTime ~= nil and item.endTime ~= nil)
@@ -244,7 +263,8 @@ function M.TimeStop(opts)
         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
 
     if dayItem_path_exists then
-        local dayItem = config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+        local dayItem =
+            config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
         for _, item in pairs(dayItem.items) do
             if item.endTime == nil then
                 item.endTime = time
@@ -260,7 +280,8 @@ function M.TimeStop(opts)
 
     local heute_text = 'N/A'
     if dayItem_path_exists then
-        local dayItem = config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+        local dayItem =
+            config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
         if dayItem.summary and dayItem.summary.overhour then
             heute_text = string.format('%.2f', dayItem.summary.overhour)
         end
@@ -273,8 +294,10 @@ function M.TimeStop(opts)
         and config_module.obj.content['data'][year_str][week_str].summary
         and config_module.obj.content['data'][year_str][week_str].summary.overhour
     then
-        gesamt_text =
-            string.format('%.2f', config_module.obj.content['data'][year_str][week_str].summary.overhour)
+        gesamt_text = string.format(
+            '%.2f',
+            config_module.obj.content['data'][year_str][week_str].summary.overhour
+        )
     end
 
     notify({
@@ -302,14 +325,19 @@ function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSub
     if config_module.obj.content['data'][year_str][week_str][project][file] == nil then
         config_module.obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
     end
-    if config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
-        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
-            summary = {},
-            items = {},
-        }
+    if
+        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+        == nil
+    then
+        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] =
+            {
+                summary = {},
+                items = {},
+            }
     end
 
-    local dayItem = config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+    local dayItem =
+        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
     local timeReadableStart = os.date('*t', startTime)
     local item = {
         startTime = startTime,
@@ -330,9 +358,10 @@ function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSub
 
     notify({
         'Heute: ' .. string.format('%.2f', dayItem.summary.overhour) .. ' Stunden',
-        'Gesamt: '
-            .. string.format('%.2f', config_module.obj.content['data'][year_str][week_str].summary.overhour)
-            .. ' Stunden',
+        'Gesamt: ' .. string.format(
+            '%.2f',
+            config_module.obj.content['data'][year_str][week_str].summary.overhour
+        ) .. ' Stunden',
     }, 'info', { title = 'TimeTracking - SaveTime' })
 end
 
@@ -360,14 +389,22 @@ function M.addTime(opts)
     end
 
     local weekday_name_to_num_1_7 = {
-        Sunday = 1, Monday = 2, Tuesday = 3, Wednesday = 4, Thursday = 5, Friday = 6, Saturday = 7,
+        Sunday = 1,
+        Monday = 2,
+        Tuesday = 3,
+        Wednesday = 4,
+        Thursday = 5,
+        Friday = 6,
+        Saturday = 7,
     }
     local current_wday_numeric_1_7 = current_mocked_t_info.wday
     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
 
     if target_wday_numeric_1_7 == nil then
         notify(
-            "Warning: Unrecognized weekday '" .. tostring(targetWeekdayName) .. "' in addTime. Defaulting to current day.",
+            "Warning: Unrecognized weekday '"
+                .. tostring(targetWeekdayName)
+                .. "' in addTime. Defaulting to current day.",
             'warn'
         )
         target_wday_numeric_1_7 = current_wday_numeric_1_7
@@ -386,7 +423,15 @@ function M.addTime(opts)
         M.TimeResume()
     end
 
-    M.saveTime(add_startTime_ts, add_endTime_ts, targetWeekdayName, clearDay_param, project, file, false)
+    M.saveTime(
+        add_startTime_ts,
+        add_endTime_ts,
+        targetWeekdayName,
+        clearDay_param,
+        project,
+        file,
+        false
+    )
 
     if paused_state then
         M.TimePause()
@@ -417,14 +462,22 @@ function M.subtractTime(opts)
     end
 
     local weekday_name_to_num_1_7 = {
-        Sunday = 1, Monday = 2, Tuesday = 3, Wednesday = 4, Thursday = 5, Friday = 6, Saturday = 7,
+        Sunday = 1,
+        Monday = 2,
+        Tuesday = 3,
+        Wednesday = 4,
+        Thursday = 5,
+        Friday = 6,
+        Saturday = 7,
     }
     local current_wday_numeric_1_7 = current_mocked_t_info.wday
     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
 
     if target_wday_numeric_1_7 == nil then
         notify(
-            "Warning: Unrecognized weekday '" .. tostring(targetWeekdayName) .. "' in subtractTime. Defaulting to current day.",
+            "Warning: Unrecognized weekday '"
+                .. tostring(targetWeekdayName)
+                .. "' in subtractTime. Defaulting to current day.",
             'warn'
         )
         target_wday_numeric_1_7 = current_wday_numeric_1_7
@@ -444,7 +497,15 @@ function M.subtractTime(opts)
         M.TimeResume()
     end
 
-    M.saveTime(sub_startTime_to_save, sub_endTime_to_save, targetWeekdayName, 'nope', project, file, true)
+    M.saveTime(
+        sub_startTime_to_save,
+        sub_endTime_to_save,
+        targetWeekdayName,
+        'nope',
+        project,
+        file,
+        true
+    )
 
     if paused_state then
         M.TimePause()
@@ -477,7 +538,8 @@ function M.clearDay(weekday_param, project, file)
         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays']
         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday_param]
     then
-        local dayContents = config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday_param]
+        local dayContents =
+            config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday_param]
         if dayContents.items then
             dayContents.items = {} -- Clear items by assigning an empty table
         end

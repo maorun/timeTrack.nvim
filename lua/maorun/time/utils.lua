@@ -35,7 +35,11 @@ function M.get_project_and_file_info(buffer_path_or_bufnr)
     local current_dir = file_path_obj:parent()
 
     -- Loop upwards to find .git directory or stop at root
-    while current_dir and current_dir:absolute() ~= '' and current_dir:absolute() ~= Path:new('/'):absolute() do
+    while
+        current_dir
+        and current_dir:absolute() ~= ''
+        and current_dir:absolute() ~= Path:new('/'):absolute()
+    do
         if current_dir:joinpath('.git'):exists() then
             project_name = current_dir.name
             break
@@ -55,7 +59,10 @@ function M.get_project_and_file_info(buffer_path_or_bufnr)
         -- Fallback: use parent directory name if .git not found
         local parent_dir_obj = file_path_obj:parent()
         if parent_dir_obj and parent_dir_obj.name and parent_dir_obj.name ~= '' then
-            if parent_dir_obj:is_root() or parent_dir_obj:absolute() == Path:new('/'):absolute() then
+            if
+                parent_dir_obj:is_root()
+                or parent_dir_obj:absolute() == Path:new('/'):absolute()
+            then
                 project_name = '_root_' -- Or "filesystem_root"
             else
                 project_name = parent_dir_obj.name
@@ -82,7 +89,9 @@ function M.calculateAverage()
         sum = sum + value
         count = count + 1
     end
-    if count == 0 then return 0 end -- Avoid division by zero
+    if count == 0 then
+        return 0
+    end -- Avoid division by zero
     return sum / count
 end
 

@@ -34,7 +34,12 @@ function M.setup(user_config)
             ui.select(
                 {}, -- Default opts
                 function(hours, weekday, project, file)
-                    core.subtractTime({ time = hours, weekday = weekday, project = project, file = file })
+                    core.subtractTime({
+                        time = hours,
+                        weekday = weekday,
+                        project = project,
+                        file = file,
+                    })
                 end
             )
         end,
@@ -48,7 +53,7 @@ function M.setup(user_config)
             if not weekday then
                 -- TODO: Maybe prompt for weekday if not provided, or use current day?
                 -- For now, let's make it clear it needs parameters.
-                print("Error: Time.clearDay requires weekday, project, and file parameters.")
+                print('Error: Time.clearDay requires weekday, project, and file parameters.')
                 -- Example of how to prompt if desired:
                 -- ui.select({hours=false}, function(_, wd, pr, fl) core.clearDay(wd, pr, fl) end)
                 return
@@ -71,14 +76,18 @@ function M.setup(user_config)
             -- Similar to clearDay, this needs parameters.
             -- If weekday is nil, we might prompt for it.
             if not weekday then
-                 ui.select({hours=false, project=true, file=true}, function(_, wd, pr, fl) core.setIllDay(wd, pr, fl) end)
+                ui.select({ hours = false, project = true, file = true }, function(_, wd, pr, fl)
+                    core.setIllDay(wd, pr, fl)
+                end)
             else
                 core.setIllDay(weekday, project, file) -- Pass through if provided
             end
         end,
         setHoliday = function(weekday, project, file) -- Alias for setIllDay
-             if not weekday then
-                 ui.select({hours=false, project=true, file=true}, function(_, wd, pr, fl) core.setIllDay(wd, pr, fl) end)
+            if not weekday then
+                ui.select({ hours = false, project = true, file = true }, function(_, wd, pr, fl)
+                    core.setIllDay(wd, pr, fl)
+                end)
             else
                 core.setIllDay(weekday, project, file) -- Pass through if provided
             end
@@ -88,7 +97,10 @@ function M.setup(user_config)
             -- The original init.lua's calculate did save.
             -- Decide if this public calculate should also save.
             -- For consistency with original, let's add init and save.
-            core.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
+            core.init({
+                path = config_module.obj.path,
+                hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+            })
             core.calculate(opts)
             utils.save() -- Assuming utils.save uses the shared config_module.obj
             return config_module.obj -- Return the data object
@@ -110,7 +122,10 @@ M.setTime = core.setTime
 M.clearDay = core.clearDay
 M.isPaused = core.isPaused
 M.calculate = function(opts) -- Match the public Time.calculate behavior
-    core.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
+    core.init({
+        path = config_module.obj.path,
+        hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+    })
     core.calculate(opts)
     utils.save()
     return config_module.obj

@@ -45,7 +45,9 @@ function M.select(opts, callback)
     for day, num in pairs(config_module.weekdayNumberMap) do
         table.insert(sorted_weekdays, { name = day, value = num })
     end
-    table.sort(sorted_weekdays, function(a, b) return a.value < b.value end)
+    table.sort(sorted_weekdays, function(a, b)
+        return a.value < b.value
+    end)
 
     for _, day_info in ipairs(sorted_weekdays) do
         if not selectionNumbers[day_info.value] then -- This check might be redundant if weekdayNumberMap has unique values
@@ -53,7 +55,6 @@ function M.select(opts, callback)
             selections[#selections + 1] = day_info.name
         end
     end
-
 
     ---@param weekday_param string
     local function selectHours(weekday_param)
@@ -63,7 +64,7 @@ function M.select(opts, callback)
             }, function(input)
                 local n = tonumber(input)
                 if n == nil or input == nil or input == '' then
-                    notify("Invalid number of hours provided.", "warn", {title = "TimeTracking"})
+                    notify('Invalid number of hours provided.', 'warn', { title = 'TimeTracking' })
                     return
                 end
                 callback(n, weekday_param, selected_project, selected_file)
@@ -82,9 +83,9 @@ function M.select(opts, callback)
                     list = selections, -- Use the sorted selections
                     action = function(selected_weekday)
                         if selected_weekday then -- Ensure a selection was made
-                           selectHours(selected_weekday)
+                            selectHours(selected_weekday)
                         else
-                           notify("No weekday selected.", "info", {title = "TimeTracking"})
+                            notify('No weekday selected.', 'info', { title = 'TimeTracking' })
                         end
                     end,
                 })
@@ -95,7 +96,7 @@ function M.select(opts, callback)
                     if selected_weekday then -- Ensure a selection was made
                         selectHours(selected_weekday)
                     else
-                        notify("No weekday selected.", "info", {title = "TimeTracking"})
+                        notify('No weekday selected.', 'info', { title = 'TimeTracking' })
                     end
                 end)
             end
@@ -111,8 +112,12 @@ function M.select(opts, callback)
             -- Option 3: Modify callback or have different select functions.
             -- Given current callback, let's notify and not proceed if weekday is essential but skipped.
             if opts.hours then -- If hours are also expected, it's likely a time entry operation.
-                 notify("Weekday selection was skipped, but it's required for this operation.", "warn", {title = "TimeTracking"})
-                 return
+                notify(
+                    "Weekday selection was skipped, but it's required for this operation.",
+                    'warn',
+                    { title = 'TimeTracking' }
+                )
+                return
             else
                 -- If only project/file are relevant and weekday/hours are not.
                 -- This path is not used by current Time.add/subtract/set.
