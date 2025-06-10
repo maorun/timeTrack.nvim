@@ -59,28 +59,28 @@ describe('subtractTime', function()
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday],
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'],
             'Weekday data should exist'
         )
         assert.is_not_nil(
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'Items should exist'
         )
         assert.are.same(
             1,
-            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'One item should be created'
         )
 
         local item =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Weekday summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -120,24 +120,24 @@ describe('subtractTime', function()
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'Items should exist for Tuesday'
         )
         assert.are.same(
             1,
-            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'One item should be created for Tuesday'
         )
 
         local item =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours for Tuesday should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Tuesday summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -178,24 +178,24 @@ describe('subtractTime', function()
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items,
+            data.content.data[expected_year_key][expected_week_key][currentWeekday]['default_project']['default_file'].items,
             'Items should exist for current day'
         )
         assert.are.same(
             1,
-            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items,
+            #data.content.data[expected_year_key][expected_week_key][currentWeekday]['default_project']['default_file'].items,
             'One item should be created for current day'
         )
 
         local item =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].items[1]
+            data.content.data[expected_year_key][expected_week_key][currentWeekday]['default_project']['default_file'].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours for current day should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[currentWeekday].summary
+            data.content.data[expected_year_key][expected_week_key][currentWeekday]['default_project']['default_file'].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Current day summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -236,24 +236,24 @@ describe('subtractTime', function()
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'Items should exist for Wednesday'
         )
         assert.are.same(
             1,
-            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'One item should be created for Wednesday'
         )
 
         local item =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours for Wednesday should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Wednesday summary diffInHours should be approximately ' .. -hoursToSubtract
@@ -296,18 +296,18 @@ describe('subtractTime', function()
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         assert.is_not_nil(
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'Items should exist for Thursday'
         )
         assert.are.same(
             2,
-            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'Two items should exist for Thursday (add and subtract)'
         )
 
         local totalDiffInHours = initialHours - hoursToSubtract
         local weekdaySummary =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
             math.abs(weekdaySummary.diffInHours - totalDiffInHours) < 0.001,
             'Thursday summary diffInHours should be ' .. totalDiffInHours
@@ -361,24 +361,24 @@ describe('subtractTime', function()
         )
 
         assert.is_not_nil(
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'Items should exist for Friday'
         )
         assert.are.same(
             1,
-            #data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items,
+            #data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items,
             'One item should be created for Friday despite pause/resume'
         )
 
         local item =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items[1]
         assert(
             math.abs(item.diffInHours - -hoursToSubtract) < 0.001,
             'diffInHours for Friday should be approximately ' .. -hoursToSubtract
         )
 
         local weekdaySummary =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].summary
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
             math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
             'Friday summary diffInHours should be approximately ' .. -hoursToSubtract

@@ -59,15 +59,11 @@ function M.init(user_config)
         config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] = {}
     end
     -- Initialize file with empty items and summary (previously was weekdays = {})
-    if
-        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name]
-        == nil
-    then
-        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] =
-            {
-                items = {},
-                summary = {},
-            }
+    if config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] = {
+            items = {},
+            summary = {},
+        }
     end
     return config_module.obj
 end

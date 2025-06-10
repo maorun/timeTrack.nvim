@@ -142,16 +142,18 @@ describe('Project and File Tracking Functionality', function()
             assert.is_not_nil(year_data, 'Year data should exist')
             local week_data = year_data[mock_date_params.week]
             assert.is_not_nil(week_data, 'Week data should exist')
-            local proj_data = week_data[project]
+            -- New structure: year -> week -> weekday -> project -> file
+            local day_data_for_project_file = week_data[mock_date_params.weekday_name]
+            assert.is_not_nil(day_data_for_project_file, mock_date_params.weekday_name .. ' data should exist at week level')
+            local proj_data = day_data_for_project_file[project]
             assert.is_not_nil(proj_data, 'Project data should exist for ' .. project)
-            local file_data = proj_data[file]
-            assert.is_not_nil(file_data, 'File data should exist for ' .. file)
-            local day_data = file_data.weekdays['Monday']
-            assert.is_not_nil(day_data, 'Monday data should exist')
-            assert.are.same(1, #day_data.items, 'Should have one item')
-            assert.are.same(startTime, day_data.items[1].startTime)
-            assert.are.same(stopTime, day_data.items[1].endTime)
-            assert.is_near(1, day_data.items[1].diffInHours, 0.001)
+            local file_specific_data = proj_data[file]
+            assert.is_not_nil(file_specific_data, 'File data should exist for ' .. file)
+            assert.is_not_nil(file_specific_data.items, 'Items table should exist in file data')
+            assert.are.same(1, #file_specific_data.items, 'Should have one item')
+            assert.are.same(startTime, file_specific_data.items[1].startTime)
+            assert.are.same(stopTime, file_specific_data.items[1].endTime)
+            assert.is_near(1, file_specific_data.items[1].diffInHours, 0.001)
         end)
 
         it("should default to 'default_project' and 'default_file' if not specified", function()
@@ -162,12 +164,14 @@ describe('Project and File Tracking Functionality', function()
             time_init_module.TimeStop({ time = stopTime, weekday = 'Monday' }) -- No project/file
 
             local data = get_data_from_json()
-            local day_data =
-                data.data[mock_date_params.year][mock_date_params.week]['default_project']['default_file'].weekdays['Monday']
-            assert.is_not_nil(day_data, 'Data in default project/file for Monday should exist')
-            assert.are.same(1, #day_data.items)
-            assert.are.same(startTime, day_data.items[1].startTime)
-            assert.are.same(stopTime, day_data.items[1].endTime)
+            -- New structure: year -> week -> weekday -> project -> file
+            local file_specific_data =
+                data.data[mock_date_params.year][mock_date_params.week][mock_date_params.weekday_name]['default_project']['default_file']
+            assert.is_not_nil(file_specific_data, 'Data in default project/file for Monday should exist')
+            assert.is_not_nil(file_specific_data.items, 'Items table should exist in file data')
+            assert.are.same(1, #file_specific_data.items)
+            assert.are.same(startTime, file_specific_data.items[1].startTime)
+            assert.are.same(stopTime, file_specific_data.items[1].endTime)
         end)
     end)
 
@@ -180,8 +184,9 @@ describe('Project and File Tracking Functionality', function()
                 file = 'file_alpha.md',
             })
             local data = get_data_from_json()
+            -- New structure: year -> week -> weekday -> project -> file
             local day_items =
-                data.data[mock_date_params.year][mock_date_params.week]['ProjectX']['file_alpha.md'].weekdays['Tuesday'].items
+                data.data[mock_date_params.year][mock_date_params.week]['Tuesday']['ProjectX']['file_alpha.md'].items
             assert.are.same(1, #day_items)
             assert.is_near(2.5, day_items[1].diffInHours, 0.001)
         end)
@@ -189,8 +194,9 @@ describe('Project and File Tracking Functionality', function()
         it('should use default project/file if not specified', function()
             time_init_module.addTime({ time = 1.5, weekday = 'Wednesday' })
             local data = get_data_from_json()
+            -- New structure: year -> week -> weekday -> project -> file
             local day_items =
-                data.data[mock_date_params.year][mock_date_params.week]['default_project']['default_file'].weekdays['Wednesday'].items
+                data.data[mock_date_params.year][mock_date_params.week]['Wednesday']['default_project']['default_file'].items
             assert.are.same(1, #day_items)
             assert.is_near(1.5, day_items[1].diffInHours, 0.001)
         end)
@@ -206,8 +212,9 @@ describe('Project and File Tracking Functionality', function()
                 file = 'file_beta.txt',
             })
             local data = get_data_from_json()
+            -- New structure: year -> week -> weekday -> project -> file
             local day_items =
-                data.data[mock_date_params.year][mock_date_params.week]['ProjectY']['file_beta.txt'].weekdays['Thursday'].items
+                data.data[mock_date_params.year][mock_date_params.week]['Thursday']['ProjectY']['file_beta.txt'].items
             assert.are.same(1, #day_items)
             assert.is_near(-1, day_items[1].diffInHours, 0.001) -- diffInHours should be negative for subtractTime
         end)
@@ -237,8 +244,9 @@ describe('Project and File Tracking Functionality', function()
                 file = 'file_gamma.py',
             })
             local data = get_data_from_json()
+            -- New structure: year -> week -> weekday -> project -> file
             local day_items =
-                data.data[mock_date_params.year][mock_date_params.week]['ProjectZ']['file_gamma.py'].weekdays['Friday'].items
+                data.data[mock_date_params.year][mock_date_params.week]['Friday']['ProjectZ']['file_gamma.py'].items
             assert.are.same(1, #day_items, 'setTime should result in a single entry for the day')
             assert.is_near(3.5, day_items[1].diffInHours, 0.001)
         end)
@@ -278,14 +286,15 @@ describe('Project and File Tracking Functionality', function()
             })
             local data = get_data_from_json()
             local week_summary = data.data[mock_date_params.year][mock_date_params.week].summary
+            -- New structure: year -> week -> weekday -> project -> file -> summary
             local alpha_main_mon =
-                data.data[mock_date_params.year][mock_date_params.week]['Alpha']['main.lua'].weekdays['Monday'].summary
+                data.data[mock_date_params.year][mock_date_params.week]['Monday']['Alpha']['main.lua'].summary
             local alpha_utils_mon =
-                data.data[mock_date_params.year][mock_date_params.week]['Alpha']['utils.lua'].weekdays['Monday'].summary
+                data.data[mock_date_params.year][mock_date_params.week]['Monday']['Alpha']['utils.lua'].summary
             local alpha_main_tue =
-                data.data[mock_date_params.year][mock_date_params.week]['Alpha']['main.lua'].weekdays['Tuesday'].summary
+                data.data[mock_date_params.year][mock_date_params.week]['Tuesday']['Alpha']['main.lua'].summary
             local bravo_init_mon =
-                data.data[mock_date_params.year][mock_date_params.week]['Bravo']['init.lua'].weekdays['Monday'].summary
+                data.data[mock_date_params.year][mock_date_params.week]['Monday']['Bravo']['init.lua'].summary
 
             assert.is_near(2, alpha_main_mon.diffInHours, 0.001)
             assert.is_near(-6, alpha_main_mon.overhour, 0.001)

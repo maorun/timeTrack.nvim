@@ -43,7 +43,7 @@ describe('saveTime', function()
 
         local data = maorunTime.calculate({ year = year, weeknumber = week_number_str })
         local item =
-            data.content.data[year][week_number_str]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[year][week_number_str][weekday]['default_project']['default_file'].items[1]
 
         assert.is_not_nil(item, 'Item should be saved')
         assert.are.same(hours_to_add, item.diffInHours)
@@ -82,7 +82,7 @@ describe('saveTime', function()
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local items =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items
 
         assert.are.same(2, #items, 'Should have two items for the weekday')
         assert.are.same(hours_to_add1, items[1].diffInHours)
@@ -109,7 +109,7 @@ describe('saveTime', function()
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local item =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items[1]
         assert.are.same(hours_duration, item.diffInHours)
     end)
 
@@ -134,7 +134,7 @@ describe('saveTime', function()
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local item =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items[1]
 
         assert.is_not_nil(item.startTime, 'startTime should be set')
         assert.is_not_nil(item.endTime, 'endTime should be set')
@@ -181,7 +181,7 @@ describe('saveTime', function()
         local data =
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
         local item =
-            data.content.data[expected_year_key][expected_week_key]['default_project']['default_file'].weekdays[weekday].items[1]
+            data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].items[1]
 
         assert.is_not_nil(item, 'Item should be saved')
         assert.are.same(-hours_to_subtract, item.diffInHours)
