@@ -62,7 +62,24 @@ function M.setup(user_config)
         end,
         TimePause = core.TimePause,
         TimeResume = core.TimeResume,
-        TimeStop = core.TimeStop, -- Expose the core TimeStop directly
+        TimeStop = function()
+            core.TimeStop()
+
+            local notify = require('notify')
+
+            local startTime = os.time()
+            local year_str = os.date('%Y', startTime)
+            local week_str = os.date('%W', startTime)
+
+            notify({
+                'Gesamt: '
+                    .. string.format(
+                        '%.2f',
+                        config_module.obj.content['data'][year_str][week_str].summary.overhour
+                    )
+                    .. ' Stunden',
+            }, 'info', { title = 'TimeTracking - Stop' })
+        end,
         set = function()
             ui.select(
                 {}, -- Default opts

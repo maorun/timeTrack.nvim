@@ -277,33 +277,6 @@ function M.TimeStop(opts)
 
     M.calculate({ year = year_str, weeknumber = week_str })
     utils.save()
-
-    local heute_text = 'N/A'
-    if dayItem_path_exists then
-        local dayItem =
-            config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-        if dayItem.summary and dayItem.summary.overhour then
-            heute_text = string.format('%.2f', dayItem.summary.overhour)
-        end
-    end
-
-    local gesamt_text = 'N/A'
-    if
-        config_module.obj.content['data'][year_str]
-        and config_module.obj.content['data'][year_str][week_str]
-        and config_module.obj.content['data'][year_str][week_str].summary
-        and config_module.obj.content['data'][year_str][week_str].summary.overhour
-    then
-        gesamt_text = string.format(
-            '%.2f',
-            config_module.obj.content['data'][year_str][week_str].summary.overhour
-        )
-    end
-
-    notify({
-        'Heute: ' .. heute_text .. ' Stunden',
-        'Gesamt: ' .. gesamt_text .. ' Stunden',
-    }, 'info', { title = 'TimeTracking - Stop' })
 end
 
 function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSubtraction) -- _clearDay param might be unused now
@@ -355,14 +328,6 @@ function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSub
     table.insert(dayItem.items, item)
     M.calculate({ year = year_str, weeknumber = week_str })
     utils.save()
-
-    notify({
-        'Heute: ' .. string.format('%.2f', dayItem.summary.overhour) .. ' Stunden',
-        'Gesamt: ' .. string.format(
-            '%.2f',
-            config_module.obj.content['data'][year_str][week_str].summary.overhour
-        ) .. ' Stunden',
-    }, 'info', { title = 'TimeTracking - SaveTime' })
 end
 
 ---@param opts { time: number, weekday: string|osdate, clearDay?: string, project?: string, file?: string }
