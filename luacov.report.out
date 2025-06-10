@@ -1,11 +1,109 @@
 ==============================================================================
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/autocmds.lua
 ==============================================================================
-   8 local Path = require('plenary.path')
-   8 local os_sep = require('plenary.path').path.sep
-   8 local notify = require('notify')
+   8 local core = require('maorun.time.core')
+   8 local utils = require('maorun.time.utils') -- For get_project_and_file_info
 
-   8 local wdayToEngName = {
+   8 local M = {}
+
+   8 function M.setup_autocmds()
+  60     local timeGroup = vim.api.nvim_create_augroup('Maorun-Time', { clear = true })
+
+ 120     vim.api.nvim_create_autocmd('VimEnter', {
+  60         group = timeGroup,
+             desc = 'Start Timetracking on VimEnter for the initial buffer',
+             callback = function()
+***0             local current_buf = vim.api.nvim_get_current_buf()
+***0             local info = utils.get_project_and_file_info(current_buf)
+***0             if info then
+***0                 core.TimeStart({ project = info.project, file = info.file })
+                 else
+***0                 core.TimeStart() -- Use defaults if no info
+                 end
+             end,
+         })
+
+ 120     vim.api.nvim_create_autocmd('BufEnter', {
+  60         group = timeGroup,
+             desc = 'Start Timetracking when entering a buffer',
+             callback = function(args)
+                 -- Prevent execution if buffer name is empty (e.g. new empty buffer)
+                 -- or if it's a special buffer like Telescope prompt
+***0             local bufname = vim.api.nvim_buf_get_name(args.buf)
+***0             if bufname == '' or vim.bo[args.buf].buftype ~= '' then
+***0                 return
+                 end
+
+***0             local info = utils.get_project_and_file_info(args.buf)
+***0             if info then
+***0                 core.TimeStart({ project = info.project, file = info.file })
+                 else
+                     -- It's possible that even with a valid bufname, info is nil
+                     -- if get_project_and_file_info can't determine project/file.
+                     -- In this case, using defaults is reasonable.
+***0                 core.TimeStart()
+                 end
+             end,
+         })
+
+ 120     vim.api.nvim_create_autocmd('FocusGained', {
+  60         group = timeGroup,
+             desc = 'Start Timetracking when Neovim gains focus',
+             callback = function()
+***0             local current_buf = vim.api.nvim_get_current_buf()
+***0             local bufname = vim.api.nvim_buf_get_name(current_buf)
+                 -- Similar check for empty or special buffers
+***0             if bufname == '' or vim.bo[current_buf].buftype ~= '' then
+***0                 return
+                 end
+
+***0             local info = utils.get_project_and_file_info(current_buf)
+***0             if info then
+***0                 core.TimeStart({ project = info.project, file = info.file })
+                 else
+***0                 core.TimeStart()
+                 end
+             end,
+         })
+
+ 120     vim.api.nvim_create_autocmd('BufLeave', {
+  60         group = timeGroup,
+             desc = 'Stop Timetracking for the buffer being left',
+             callback = function(args)
+                 -- Prevent execution if buffer name is empty or special buffer
+***0             local bufname = vim.api.nvim_buf_get_name(args.buf)
+***0             if bufname == '' or vim.bo[args.buf].buftype ~= '' then
+***0                 return
+                 end
+
+***0             local info = utils.get_project_and_file_info(args.buf)
+***0             if info then
+***0                 core.TimeStop({ project = info.project, file = info.file })
+                 else
+***0                 core.TimeStop()
+                 end
+             end,
+         })
+
+ 120     vim.api.nvim_create_autocmd('VimLeave', {
+  60         group = timeGroup,
+             desc = 'End Timetracking on VimLeave (general stop)',
+             callback = function()
+***0             core.TimeStop()
+             end,
+         })
+     end
+
+   8 return M
+
+==============================================================================
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/config.lua
+==============================================================================
+   8 local os_sep = require('plenary.path').path.sep
+
+   8 local M = {}
+
+   8 M.wdayToEngName = {
          [1] = 'Sunday',
          [2] = 'Monday',
          [3] = 'Tuesday',
@@ -13,17 +111,9 @@
          [5] = 'Thursday',
          [6] = 'Friday',
          [7] = 'Saturday',
-     }
+   8 }
 
-     local function save(obj)
- 473     Path:new(obj.path):write(vim.fn.json_encode(obj.content), 'w')
-     end
-
-   8 local obj = {
-         path = nil,
-     }
-
-   8 local defaultHoursPerWeekday = {
+   8 M.defaultHoursPerWeekday = {
          Monday = 8,
          Tuesday = 8,
          Wednesday = 8,
@@ -31,9 +121,9 @@
          Friday = 8,
          Saturday = 0,
          Sunday = 0,
-     }
+   8 }
 
-   8 local weekdayNumberMap = {
+   8 M.weekdayNumberMap = {
          Sunday = 0,
          Monday = 1,
          Tuesday = 2,
@@ -41,15 +131,887 @@
          Thursday = 4,
          Friday = 5,
          Saturday = 6,
-     }
+   8 }
 
-   8 local defaults = {
+   8 M.obj = {
+         path = nil,
+   8     content = {}, -- Initialize content as an empty table
+   8 }
+
+   8 M.defaults = {
   16     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
-   8     hoursPerWeekday = defaultHoursPerWeekday,
-     }
-   8 local config = defaults
+   8     hoursPerWeekday = M.defaultHoursPerWeekday,
+   8 }
 
-     local function get_project_and_file_info(buffer_path_or_bufnr)
+     -- This 'config' table will be populated by the init function later
+     -- For now, it can be initialized with defaults, or left empty
+     -- and the main init.lua or core.lua will handle merging user_config with defaults.
+     -- Let's initialize it with defaults for now.
+   8 M.config = vim.deepcopy(M.defaults) -- Use deepcopy to avoid modifying defaults unintentionally
+
+   8 return M
+
+==============================================================================
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua
+==============================================================================
+   8 local Path = require('plenary.path')
+   8 local notify = require('notify')
+   8 local config_module = require('maorun.time.config')
+   8 local utils = require('maorun.time.utils')
+
+   8 local M = {}
+
+   8 function M.init(user_config)
+ 183     config_module.config =
+ 366         vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
+ 183     if user_config and user_config.hoursPerWeekday ~= nil then
+ 140         config_module.config.hoursPerWeekday = user_config.hoursPerWeekday
+         end
+ 183     config_module.obj.path = config_module.config.path
+ 183     local p = Path:new(config_module.obj.path)
+ 549     if not p:exists() then
+  14         p:touch({ parents = true })
+         end
+
+ 549     local data = Path:new(config_module.obj.path):read()
+ 183     if data ~= '' then
+  90         config_module.obj.content = vim.json.decode(data)
+         else
+  93         config_module.obj.content = {}
+         end
+         -- Ensure hoursPerWeekday is initialized if not present (e.g. new file)
+ 183     if config_module.obj.content['hoursPerWeekday'] == nil then
+  95         config_module.obj.content['hoursPerWeekday'] = config_module.config.hoursPerWeekday
+         end
+
+ 183     if config_module.obj.content['data'] == nil then
+  93         config_module.obj.content['data'] = {}
+         end
+
+         -- Ensure the basic structure for current time (if needed for some initialization logic)
+         -- This part might be simplified if direct access isn't needed immediately after init
+ 183     local year_str = os.date('%Y')
+ 183     local week_str = os.date('%W')
+         -- Default project/file initialization can be removed if not strictly necessary at this point
+         -- as TimeStart and other functions will create them on demand.
+         -- For now, keeping it to ensure data structure exists for potential immediate access.
+ 183     local project_name = 'default_project'
+ 183     local file_name = 'default_file'
+
+ 183     if config_module.obj.content['data'][year_str] == nil then
+ 108         config_module.obj.content['data'][year_str] = {}
+         end
+ 183     if config_module.obj.content['data'][year_str][week_str] == nil then
+ 108         config_module.obj.content['data'][year_str][week_str] = {}
+         end
+ 183     if config_module.obj.content['data'][year_str][week_str][project_name] == nil then
+ 108         config_module.obj.content['data'][year_str][week_str][project_name] = {}
+         end
+ 183     if config_module.obj.content['data'][year_str][week_str][project_name][file_name] == nil then
+ 108         config_module.obj.content['data'][year_str][week_str][project_name][file_name] = {
+ 108             weekdays = {},
+ 108         }
+         end
+ 183     return config_module.obj
+     end
+
+     ---@param opts {weeknumber: string|osdate, year: string|osdate}|nil
+   8 function M.calculate(opts)
+ 184     opts = vim.tbl_deep_extend('keep', opts or {}, {
+ 180         year = os.date('%Y'),
+ 180         weeknumber = os.date('%W'),
+  92     })
+
+  92     local year_str = opts.year
+  92     local week_str = opts.weeknumber
+
+         if
+  92         not config_module.obj.content['data'][year_str]
+  92         or not config_module.obj.content['data'][year_str][week_str]
+         then
+***0         return
+         end
+
+  92     local current_week_data = config_module.obj.content['data'][year_str][week_str]
+
+  92     if current_week_data.summary == nil then
+  40         current_week_data.summary = {}
+         end
+
+  92     local prevWeekOverhour = 0
+  92     if config_module.obj.content['data'][year_str] then
+  92         local prev_week_number_str = string.format('%02d', tonumber(week_str) - 1)
+  92         if config_module.obj.content['data'][year_str][prev_week_number_str] then
+   2             local prev_week_data = config_module.obj.content['data'][year_str][prev_week_number_str]
+   2             if prev_week_data and prev_week_data.summary and prev_week_data.summary.overhour then
+   2                 prevWeekOverhour = prev_week_data.summary.overhour
+                 end
+             end
+         end
+
+  92     current_week_data.summary.overhour = prevWeekOverhour
+
+ 290     for project_name, project_data in pairs(current_week_data) do
+ 198         if project_name ~= 'summary' then
+ 216             for file_name, file_data in pairs(project_data) do
+ 110                 if file_data.weekdays then
+ 204                     for weekday_name, day_data in pairs(file_data.weekdays) do
+  94                         local time_in_weekday = 0
+  94                         if day_data.items then
+ 199                             for _, item_entry in pairs(day_data.items) do
+ 105                                 if item_entry.diffInHours ~= nil then
+ 102                                     time_in_weekday = time_in_weekday + item_entry.diffInHours
+                                     end
+                                 end
+                             end
+
+  94                         if day_data.summary == nil then
+   1                             day_data.summary = {}
+                             end
+  94                         day_data.summary.diffInHours = time_in_weekday
+
+  94                         local expected_hours = config_module.obj.content['hoursPerWeekday'][weekday_name]
+  94                             or 0
+  94                         day_data.summary.overhour = time_in_weekday - expected_hours
+
+  94                         current_week_data.summary.overhour = current_week_data.summary.overhour
+  94                             + day_data.summary.overhour
+                         end
+                     end
+                 end
+             end
+         end
+     end
+
+   8 function M.TimePause()
+  20     M.init({
+  10         path = config_module.obj.path,
+  10         hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+         })
+  10     config_module.obj.content.paused = true
+  10     utils.save()
+  20     notify({
+             'Timetracking paused',
+  10     }, 'info', { title = 'TimeTracking - Pause' })
+     end
+
+   8 function M.TimeResume()
+  14     M.init({
+   7         path = config_module.obj.path,
+   7         hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+         })
+   7     config_module.obj.content.paused = false
+   7     utils.save()
+  14     notify({
+             'Timetracking resumed',
+   7     }, 'info', { title = 'TimeTracking - Resume' })
+     end
+
+   8 function M.isPaused()
+         -- Ensure data is loaded before checking pause state, especially if called early.
+         -- However, frequent re-init might be inefficient.
+         -- Assuming init has been called once at setup.
+         -- If not, this might need to call M.init or rely on it being called.
+         -- For safety, a light init if obj.content is not populated can be added.
+  72     if not config_module.obj.content or not config_module.obj.content.paused then
+ 128         M.init({
+  64             path = config_module.obj.path,
+  64             hoursPerWeekday = config_module.config.hoursPerWeekday,
+             })
+         end
+  72     return config_module.obj.content.paused
+     end
+
+     ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
+   8 function M.TimeStart(opts)
+   9     opts = opts or {}
+         -- Similar to isPaused, ensure init has run.
+         -- M.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
+  18     if M.isPaused() then
+***0         return
+         end
+
+   9     local weekday = opts.weekday
+   9     local time = opts.time
+   9     local project = opts.project or 'default_project'
+   9     local file = opts.file or 'default_file'
+
+   9     if weekday == nil then
+  15         local current_wday_numeric = os.date('*t', os.time()).wday
+   5         weekday = config_module.wdayToEngName[current_wday_numeric]
+         end
+   9     if time == nil then
+***0         time = os.time()
+         end
+
+   9     local year_str = os.date('%Y', time)
+   9     local week_str = os.date('%W', time)
+
+   9     if config_module.obj.content['data'][year_str] == nil then
+***0         config_module.obj.content['data'][year_str] = {}
+         end
+   9     if config_module.obj.content['data'][year_str][week_str] == nil then
+***0         config_module.obj.content['data'][year_str][week_str] = {}
+         end
+   9     if config_module.obj.content['data'][year_str][week_str][project] == nil then
+   1         config_module.obj.content['data'][year_str][week_str][project] = {}
+         end
+   9     if config_module.obj.content['data'][year_str][week_str][project][file] == nil then
+   1         config_module.obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
+         end
+         if
+   9         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+   9         == nil
+         then
+   8         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] =
+                 {
+   8                 summary = {},
+   8                 items = {},
+   8             }
+         end
+
+         local dayItem =
+   9         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+   9     local canStart = true
+  10     for _, item in pairs(dayItem.items) do
+   1         canStart = canStart and (item.startTime ~= nil and item.endTime ~= nil)
+         end
+   9     if canStart then
+   8         local timeReadable = os.date('*t', time)
+  16         table.insert(dayItem.items, {
+   8             startTime = time,
+   8             startReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min),
+             })
+         end
+   9     utils.save()
+     end
+
+     ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
+   8 function M.TimeStop(opts)
+   7     opts = opts or {}
+         -- M.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
+  14     if M.isPaused() then
+***0         return
+         end
+
+   7     local weekday = opts.weekday
+   7     local time = opts.time
+   7     local project = opts.project or 'default_project'
+   7     local file = opts.file or 'default_file'
+
+   7     if weekday == nil then
+  12         local current_wday_numeric = os.date('*t', os.time()).wday
+   4         weekday = config_module.wdayToEngName[current_wday_numeric]
+         end
+   7     if time == nil then
+***0         time = os.time()
+         end
+
+   7     local year_str = os.date('%Y', time)
+   7     local week_str = os.date('%W', time)
+
+   7     local dayItem_path_exists = config_module.obj.content['data'][year_str]
+   7         and config_module.obj.content['data'][year_str][week_str]
+   7         and config_module.obj.content['data'][year_str][week_str][project]
+   7         and config_module.obj.content['data'][year_str][week_str][project][file]
+   7         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays']
+   7         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+   7         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
+
+   7     if dayItem_path_exists then
+             local dayItem =
+   6             config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+  12         for _, item in pairs(dayItem.items) do
+   6             if item.endTime == nil then
+   5                 item.endTime = time
+   5                 local timeReadable = os.date('*t', time)
+   5                 item.endReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min)
+   5                 item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
+                 end
+             end
+         end
+
+   7     M.calculate({ year = year_str, weeknumber = week_str })
+   7     utils.save()
+
+   7     local heute_text = 'N/A'
+   7     if dayItem_path_exists then
+             local dayItem =
+   6             config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+   6         if dayItem.summary and dayItem.summary.overhour then
+   6             heute_text = string.format('%.2f', dayItem.summary.overhour)
+             end
+         end
+
+   7     local gesamt_text = 'N/A'
+         if
+   7         config_module.obj.content['data'][year_str]
+   7         and config_module.obj.content['data'][year_str][week_str]
+   7         and config_module.obj.content['data'][year_str][week_str].summary
+   7         and config_module.obj.content['data'][year_str][week_str].summary.overhour
+         then
+  14         gesamt_text = string.format(
+   7             '%.2f',
+   7             config_module.obj.content['data'][year_str][week_str].summary.overhour
+  14         )
+         end
+
+  14     notify({
+   7         'Heute: ' .. heute_text .. ' Stunden',
+   7         'Gesamt: ' .. gesamt_text .. ' Stunden',
+   7     }, 'info', { title = 'TimeTracking - Stop' })
+     end
+
+   8 function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSubtraction) -- _clearDay param might be unused now
+  42     project = project or 'default_project'
+  42     file = file or 'default_file'
+  42     isSubtraction = isSubtraction or false
+  42     local year_str = os.date('%Y', startTime)
+  42     local week_str = os.date('%W', startTime)
+
+  42     if config_module.obj.content['data'][year_str] == nil then
+***0         config_module.obj.content['data'][year_str] = {}
+         end
+  42     if config_module.obj.content['data'][year_str][week_str] == nil then
+***0         config_module.obj.content['data'][year_str][week_str] = {}
+         end
+  42     if config_module.obj.content['data'][year_str][week_str][project] == nil then
+   5         config_module.obj.content['data'][year_str][week_str][project] = {}
+         end
+  42     if config_module.obj.content['data'][year_str][week_str][project][file] == nil then
+   6         config_module.obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
+         end
+         if
+  42         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+  42         == nil
+         then
+  34         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] =
+                 {
+  34                 summary = {},
+  34                 items = {},
+  34             }
+         end
+
+         local dayItem =
+  42         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+  42     local timeReadableStart = os.date('*t', startTime)
+  42     local item = {
+  42         startTime = startTime,
+  42         startReadable = string.format('%02d:%02d', timeReadableStart.hour, timeReadableStart.min),
+  42         endTime = endTime,
+         }
+  42     local timeReadableEnd = os.date('*t', endTime)
+  42     item.endReadable = string.format('%02d:%02d', timeReadableEnd.hour, timeReadableEnd.min)
+
+  42     item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
+  42     if isSubtraction then
+   9         item.diffInHours = -item.diffInHours
+         end
+
+  42     table.insert(dayItem.items, item)
+  42     M.calculate({ year = year_str, weeknumber = week_str })
+  42     utils.save()
+
+  84     notify({
+  42         'Heute: ' .. string.format('%.2f', dayItem.summary.overhour) .. ' Stunden',
+  84         'Gesamt: ' .. string.format(
+  42             '%.2f',
+  42             config_module.obj.content['data'][year_str][week_str].summary.overhour
+  84         ) .. ' Stunden',
+  42     }, 'info', { title = 'TimeTracking - SaveTime' })
+     end
+
+     ---@param opts { time: number, weekday: string|osdate, clearDay?: string, project?: string, file?: string }
+   8 function M.addTime(opts)
+  33     local clearDay_param = opts.clearDay -- Store original clearDay for potential future use, though saveTime ignores it now
+  33     local project = opts.project or 'default_project'
+  33     local file = opts.file or 'default_file'
+
+         -- M.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
+
+  33     local current_mocked_ts = os.time()
+  33     local current_mocked_t_info = os.date('*t', current_mocked_ts)
+
+***0     local current_day_gmt_midnight_ts = current_mocked_ts
+***0         - (
+  33             current_mocked_t_info.hour * 3600
+  33             + current_mocked_t_info.min * 60
+  33             + current_mocked_t_info.sec
+  33         )
+
+  33     local targetWeekdayName = opts.weekday
+  33     if targetWeekdayName == nil then
+   1         targetWeekdayName = config_module.wdayToEngName[current_mocked_t_info.wday]
+         end
+
+  33     local weekday_name_to_num_1_7 = {
+             Sunday = 1,
+             Monday = 2,
+             Tuesday = 3,
+             Wednesday = 4,
+             Thursday = 5,
+             Friday = 6,
+             Saturday = 7,
+         }
+  33     local current_wday_numeric_1_7 = current_mocked_t_info.wday
+  33     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
+
+  33     if target_wday_numeric_1_7 == nil then
+***0         notify(
+                 "Warning: Unrecognized weekday '"
+***0                 .. tostring(targetWeekdayName)
+***0                 .. "' in addTime. Defaulting to current day.",
+                 'warn'
+             )
+***0         target_wday_numeric_1_7 = current_wday_numeric_1_7
+***0         targetWeekdayName = config_module.wdayToEngName[current_wday_numeric_1_7] -- Correct targetWeekdayName
+         end
+
+  33     local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
+  33     local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
+
+  33     local total_seconds_duration = math.floor(opts.time * 3600)
+  33     local add_endTime_ts = target_day_gmt_midnight_ts + (23 * 3600)
+  33     local add_startTime_ts = add_endTime_ts - total_seconds_duration
+
+  33     local paused_state = M.isPaused()
+  33     if paused_state then
+   1         M.TimeResume()
+         end
+
+  66     M.saveTime(
+  33         add_startTime_ts,
+  33         add_endTime_ts,
+  33         targetWeekdayName,
+  33         clearDay_param,
+  33         project,
+  33         file,
+             false
+  33     )
+
+  33     if paused_state then
+   1         M.TimePause()
+         end
+  33     return config_module.obj
+     end
+
+     ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
+   8 function M.subtractTime(opts)
+   9     local project = opts.project or 'default_project'
+   9     local file = opts.file or 'default_file'
+
+         -- M.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
+
+   9     local current_mocked_ts = os.time()
+   9     local current_mocked_t_info = os.date('*t', current_mocked_ts)
+
+***0     local current_day_gmt_midnight_ts = current_mocked_ts
+***0         - (
+   9             current_mocked_t_info.hour * 3600
+   9             + current_mocked_t_info.min * 60
+   9             + current_mocked_t_info.sec
+   9         )
+
+   9     local targetWeekdayName = opts.weekday
+   9     if targetWeekdayName == nil then
+   1         targetWeekdayName = config_module.wdayToEngName[current_mocked_t_info.wday]
+         end
+
+   9     local weekday_name_to_num_1_7 = {
+             Sunday = 1,
+             Monday = 2,
+             Tuesday = 3,
+             Wednesday = 4,
+             Thursday = 5,
+             Friday = 6,
+             Saturday = 7,
+         }
+   9     local current_wday_numeric_1_7 = current_mocked_t_info.wday
+   9     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
+
+   9     if target_wday_numeric_1_7 == nil then
+***0         notify(
+                 "Warning: Unrecognized weekday '"
+***0                 .. tostring(targetWeekdayName)
+***0                 .. "' in subtractTime. Defaulting to current day.",
+                 'warn'
+             )
+***0         target_wday_numeric_1_7 = current_wday_numeric_1_7
+***0         targetWeekdayName = config_module.wdayToEngName[current_wday_numeric_1_7] -- Correct targetWeekdayName
+         end
+
+   9     local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
+   9     local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
+
+   9     local total_seconds_duration = math.floor(opts.time * 3600)
+   9     local sub_day_end_reference_ts = target_day_gmt_midnight_ts + (23 * 3600)
+   9     local sub_startTime_to_save = sub_day_end_reference_ts - total_seconds_duration
+   9     local sub_endTime_to_save = sub_day_end_reference_ts
+
+   9     local paused_state = M.isPaused()
+   9     if paused_state then
+   1         M.TimeResume()
+         end
+
+  18     M.saveTime(
+   9         sub_startTime_to_save,
+   9         sub_endTime_to_save,
+   9         targetWeekdayName,
+   9         'nope',
+   9         project,
+   9         file,
+             true
+   9     )
+
+   9     if paused_state then
+   1         M.TimePause()
+         end
+   9     return config_module.obj
+     end
+
+   8 function M.setIllDay(weekday_param, project, file) -- Added project and file params
+   4     M.addTime({
+   4         time = utils.calculateAverage(),
+   2         weekday = weekday_param,
+             clearDay = 'yes', -- This implies clearing should happen before adding.
+   2         project = project,
+   2         file = file,
+         })
+   2     return config_module.obj
+     end
+
+   8 function M.clearDay(weekday_param, project, file)
+   1     project = project or 'default_project'
+   1     file = file or 'default_file'
+   1     local year_str = os.date('%Y')
+   1     local week_str = os.date('%W')
+
+         if
+   1         config_module.obj.content['data'][year_str]
+   1         and config_module.obj.content['data'][year_str][week_str]
+   1         and config_module.obj.content['data'][year_str][week_str][project]
+   1         and config_module.obj.content['data'][year_str][week_str][project][file]
+   1         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays']
+   1         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday_param]
+         then
+             local dayContents =
+   1             config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday_param]
+   1         if dayContents.items then
+   1             dayContents.items = {} -- Clear items by assigning an empty table
+             end
+             -- Optionally reset summary for the day as well
+             -- dayContents.summary = {}
+         end
+   1     M.calculate({ year = year_str, weeknumber = week_str })
+   1     utils.save()
+     end
+
+     ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
+   8 function M.setTime(opts)
+   1     opts = opts or {}
+   1     local project = opts.project or 'default_project'
+   1     local file = opts.file or 'default_file'
+
+   1     M.clearDay(opts.weekday, project, file)
+   2     M.addTime({
+   1         time = opts.time,
+   1         weekday = opts.weekday,
+             clearDay = 'yes',
+   1         project = project,
+   1         file = file,
+         })
+     end
+
+   8 return M
+
+==============================================================================
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua
+==============================================================================
+     -- Main init.lua for maorun.time
+
+     -- Require the new modules
+   8 local config_module = require('maorun.time.config')
+   8 local core = require('maorun.time.core')
+   8 local utils = require('maorun.time.utils') -- Though utils might be mostly used by core
+   8 local autocmds = require('maorun.time.autocmds')
+   8 local ui = require('maorun.time.ui')
+
+     -- The main module table that will be returned
+   8 local M = {}
+
+     -- Setup function to initialize the plugin
+     ---@param user_config table|nil User configuration to override defaults
+   8 function M.setup(user_config)
+         -- Initialize core components (loads data, sets up config_module.obj and config_module.config)
+  60     local config_obj = core.init(user_config) -- Store the returned object
+         -- Setup autocommands
+  60     autocmds.setup_autocmds()
+         -- The global Time table is not strictly necessary if all interactions happen via returned module,
+         -- but keeping it for compatibility if it was used globally before.
+         -- Otherwise, commands should be set up to call M.add(), M.subtract(), etc.
+  60     Time = {
+             add = function()
+***0             ui.select(
+                     {}, -- Default opts: ask for hours, weekday, project, file
+                     function(hours, weekday, project, file)
+***0                     core.addTime({ time = hours, weekday = weekday, project = project, file = file })
+                     end
+                 )
+             end,
+  60         addTime = core.addTime,
+             subtract = function()
+***0             ui.select(
+                     {}, -- Default opts
+                     function(hours, weekday, project, file)
+***0                     core.subtractTime({
+                             time = hours,
+                             weekday = weekday,
+                             project = project,
+                             file = file,
+                         })
+                     end
+                 )
+             end,
+  60         subtractTime = core.subtractTime,
+             clearDay = function(weekday, project, file) -- Requires explicit params now
+                 -- This public clearDay needs a way to get weekday, project, file.
+                 -- Option 1: Use ui.select, asking only for what's needed.
+                 -- Option 2: Require user to pass them directly.
+                 -- For now, assume direct pass or user handles getting them.
+                 -- If called from command, command needs to parse args.
+***0             if not weekday then
+                     -- TODO: Maybe prompt for weekday if not provided, or use current day?
+                     -- For now, let's make it clear it needs parameters.
+***0                 print('Error: Time.clearDay requires weekday, project, and file parameters.')
+                     -- Example of how to prompt if desired:
+                     -- ui.select({hours=false}, function(_, wd, pr, fl) core.clearDay(wd, pr, fl) end)
+***0                 return
+                 end
+***0             core.clearDay(weekday, project, file)
+             end,
+  60         TimePause = core.TimePause,
+  60         TimeResume = core.TimeResume,
+  60         TimeStop = core.TimeStop, -- Expose the core TimeStop directly
+             set = function()
+***0             ui.select(
+                     {}, -- Default opts
+                     function(hours, weekday, project, file)
+***0                     core.setTime({ time = hours, weekday = weekday, project = project, file = file })
+                     end
+                 )
+             end,
+  60         setTime = core.setTime,
+             setIllDay = function(weekday, project, file) -- Matching core.setIllDay signature change
+                 -- Similar to clearDay, this needs parameters.
+                 -- If weekday is nil, we might prompt for it.
+***0             if not weekday then
+***0                 ui.select({ hours = false, project = true, file = true }, function(_, wd, pr, fl)
+***0                     core.setIllDay(wd, pr, fl)
+                     end)
+                 else
+***0                 core.setIllDay(weekday, project, file) -- Pass through if provided
+                 end
+             end,
+             setHoliday = function(weekday, project, file) -- Alias for setIllDay
+***0             if not weekday then
+***0                 ui.select({ hours = false, project = true, file = true }, function(_, wd, pr, fl)
+***0                     core.setIllDay(wd, pr, fl)
+                     end)
+                 else
+***0                 core.setIllDay(weekday, project, file) -- Pass through if provided
+                 end
+             end,
+             calculate = function(opts)
+                 -- The core.calculate function doesn't save automatically.
+                 -- The original init.lua's calculate did save.
+                 -- Decide if this public calculate should also save.
+                 -- For consistency with original, let's add init and save.
+***0             core.init({
+                     path = config_module.obj.path,
+                     hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+                 })
+***0             core.calculate(opts)
+***0             utils.save() -- Assuming utils.save uses the shared config_module.obj
+***0             return config_module.obj -- Return the data object
+             end,
+  60     }
+  60     return config_obj -- Return the config_obj obtained from core.init
+     end
+
+     -- Functions returned by the module for direct use (e.g., by other plugins or specific keymaps)
+   8 M.TimeStart = core.TimeStart
+   8 M.TimeStop = core.TimeStop
+   8 M.TimePause = core.TimePause
+   8 M.TimeResume = core.TimeResume
+   8 M.setIllDay = core.setIllDay
+   8 M.setHoliday = core.setIllDay -- Alias
+   8 M.addTime = core.addTime
+   8 M.subtractTime = core.subtractTime
+   8 M.setTime = core.setTime
+   8 M.clearDay = core.clearDay
+   8 M.isPaused = core.isPaused
+     M.calculate = function(opts) -- Match the public Time.calculate behavior
+  84     core.init({
+  42         path = config_module.obj.path,
+  42         hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+         })
+  42     core.calculate(opts)
+  42     utils.save()
+  42     return config_module.obj
+     end
+   8 M.weekdays = config_module.weekdayNumberMap -- Expose weekday map
+
+   8 return M
+
+==============================================================================
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua
+==============================================================================
+   8 local core = require('maorun.time.core')
+   8 local config_module = require('maorun.time.config') -- For weekdayNumberMap
+
+   8 local M = {}
+
+     ---@param opts { hours?: boolean, weekday?: boolean, project?: boolean, file?: boolean }
+     ---@param callback fun(hours:number, weekday: string, project:string, file:string) the function to call
+   8 function M.select(opts, callback)
+***0     opts = vim.tbl_deep_extend('force', {
+             hours = true,
+             weekday = true,
+             project = true,
+             file = true,
+***0     }, opts or {})
+
+***0     local selected_project = 'default_project'
+***0     local selected_file = 'default_file'
+
+         local function get_file_input()
+***0         if opts.file then
+***0             vim.ui.input({ prompt = 'File name? (default: default_file) ' }, function(input)
+***0                 selected_file = (input and input ~= '') and input or 'default_file'
+***0                 get_weekday_selection()
+                 end)
+             else
+***0             get_weekday_selection()
+             end
+         end
+
+         local function get_project_input()
+***0         if opts.project then
+***0             vim.ui.input({ prompt = 'Project name? (default: default_project) ' }, function(input)
+***0                 selected_project = (input and input ~= '') and input or 'default_project'
+***0                 get_file_input()
+                 end)
+             else
+***0             get_file_input()
+             end
+         end
+
+***0     local selections = {}
+***0     local selectionNumbers = {}
+         -- Sort weekdayNumberMap by value to ensure consistent order for vim.ui.select
+***0     local sorted_weekdays = {}
+***0     for day, num in pairs(config_module.weekdayNumberMap) do
+***0         table.insert(sorted_weekdays, { name = day, value = num })
+         end
+***0     table.sort(sorted_weekdays, function(a, b)
+***0         return a.value < b.value
+         end)
+
+***0     for _, day_info in ipairs(sorted_weekdays) do
+***0         if not selectionNumbers[day_info.value] then -- This check might be redundant if weekdayNumberMap has unique values
+***0             selectionNumbers[day_info.value] = 1
+***0             selections[#selections + 1] = day_info.name
+             end
+         end
+
+         ---@param weekday_param string
+         local function selectHours(weekday_param)
+***0         if opts.hours then
+***0             vim.ui.input({
+                     prompt = 'How many hours? ',
+                 }, function(input)
+***0                 local n = tonumber(input)
+***0                 if n == nil or input == nil or input == '' then
+***0                     notify('Invalid number of hours provided.', 'warn', { title = 'TimeTracking' })
+***0                     return
+                     end
+***0                 callback(n, weekday_param, selected_project, selected_file)
+                 end)
+             else
+***0             callback(0, weekday_param, selected_project, selected_file) -- Assuming 0 hours if not prompted
+             end
+         end
+
+         local function get_weekday_selection()
+***0         if opts.weekday then
+***0             if pcall(require, 'telescope') and require('maorun.time.weekday_select') then
+***0                 local telescopeSelect = require('maorun.time.weekday_select')
+***0                 telescopeSelect({
+                         prompt_title = 'Which day?',
+                         list = selections, -- Use the sorted selections
+                         action = function(selected_weekday)
+***0                         if selected_weekday then -- Ensure a selection was made
+***0                             selectHours(selected_weekday)
+                             else
+***0                             notify('No weekday selected.', 'info', { title = 'TimeTracking' })
+                             end
+                         end,
+                     })
+                 else
+***0                 vim.ui.select(selections, { -- Use the sorted selections
+                         prompt = 'Which day? ',
+                     }, function(selected_weekday)
+***0                     if selected_weekday then -- Ensure a selection was made
+***0                         selectHours(selected_weekday)
+                         else
+***0                         notify('No weekday selected.', 'info', { title = 'TimeTracking' })
+                         end
+                     end)
+                 end
+             else
+                 -- This case needs careful handling. If weekday is false, what should happen?
+                 -- The original code didn't seem to have a clear path if opts.weekday was false
+                 -- and callback requires a weekday.
+                 -- For now, let's assume if opts.weekday is false, the operation is not time-specific
+                 -- and we call back with a nil weekday, or a sensible default.
+                 -- However, the callback signature expects a weekday string.
+                 -- Option 1: Error or notify that weekday is required.
+                 -- Option 2: Use a default (e.g., current day).
+                 -- Option 3: Modify callback or have different select functions.
+                 -- Given current callback, let's notify and not proceed if weekday is essential but skipped.
+***0             if opts.hours then -- If hours are also expected, it's likely a time entry operation.
+***0                 notify(
+                         "Weekday selection was skipped, but it's required for this operation.",
+                         'warn',
+***0                     { title = 'TimeTracking' }
+                     )
+***0                 return
+                 else
+                     -- If only project/file are relevant and weekday/hours are not.
+                     -- This path is not used by current Time.add/subtract/set.
+***0                 callback(0, nil, selected_project, selected_file)
+                 end
+             end
+         end
+
+***0     get_project_input()
+     end
+
+   8 return M
+
+==============================================================================
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua
+==============================================================================
+   8 local Path = require('plenary.path')
+   8 local config_module = require('maorun.time.config') -- Adjusted path
+
+   8 local M = {}
+
+   8 function M.save()
+ 473     Path:new(config_module.obj.path):write(vim.fn.json_encode(config_module.obj.content), 'w')
+     end
+
+   8 function M.get_project_and_file_info(buffer_path_or_bufnr)
          local filepath_str
 ***0     if type(buffer_path_or_bufnr) == 'number' then
 ***0         filepath_str = vim.api.nvim_buf_get_name(buffer_path_or_bufnr)
@@ -77,7 +1039,11 @@
 ***0     local current_dir = file_path_obj:parent()
 
          -- Loop upwards to find .git directory or stop at root
-***0     while current_dir and current_dir:absolute() ~= '' and current_dir:absolute() ~= '/' do
+***0     while
+             current_dir
+***0         and current_dir:absolute() ~= ''
+***0         and current_dir:absolute() ~= Path:new('/'):absolute()
+         do
 ***0         if current_dir:joinpath('.git'):exists() then
 ***0             project_name = current_dir.name
                  break
@@ -97,7 +1063,10 @@
              -- Fallback: use parent directory name if .git not found
 ***0         local parent_dir_obj = file_path_obj:parent()
 ***0         if parent_dir_obj and parent_dir_obj.name and parent_dir_obj.name ~= '' then
-***0             if parent_dir_obj:is_root() or parent_dir_obj.name == Path:new('/'):name() then -- Check against root name, plenary might return empty for root name
+                 if
+***0                 parent_dir_obj:is_root()
+***0                 or parent_dir_obj:absolute() == Path:new('/'):absolute()
+                 then
 ***0                 project_name = '_root_' -- Or "filesystem_root"
                  else
 ***0                 project_name = parent_dir_obj.name
@@ -116,820 +1085,33 @@
          end
      end
 
-     local function init(user_config)
- 498     config = vim.tbl_deep_extend('force', defaults, user_config or {})
- 249     if user_config.hoursPerWeekday ~= nil then
- 206         config.hoursPerWeekday = user_config.hoursPerWeekday
-         end
- 249     obj.path = config.path
- 249     local p = Path:new(obj.path)
- 747     if not p:exists() then
-  14         p:touch({ parents = true })
-         end
-
- 747     local data = Path:new(obj.path):read()
- 249     if data ~= '' then
- 129         obj.content = vim.json.decode(data)
-         else
- 120         obj.content = {}
-         end
-         -- Ensure hoursPerWeekday is initialized if not present (e.g. new file)
- 249     if obj.content['hoursPerWeekday'] == nil then
- 123         obj.content['hoursPerWeekday'] = config.hoursPerWeekday
-         end
-
- 249     if obj.content['data'] == nil then
- 120         obj.content['data'] = {}
-         end
-
- 249     local year_str = os.date('%Y')
- 249     local week_str = os.date('%W')
- 249     local project_name = 'default_project' -- Hardcoded for now
- 249     local file_name = 'default_file' -- Hardcoded for now
-
- 249     if obj.content['data'][year_str] == nil then
- 135         obj.content['data'][year_str] = {}
-         end
- 249     if obj.content['data'][year_str][week_str] == nil then
- 135         obj.content['data'][year_str][week_str] = {}
-         end
- 249     if obj.content['data'][year_str][week_str][project_name] == nil then
- 135         obj.content['data'][year_str][week_str][project_name] = {}
-         end
- 249     if obj.content['data'][year_str][week_str][project_name][file_name] == nil then
- 135         obj.content['data'][year_str][week_str][project_name][file_name] = {
- 135             weekdays = {}, -- Will store weekday -> {summary={}, items={...}}
-                 -- The weekly summary (overhour) is not initialized here,
-                 -- it will be handled by the calculate function.
- 135         }
-         end
- 249     return obj
-     end
-
-     ---@param opts {weeknumber: string|osdate, year: string|osdate}|nil
-     local function calculate(opts)
- 184     opts = vim.tbl_deep_extend('keep', opts or {}, {
- 180         year = os.date('%Y'),
- 180         weeknumber = os.date('%W'),
-  92     })
-
-  92     local year_str = opts.year
-  92     local week_str = opts.weeknumber
-
-  92     if not obj.content['data'][year_str] or not obj.content['data'][year_str][week_str] then
-             -- No data for this year/week, nothing to calculate
-***0         return
-         end
-
-  92     local current_week_data = obj.content['data'][year_str][week_str]
-
-         -- Initialize week summary if it doesn't exist under current_week_data.summary
-  92     if current_week_data.summary == nil then
-  40         current_week_data.summary = {}
-         end
-
-  92     local prevWeekOverhour = 0
-         -- Ensure year_str data exists before trying to access previous week
-  92     if obj.content['data'][year_str] then
-  92         local prev_week_number_str = string.format('%02d', tonumber(week_str) - 1)
-  92         if obj.content['data'][year_str][prev_week_number_str] then
-   2             local prev_week_data = obj.content['data'][year_str][prev_week_number_str]
-   2             if prev_week_data and prev_week_data.summary and prev_week_data.summary.overhour then
-   2                 prevWeekOverhour = prev_week_data.summary.overhour
-                 end
-             end
-         end
-
-  92     current_week_data.summary.overhour = prevWeekOverhour -- Initialize with previous week's carry-over
-         -- local total_time_in_week = 0 -- Can be used if we want to store total logged time for the week explicitly
-
-         -- Iterate over projects in the current week
- 290     for project_name, project_data in pairs(current_week_data) do
- 198         if project_name ~= 'summary' then -- Skip the summary table itself
-                 -- Iterate over files in the current project
- 216             for file_name, file_data in pairs(project_data) do
- 110                 if file_data.weekdays then
-                         -- Iterate over weekdays in the current file
- 204                     for weekday_name, day_data in pairs(file_data.weekdays) do
-  94                         local time_in_weekday = 0
-  94                         if day_data.items then
- 199                             for _, item_entry in pairs(day_data.items) do
- 105                                 if item_entry.diffInHours ~= nil then
- 102                                     time_in_weekday = time_in_weekday + item_entry.diffInHours
-                                     end
-                                 end
-                             end
-
-                             -- Update summary for this specific day under project -> file -> weekday
-  94                         if day_data.summary == nil then
-   1                             day_data.summary = {}
-                             end
-  94                         day_data.summary.diffInHours = time_in_weekday
-
-  94                         local expected_hours = obj.content['hoursPerWeekday'][weekday_name] or 0
-  94                         day_data.summary.overhour = time_in_weekday - expected_hours
-
-                             -- Accumulate this day's overhour to the overall week summary
-  94                         current_week_data.summary.overhour = current_week_data.summary.overhour
-  94                             + day_data.summary.overhour
-                             -- total_time_in_week = total_time_in_week + time_in_weekday -- Accumulate total logged time
-                         end
-                     end
-                 end
-             end
-         end
-         -- If you want to store the total logged time for the week in the summary:
-         -- current_week_data.summary.totalLoggedTime = total_time_in_week
-     end
-
-     local function TimePause()
-  10     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-  10     obj.content.paused = true
-  10     save(obj)
-  20     notify({
-             'Timetracking paused',
-  10     }, 'info', { title = 'TimeTracking - Pause' })
-     end
-
-     local function TimeResume()
-   7     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-   7     obj.content.paused = false
-   7     save(obj)
-  14     notify({
-             'Timetracking resumed',
-   7     }, 'info', { title = 'TimeTracking - Resume' })
-     end
-     local function isPaused()
-  72     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-  72     return obj.content.paused
-     end
-
-     ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
-     local function TimeStart(opts)
-   9     opts = opts or {}
-   9     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-  18     if isPaused() then
-***0         return
-         end
-
-   9     local weekday = opts.weekday
-   9     local time = opts.time
-   9     local project = opts.project or 'default_project'
-   9     local file = opts.file or 'default_file'
-
-   9     if weekday == nil then
-  15         local current_wday_numeric = os.date('*t', os.time()).wday
-   5         weekday = wdayToEngName[current_wday_numeric]
-         end
-   9     if time == nil then
-***0         time = os.time()
-         end
-
-   9     local year_str = os.date('%Y', time) -- Use time for year_str for consistency if time is provided
-   9     local week_str = os.date('%W', time) -- Use time for week_str for consistency
-
-         -- Ensure path exists (init might have only created for current os.date)
-   9     if obj.content['data'][year_str] == nil then
-***0         obj.content['data'][year_str] = {}
-         end
-   9     if obj.content['data'][year_str][week_str] == nil then
-***0         obj.content['data'][year_str][week_str] = {}
-         end
-   9     if obj.content['data'][year_str][week_str][project] == nil then
-   1         obj.content['data'][year_str][week_str][project] = {}
-         end
-   9     if obj.content['data'][year_str][week_str][project][file] == nil then
-   1         obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
-         end
-   9     if obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
-   8         obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
-   8             summary = {},
-   8             items = {},
-   8         }
-         end
-
-   9     local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-   9     local canStart = true
-  10     for _, item in pairs(dayItem.items) do
-   1         canStart = canStart and (item.startTime ~= nil and item.endTime ~= nil)
-         end
-   9     if canStart then
-   8         local timeReadable = os.date('*t', time)
-  16         table.insert(dayItem.items, {
-   8             startTime = time,
-   8             startReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min),
-             })
-         end
-   9     save(obj)
-     end
-
-     ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
-     local function TimeStop(opts)
-   7     opts = opts or {}
-   7     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-  14     if isPaused() then
-***0         return
-         end
-
-   7     local weekday = opts.weekday
-   7     local time = opts.time
-   7     local project = opts.project or 'default_project'
-   7     local file = opts.file or 'default_file'
-
-   7     if weekday == nil then
-  12         local current_wday_numeric = os.date('*t', os.time()).wday
-   4         weekday = wdayToEngName[current_wday_numeric]
-         end
-   7     if time == nil then
-***0         time = os.time()
-         end
-
-   7     local year_str = os.date('%Y', time)
-   7     local week_str = os.date('%W', time)
-
-         -- Check if the path to the day's items exists in the new structure
-   7     local dayItem_path_exists = obj.content['data'][year_str]
-   7         and obj.content['data'][year_str][week_str]
-   7         and obj.content['data'][year_str][week_str][project]
-   7         and obj.content['data'][year_str][week_str][project][file]
-   7         and obj.content['data'][year_str][week_str][project][file]['weekdays']
-   7         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-   7         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
-
-   7     if dayItem_path_exists then
-   6         local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-  12         for _, item in pairs(dayItem.items) do
-   6             if item.endTime == nil then
-   5                 item.endTime = time
-   5                 local timeReadable = os.date('*t', time)
-   5                 item.endReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min)
-   5                 item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
-                 end
-             end
-         end
-
-   7     calculate({ year = year_str, weeknumber = week_str }) -- Calculate regardless of whether items were stopped, to update summaries.
-   7     save(obj)
-
-   7     local heute_text = 'N/A'
-   7     if dayItem_path_exists then
-             -- Accessing dayItem here is safe because dayItem_path_exists is true
-   6         local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-   6         if dayItem.summary and dayItem.summary.overhour then
-   6             heute_text = string.format('%.2f', dayItem.summary.overhour)
-             end
-         end
-
-   7     local gesamt_text = 'N/A'
-         -- Check path for overall week summary - this might be inaccurate until 'calculate' is updated
-         if
-   7         obj.content['data'][year_str]
-   7         and obj.content['data'][year_str][week_str]
-   7         and obj.content['data'][year_str][week_str].summary -- This summary is at week level
-   7         and obj.content['data'][year_str][week_str].summary.overhour
-         then
-***0         gesamt_text =
-   7             string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour)
-         end
-
-  14     notify({
-   7         'Heute: ' .. heute_text .. ' Stunden',
-   7         'Gesamt: ' .. gesamt_text .. ' Stunden',
-   7     }, 'info', { title = 'TimeTracking - Stop' })
-     end
-
      -- calculate an average over the hoursPerWeekday
-     local function calculateAverage()
+   8 function M.calculateAverage()
    2     local sum = 0
    2     local count = 0
-  14     for _, value in pairs(config.hoursPerWeekday) do
+  14     for _, value in pairs(config_module.config.hoursPerWeekday) do
   12         sum = sum + value
   12         count = count + 1
          end
+   2     if count == 0 then
+***0         return 0
+         end -- Avoid division by zero
    2     return sum / count
      end
 
-     local function saveTime(startTime, endTime, weekday, clearDay, project, file, isSubtraction)
-  42     project = project or 'default_project'
-  42     file = file or 'default_file'
-  42     isSubtraction = isSubtraction or false -- Default to false if not provided
-  42     local year_str = os.date('%Y', startTime) -- Use startTime to determine year/week
-  42     local week_str = os.date('%W', startTime)
-
-         -- Ensure path exists
-  42     if obj.content['data'][year_str] == nil then
-***0         obj.content['data'][year_str] = {}
-         end
-  42     if obj.content['data'][year_str][week_str] == nil then
-***0         obj.content['data'][year_str][week_str] = {}
-         end
-  42     if obj.content['data'][year_str][week_str][project] == nil then
-   5         obj.content['data'][year_str][week_str][project] = {}
-         end
-  42     if obj.content['data'][year_str][week_str][project][file] == nil then
-   6         obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
-         end
-  42     if obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] == nil then
-  34         obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] = {
-  34             summary = {},
-  34             items = {},
-  34         }
-         end
-
-         -- Handle clearDay logic - if true, existing items for the day are cleared.
-         -- The original saveTime had a complex `clearDay` check in the first 'if'.
-         -- Assuming if clearDay is passed as non-nil (and not 'nope'), it means we should clear.
-         -- The addTime function passes clearDay as 'yes' or nil. 'nope' was for subtractTime.
-         -- For simplicity here, if clearDay is true (boolean), we clear.
-         -- The addTime/setTime logic will need to ensure clearDay is passed appropriately.
-         -- The original logic for clearDay was: `if clearDay == nil and ... == nil then init day`.
-         -- This seems more about init than clearing. The actual clearing is done by `clearDay()` func.
-         -- Let's stick to the new structure path first. The `clearDay` param in `saveTime` might be redundant
-         -- if `clearDay()` function is used before `addTime` in `setTime`.
-         -- For now, `clearDay` in `saveTime` doesn't actively clear, it's more for path init.
-
-  42     local dayItem = obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-  42     local timeReadableStart = os.date('*t', startTime)
-  42     local item = {
-  42         startTime = startTime,
-  42         startReadable = string.format('%02d:%02d', timeReadableStart.hour, timeReadableStart.min),
-  42         endTime = endTime,
-         }
-  42     local timeReadableEnd = os.date('*t', endTime)
-  42     item.endReadable = string.format('%02d:%02d', timeReadableEnd.hour, timeReadableEnd.min)
-
-  42     item.diffInHours = os.difftime(item.endTime, item.startTime) / 60 / 60
-  42     if isSubtraction then
-   9         item.diffInHours = -item.diffInHours
-         end
-
-  42     table.insert(dayItem.items, item)
-  42     calculate({ year = year_str, weeknumber = week_str })
-  42     save(obj)
-
-  84     notify({
-  42         'Heute: ' .. string.format('%.2f', dayItem.summary.overhour) .. ' Stunden',
-             'Gesamt: '
-  42             .. string.format('%.2f', obj.content['data'][year_str][week_str].summary.overhour)
-  42             .. ' Stunden',
-  42     }, 'info', { title = 'TimeTracking - SaveTime' }) -- Changed title for clarity
-     end
-
-     -- adds time into the current week
-     ---@param opts { time: number, weekday: string|osdate, clearDay?: string, project?: string, file?: string }
-     local function addTime(opts)
-  33     local time = opts.time
-  33     local weekday = opts.weekday
-  33     local clearDay = opts.clearDay -- This is 'yes' or nil from setTime/setIllDay, or 'nope'
-  33     local project = opts.project or 'default_project'
-  33     local file = opts.file or 'default_file'
-
-         -- The original clearDay logic: if nil, it's 'nope'; if 'yes', it's nil for saveTime's old check.
-         -- This is confusing. Let's simplify: `clearDay` in `addTime` means "should the day be cleared before adding".
-         -- `setTime` calls `clearDay()` then `addTime()`. So `addTime` itself doesn't need to handle clearing.
-         -- The `clearDay` parameter passed to `saveTime` from here will be the original `opts.clearDay` value.
-         -- saveTime's responsibility is just to save, path creation is fine.
-
-  33     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-
-  33     local current_mocked_ts = os.time() -- This will be GMT if tests mock os.time correctly
-  33     local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
-
-         -- Calculate GMT midnight for the current mocked day
-***0     local current_day_gmt_midnight_ts = current_mocked_ts
-***0         - (
-  33             current_mocked_t_info.hour * 3600
-  33             + current_mocked_t_info.min * 60
-  33             + current_mocked_t_info.sec
-  33         )
-
-  33     local targetWeekdayName = opts.weekday
-  33     if targetWeekdayName == nil then
-   1         targetWeekdayName = wdayToEngName[current_mocked_t_info.wday]
-         end
-
-         -- Determine Target Weekday and its GMT Midnight
-         -- Note: os.date('*t').wday is 1 for Sunday, ..., 7 for Saturday
-  33     local weekday_name_to_num_1_7 = {
-             Sunday = 1,
-             Monday = 2,
-             Tuesday = 3,
-             Wednesday = 4,
-             Thursday = 5,
-             Friday = 6,
-             Saturday = 7,
-         }
-  33     local current_wday_numeric_1_7 = current_mocked_t_info.wday
-  33     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
-
-  33     if target_wday_numeric_1_7 == nil then
-             -- Fallback for unrecognized weekday string, though ideally should not happen
-             -- if opts.weekday is validated or comes from wdayToEngName
-***0         notify(
-                 "Warning: Unrecognized weekday '"
-***0                 .. tostring(targetWeekdayName)
-***0                 .. "' in addTime. Defaulting to current day.",
-                 'warn'
-             )
-***0         target_wday_numeric_1_7 = current_wday_numeric_1_7
-         end
-
-  33     local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
-  33     local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
-
-         -- Calculate duration in total seconds
-  33     local total_seconds_duration = math.floor(opts.time * 3600)
-
-         -- Calculate startTime_ts and endTime_ts using GMT arithmetic
-  33     local add_endTime_ts = target_day_gmt_midnight_ts + (23 * 3600) -- 23:00:00 GMT on target day
-  33     local add_startTime_ts = add_endTime_ts - total_seconds_duration
-
-  33     local startTime = add_startTime_ts
-  33     local endTime = add_endTime_ts
-
-  33     local paused = isPaused()
-  33     if paused then
-   1         TimeResume()
-         end
-
-         -- Pass project and file to saveTime
-  33     saveTime(startTime, endTime, targetWeekdayName, clearDay, project, file, false)
-
-  33     if paused then
-   1         TimePause()
-         end
-  33     return obj
-     end
-
-     -- subtracts time from the current week
-     ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
-     local function subtractTime(opts)
-   9     local time = opts.time
-   9     local weekday = opts.weekday
-   9     local project = opts.project or 'default_project'
-   9     local file = opts.file or 'default_file'
-
-   9     init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-
-   9     local current_mocked_ts = os.time() -- This will be GMT if tests mock os.time correctly
-   9     local current_mocked_t_info = os.date('*t', current_mocked_ts) -- GMT components
-
-         -- Calculate GMT midnight for the current mocked day
-***0     local current_day_gmt_midnight_ts = current_mocked_ts
-***0         - (
-   9             current_mocked_t_info.hour * 3600
-   9             + current_mocked_t_info.min * 60
-   9             + current_mocked_t_info.sec
-   9         )
-
-   9     local targetWeekdayName = opts.weekday
-   9     if targetWeekdayName == nil then
-   1         targetWeekdayName = wdayToEngName[current_mocked_t_info.wday]
-         end
-
-         -- Determine Target Weekday and its GMT Midnight
-         -- Note: os.date('*t').wday is 1 for Sunday, ..., 7 for Saturday
-   9     local weekday_name_to_num_1_7 = {
-             Sunday = 1,
-             Monday = 2,
-             Tuesday = 3,
-             Wednesday = 4,
-             Thursday = 5,
-             Friday = 6,
-             Saturday = 7,
-         }
-   9     local current_wday_numeric_1_7 = current_mocked_t_info.wday
-   9     local target_wday_numeric_1_7 = weekday_name_to_num_1_7[targetWeekdayName]
-
-   9     if target_wday_numeric_1_7 == nil then
-             -- Fallback for unrecognized weekday string
-***0         notify(
-                 "Warning: Unrecognized weekday '"
-***0                 .. tostring(targetWeekdayName)
-***0                 .. "' in subtractTime. Defaulting to current day.",
-                 'warn'
-             )
-***0         target_wday_numeric_1_7 = current_wday_numeric_1_7
-         end
-
-   9     local day_offset = target_wday_numeric_1_7 - current_wday_numeric_1_7
-   9     local target_day_gmt_midnight_ts = current_day_gmt_midnight_ts + (day_offset * 24 * 3600)
-
-         -- Calculate duration in total seconds
-   9     local total_seconds_duration = math.floor(opts.time * 3600)
-
-         -- Calculate startTime_to_save and endTime_to_save using GMT arithmetic
-   9     local sub_day_end_reference_ts = target_day_gmt_midnight_ts + (23 * 3600) -- 23:00:00 GMT on target day
-   9     local sub_startTime_to_save = sub_day_end_reference_ts - total_seconds_duration
-   9     local sub_endTime_to_save = sub_day_end_reference_ts
-
-   9     local startTime = sub_startTime_to_save
-   9     local endTime = sub_endTime_to_save
-
-   9     local paused = isPaused()
-   9     if paused then
-   1         TimeResume()
-         end
-
-         -- Pass project, file. 'nope' for clearDay indicates not to clear.
-   9     saveTime(startTime, endTime, targetWeekdayName, 'nope', project, file, true)
-
-   9     if paused then
-   1         TimePause()
-         end
-
-   9     return obj
-     end
-
-     local function setIllDay(weekday)
-   4     addTime({
-   4         time = calculateAverage(),
-   2         weekday = weekday,
-             clearDay = 'yes',
-         })
-   2     return obj
-     end
-
-     local function clearDay(weekday, project, file)
-   1     project = project or 'default_project'
-   1     file = file or 'default_file'
-   1     local year_str = os.date('%Y')
-   1     local week_str = os.date('%W')
-
-         if
-   1         obj.content['data'][year_str]
-   1         and obj.content['data'][year_str][week_str]
-   1         and obj.content['data'][year_str][week_str][project]
-   1         and obj.content['data'][year_str][week_str][project][file]
-   1         and obj.content['data'][year_str][week_str][project][file]['weekdays']
-   1         and obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-         then
-             local dayItems =
-   1             obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
-   1         if dayItems then
-   3             for key, _ in pairs(dayItems) do
-   2                 dayItems[key] = nil
-                 end
-             end
-         end
-   1     calculate({ year = year_str, weeknumber = week_str }) -- Recalculate for the current/affected week
-   1     save(obj)
-     end
-
-     ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
-     local function setTime(opts)
-   1     opts = opts or {}
-   1     local project = opts.project or 'default_project'
-   1     local file = opts.file or 'default_file'
-
-   1     clearDay(opts.weekday, project, file) -- Pass project and file to clearDay
-   2     addTime({
-   1         time = opts.time,
-   1         weekday = opts.weekday,
-             clearDay = 'yes', -- 'yes' indicates to saveTime that items might have been cleared
-   1         project = project,
-   1         file = file,
-         })
-     end
-
-   8 local timeGroup = vim.api.nvim_create_augroup('Maorun-Time', { clear = true }) -- clear = true is good practice
-
-     -- VimEnter: Start time for the initial buffer
-  16 vim.api.nvim_create_autocmd('VimEnter', {
-   8     group = timeGroup,
-         desc = 'Start Timetracking on VimEnter for the initial buffer',
-         callback = function()
-***0         local current_buf = vim.api.nvim_get_current_buf()
-***0         local info = get_project_and_file_info(current_buf)
-***0         if info then
-***0             TimeStart({ project = info.project, file = info.file })
-             else
-***0             TimeStart() -- Use defaults if no info
-             end
-         end,
-     })
-
-     -- BufEnter: Start time for the entered buffer
-  16 vim.api.nvim_create_autocmd('BufEnter', {
-   8     group = timeGroup,
-         desc = 'Start Timetracking when entering a buffer',
-         callback = function(args)
-***0         local info = get_project_and_file_info(args.buf)
-***0         if info then
-***0             TimeStart({ project = info.project, file = info.file })
-             else
-***0             TimeStart() -- Use defaults if no info
-             end
-         end,
-     })
-
-     -- FocusGained: Start time for the current buffer when Neovim gains focus
-  16 vim.api.nvim_create_autocmd('FocusGained', {
-   8     group = timeGroup,
-         desc = 'Start Timetracking when Neovim gains focus',
-         callback = function()
-***0         local current_buf = vim.api.nvim_get_current_buf()
-***0         local info = get_project_and_file_info(current_buf)
-***0         if info then
-***0             TimeStart({ project = info.project, file = info.file })
-             else
-***0             TimeStart() -- Use defaults if no info
-             end
-         end,
-     })
-
-     -- BufLeave: Stop time for the buffer being left
-  16 vim.api.nvim_create_autocmd('BufLeave', {
-   8     group = timeGroup,
-         desc = 'Stop Timetracking for the buffer being left',
-         callback = function(args)
-***0         local info = get_project_and_file_info(args.buf)
-***0         if info then
-***0             TimeStop({ project = info.project, file = info.file })
-             else
-***0             TimeStop() -- Use defaults if no info
-             end
-         end,
-     })
-
-     -- VimLeave: General stop for all tracking
-  16 vim.api.nvim_create_autocmd('VimLeave', {
-   8     group = timeGroup,
-         desc = 'End Timetracking on VimLeave (general stop)',
-         callback = function()
-             -- a general TimeStop() ensures all active timers are stopped.
-             -- BufLeave should have handled the last active buffer.
-***0         TimeStop()
-         end,
-     })
-
-     ---@param opts { hours?: boolean, weekday?: boolean, project?: boolean, file?: boolean }
-     ---@param callback fun(hours:number, weekday: string, project:string, file:string) the function to call
-     local function select(opts, callback)
-***0     opts = vim.tbl_deep_extend('force', { -- Use 'force' to ensure defaults are applied
-             hours = true,
-             weekday = true,
-             project = true,
-             file = true,
-***0     }, opts or {})
-
-***0     local selected_project = 'default_project'
-***0     local selected_file = 'default_file'
-
-         local function get_file_input()
-***0         if opts.file then
-***0             vim.ui.input({ prompt = 'File name? (default: default_file) ' }, function(input)
-***0                 selected_file = (input and input ~= '') and input or 'default_file'
-***0                 get_weekday_selection() -- Proceed to weekday selection
-                 end)
-             else
-***0             get_weekday_selection() -- Skip file input
-             end
-         end
-
-         local function get_project_input()
-***0         if opts.project then
-***0             vim.ui.input({ prompt = 'Project name? (default: default_project) ' }, function(input)
-***0                 selected_project = (input and input ~= '') and input or 'default_project'
-***0                 get_file_input() -- Proceed to file input
-                 end)
-             else
-***0             get_file_input() -- Skip project input
-             end
-         end
-
-***0     local selections = {}
-***0     local selectionNumbers = {}
-***0     for _, value in pairs(weekdayNumberMap) do
-***0         if not selectionNumbers[value] then
-***0             selectionNumbers[value] = 1
-***0             selections[#selections + 1] = _
-             end
-         end
-
-         ---@param weekday string
-         local function selectHours(weekday_param)
-***0         if opts.hours then
-***0             vim.ui.input({
-                     prompt = 'How many hours? ',
-                 }, function(input)
-***0                 local n = tonumber(input)
-***0                 if n == nil or input == nil or input == '' then
-***0                     return
-                     end
-***0                 callback(n, weekday_param, selected_project, selected_file)
-                 end)
-             else
-                 -- If hours are not required, pass a default or handle appropriately
-***0             callback(0, weekday_param, selected_project, selected_file) -- Assuming 0 hours if not prompted
-             end
-         end
-
-         local function get_weekday_selection()
-***0         if opts.weekday then
-***0             if pcall(require, 'telescope') then
-***0                 local telescopeSelect = require('maorun.time.weekday_select')
-***0                 telescopeSelect({
-                         prompt_title = 'Which day?',
-                         list = selections,
-                         action = function(selected_weekday)
-***0                         selectHours(selected_weekday)
-                         end,
-                     })
-                 else
-***0                 vim.ui.select(selections, {
-                         prompt = 'Which day? ',
-                     }, function(selected_weekday)
-***0                     selectHours(selected_weekday)
-                     end)
-                 end
-             else
-                 -- If weekday is not required, pass a default or handle appropriately
-                 -- This case might need clarification: what weekday to use if not selected?
-                 -- For now, assuming it means no time entry if weekday selection is skipped.
-                 -- Or, pass a default like current day, but callback expects a weekday.
-                 -- Let's assume callback is only made if weekday is selected.
-                 -- If opts.weekday is false, the chain stops or uses a predefined weekday.
-                 -- For now, if weekday is false, we directly call callback with defaults (e.g. for project/file only ops)
-                 -- callback(0, nil, selected_project, selected_file) -- This line is problematic if weekday is essential
-                 -- Safest is to ensure weekday selection happens if callback needs it.
-                 -- The current design implies `select` is primarily for operations that involve weekday and hours.
-                 -- If only project/file are needed for some future op, `select` might need more changes.
-                 -- Given the context of addTime, substractTime, setTime, weekday and hours are essential.
-             end
-         end
-
-         -- Start the chain of inputs
-***0     get_project_input()
-     end
-
-   8 Time = {
-         add = function()
-***0         select(
-                 {},
-                 function(hours, weekday, project, file) -- Add project and file to callback params
-***0                 addTime({ time = hours, weekday = weekday, project = project, file = file })
-                 end
-             )
-         end,
-   8     addTime = addTime,
-         subtract = function()
-***0         select({}, function(hours, weekday, project, file) -- Add project and file
-***0             subtractTime({ time = hours, weekday = weekday, project = project, file = file })
-             end)
-         end,
-   8     subtractTime = subtractTime,
-   8     clearDay = clearDay, -- clearDay now takes project and file, but this public Time.clearDay would need them.
-         -- This might require another vim.ui.select or direct args. For now, it's an issue.
-         -- TODO: Adjust public Time.clearDay or make it internal / part of setTime only.
-   8     TimePause = TimePause,
-   8     TimeResume = TimeResume,
-   8     TimeStop = TimeStop,
-         set = function()
-***0         select({}, function(hours, weekday, project, file) -- Add project and file
-***0             setTime({ time = hours, weekday = weekday, project = project, file = file })
-             end)
-         end,
-   8     setTime = setTime,
-   8     setIllDay = setIllDay,
-   8     setHoliday = setIllDay,
-         calculate = function(opts) -- Accept opts
-***0         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-***0         calculate(opts)
-***0         save(obj)
-***0         return obj
-         end,
-   8 }
-
-   8 return {
-   8     setup = init,
-   8     TimeStart = TimeStart,
-   8     TimeStop = TimeStop,
-   8     TimePause = TimePause,
-   8     TimeResume = TimeResume,
-   8     setIllDay = setIllDay,
-   8     setHoliday = setIllDay,
-   8     addTime = addTime,
-   8     subtractTime = subtractTime,
-   8     setTime = setTime,
-   8     clearDay = clearDay,
-   8     isPaused = isPaused,
-         calculate = function(opts) -- Accept opts
-  42         init({ path = obj.path, hoursPerWeekday = obj.content['hoursPerWeekday'] })
-  42         calculate(opts)
-  42         save(obj)
-  42         return obj
-         end,
-
-   8     weekdays = weekdayNumberMap,
-   8 }
+   8 return M
 
 ==============================================================================
 Summary
 ==============================================================================
 
-File                                                                     Hits Missed Coverage
----------------------------------------------------------------------------------------------
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua 345  117    74.68%
----------------------------------------------------------------------------------------------
-Total                                                                    345  117    74.68%
+File                                                                         Hits Missed Coverage
+-------------------------------------------------------------------------------------------------
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/autocmds.lua 16   28     36.36%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/config.lua   17   0      100.00%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua     325  23     93.39%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua     37   22     62.71%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua       5    50     9.09%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua    15   35     30.00%
+-------------------------------------------------------------------------------------------------
+Total                                                                        415  158    72.43%

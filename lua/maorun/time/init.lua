@@ -14,7 +14,7 @@ local M = {}
 ---@param user_config table|nil User configuration to override defaults
 function M.setup(user_config)
     -- Initialize core components (loads data, sets up config_module.obj and config_module.config)
-    core.init(user_config)
+    local config_obj = core.init(user_config) -- Store the returned object
     -- Setup autocommands
     autocmds.setup_autocmds()
     -- The global Time table is not strictly necessary if all interactions happen via returned module,
@@ -106,7 +106,7 @@ function M.setup(user_config)
             return config_module.obj -- Return the data object
         end,
     }
-    return M -- Return the module itself for direct calls like require('maorun.time').setup()
+    return config_obj -- Return the config_obj obtained from core.init
 end
 
 -- Functions returned by the module for direct use (e.g., by other plugins or specific keymaps)
