@@ -27,34 +27,51 @@ function M.init(user_config)
     if config_module.obj.content['hoursPerWeekday'] == nil then
         config_module.obj.content['hoursPerWeekday'] = config_module.config.hoursPerWeekday
     end
+    -- Ensure paused flag is initialized
+    if config_module.obj.content['paused'] == nil then
+        config_module.obj.content['paused'] = false
+    end
 
     if config_module.obj.content['data'] == nil then
         config_module.obj.content['data'] = {}
     end
 
     -- Ensure the basic structure for current time (if needed for some initialization logic)
-    -- This part might be simplified if direct access isn't needed immediately after init
     local year_str = os.date('%Y')
     local week_str = os.date('%W')
-    -- Default project/file initialization can be removed if not strictly necessary at this point
-    -- as TimeStart and other functions will create them on demand.
-    -- For now, keeping it to ensure data structure exists for potential immediate access.
-    local project_name = 'default_project'
-    local file_name = 'default_file'
+    -- Get current weekday name
+    local current_wday_numeric = os.date('*t', os.time()).wday -- No longer needed here
+    local weekday_name = config_module.wdayToEngName[current_wday_numeric] -- No longer needed here
 
+    local project_name = 'default_project' -- No longer needed here
+    local file_name = 'default_file' -- No longer needed here
+
+    -- Initialize year if not exists
     if config_module.obj.content['data'][year_str] == nil then
         config_module.obj.content['data'][year_str] = {}
     end
+    -- Initialize week if not exists
     if config_module.obj.content['data'][year_str][week_str] == nil then
         config_module.obj.content['data'][year_str][week_str] = {}
     end
-    if config_module.obj.content['data'][year_str][week_str][project_name] == nil then
-        config_module.obj.content['data'][year_str][week_str][project_name] = {}
+    -- Initialize weekday if not exists
+    if config_module.obj.content['data'][year_str][week_str][weekday_name] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday_name] = {}
     end
-    if config_module.obj.content['data'][year_str][week_str][project_name][file_name] == nil then
-        config_module.obj.content['data'][year_str][week_str][project_name][file_name] = {
-            weekdays = {},
-        }
+    -- Initialize project if not exists
+    if config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] = {}
+    end
+    -- Initialize file with empty items and summary (previously was weekdays = {})
+    if
+        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name]
+        == nil
+    then
+        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] =
+            {
+                items = {},
+                summary = {},
+            }
     end
     return config_module.obj
 end
@@ -95,32 +112,32 @@ function M.calculate(opts)
 
     current_week_data.summary.overhour = prevWeekOverhour
 
-    for project_name, project_data in pairs(current_week_data) do
-        if project_name ~= 'summary' then
-            for file_name, file_data in pairs(project_data) do
-                if file_data.weekdays then
-                    for weekday_name, day_data in pairs(file_data.weekdays) do
-                        local time_in_weekday = 0
-                        if day_data.items then
-                            for _, item_entry in pairs(day_data.items) do
-                                if item_entry.diffInHours ~= nil then
-                                    time_in_weekday = time_in_weekday + item_entry.diffInHours
-                                end
+    for weekday_name, weekday_data in pairs(current_week_data) do
+        if weekday_name ~= 'summary' then -- Assuming 'summary' is not a valid weekday name
+            for project_name, project_data in pairs(weekday_data) do
+                for file_name, file_data in pairs(project_data) do
+                    -- The structure is now year -> week -> weekday -> project -> file
+                    -- So file_data directly contains items and summary for that day
+                    local time_in_day = 0
+                    if file_data.items then
+                        for _, item_entry in pairs(file_data.items) do
+                            if item_entry.diffInHours ~= nil then
+                                time_in_day = time_in_day + item_entry.diffInHours
                             end
                         end
-
-                        if day_data.summary == nil then
-                            day_data.summary = {}
-                        end
-                        day_data.summary.diffInHours = time_in_weekday
-
-                        local expected_hours = config_module.obj.content['hoursPerWeekday'][weekday_name]
-                            or 0
-                        day_data.summary.overhour = time_in_weekday - expected_hours
-
-                        current_week_data.summary.overhour = current_week_data.summary.overhour
-                            + day_data.summary.overhour
                     end
+
+                    if file_data.summary == nil then
+                        file_data.summary = {}
+                    end
+                    file_data.summary.diffInHours = time_in_day
+
+                    local expected_hours = config_module.obj.content['hoursPerWeekday'][weekday_name]
+                        or 0
+                    file_data.summary.overhour = time_in_day - expected_hours
+
+                    current_week_data.summary.overhour = current_week_data.summary.overhour
+                        + file_data.summary.overhour
                 end
             end
         end
@@ -156,14 +173,8 @@ function M.isPaused()
     -- However, frequent re-init might be inefficient.
     -- Assuming init has been called once at setup.
     -- If not, this might need to call M.init or rely on it being called.
-    -- For safety, a light init if obj.content is not populated can be added.
-    if not config_module.obj.content or not config_module.obj.content.paused then
-        M.init({
-            path = config_module.obj.path,
-            hoursPerWeekday = config_module.config.hoursPerWeekday,
-        })
-    end
-    return config_module.obj.content.paused
+    -- Return the paused state. If not initialized, defaults to false (not paused).
+    return config_module.obj.content and config_module.obj.content.paused == true
 end
 
 ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
@@ -197,32 +208,29 @@ function M.TimeStart(opts)
     if config_module.obj.content['data'][year_str][week_str] == nil then
         config_module.obj.content['data'][year_str][week_str] = {}
     end
-    if config_module.obj.content['data'][year_str][week_str][project] == nil then
-        config_module.obj.content['data'][year_str][week_str][project] = {}
+    -- New structure: year -> week -> weekday -> project -> file
+    if config_module.obj.content['data'][year_str][week_str][weekday] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday] = {}
     end
-    if config_module.obj.content['data'][year_str][week_str][project][file] == nil then
-        config_module.obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
+    if config_module.obj.content['data'][year_str][week_str][weekday][project] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday][project] = {}
     end
-    if
-        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-        == nil
-    then
-        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] =
-            {
-                summary = {},
-                items = {},
-            }
+    if config_module.obj.content['data'][year_str][week_str][weekday][project][file] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday][project][file] = {
+            summary = {},
+            items = {},
+        }
     end
 
-    local dayItem =
-        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+    local file_data_for_day =
+        config_module.obj.content['data'][year_str][week_str][weekday][project][file]
     local canStart = true
-    for _, item in pairs(dayItem.items) do
+    for _, item in pairs(file_data_for_day.items) do
         canStart = canStart and (item.startTime ~= nil and item.endTime ~= nil)
     end
     if canStart then
         local timeReadable = os.date('*t', time)
-        table.insert(dayItem.items, {
+        table.insert(file_data_for_day.items, {
             startTime = time,
             startReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min),
         })
@@ -254,18 +262,18 @@ function M.TimeStop(opts)
     local year_str = os.date('%Y', time)
     local week_str = os.date('%W', time)
 
-    local dayItem_path_exists = config_module.obj.content['data'][year_str]
+    -- New structure: year -> week -> weekday -> project -> file
+    local file_data_path_exists = config_module.obj.content['data'][year_str]
         and config_module.obj.content['data'][year_str][week_str]
-        and config_module.obj.content['data'][year_str][week_str][project]
-        and config_module.obj.content['data'][year_str][week_str][project][file]
-        and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays']
-        and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-        and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
+        and config_module.obj.content['data'][year_str][week_str][weekday]
+        and config_module.obj.content['data'][year_str][week_str][weekday][project]
+        and config_module.obj.content['data'][year_str][week_str][weekday][project][file]
+        and config_module.obj.content['data'][year_str][week_str][weekday][project][file].items
 
-    if dayItem_path_exists then
-        local dayItem =
-            config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-        for _, item in pairs(dayItem.items) do
+    if file_data_path_exists then
+        local file_data_for_day =
+            config_module.obj.content['data'][year_str][week_str][weekday][project][file]
+        for _, item in pairs(file_data_for_day.items) do
             if item.endTime == nil then
                 item.endTime = time
                 local timeReadable = os.date('*t', time)
@@ -292,25 +300,22 @@ function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSub
     if config_module.obj.content['data'][year_str][week_str] == nil then
         config_module.obj.content['data'][year_str][week_str] = {}
     end
-    if config_module.obj.content['data'][year_str][week_str][project] == nil then
-        config_module.obj.content['data'][year_str][week_str][project] = {}
+    -- New structure: year -> week -> weekday -> project -> file
+    if config_module.obj.content['data'][year_str][week_str][weekday] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday] = {}
     end
-    if config_module.obj.content['data'][year_str][week_str][project][file] == nil then
-        config_module.obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
+    if config_module.obj.content['data'][year_str][week_str][weekday][project] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday][project] = {}
     end
-    if
-        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-        == nil
-    then
-        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] =
-            {
-                summary = {},
-                items = {},
-            }
+    if config_module.obj.content['data'][year_str][week_str][weekday][project][file] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday][project][file] = {
+            summary = {},
+            items = {},
+        }
     end
 
-    local dayItem =
-        config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+    local file_data_for_day =
+        config_module.obj.content['data'][year_str][week_str][weekday][project][file]
     local timeReadableStart = os.date('*t', startTime)
     local item = {
         startTime = startTime,
@@ -325,7 +330,7 @@ function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSub
         item.diffInHours = -item.diffInHours
     end
 
-    table.insert(dayItem.items, item)
+    table.insert(file_data_for_day.items, item)
     M.calculate({ year = year_str, weeknumber = week_str })
     utils.save()
 end
@@ -495,21 +500,21 @@ function M.clearDay(weekday_param, project, file)
     local year_str = os.date('%Y')
     local week_str = os.date('%W')
 
+    -- New structure: year -> week -> weekday -> project -> file
     if
         config_module.obj.content['data'][year_str]
         and config_module.obj.content['data'][year_str][week_str]
-        and config_module.obj.content['data'][year_str][week_str][project]
-        and config_module.obj.content['data'][year_str][week_str][project][file]
-        and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays']
-        and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday_param]
+        and config_module.obj.content['data'][year_str][week_str][weekday_param]
+        and config_module.obj.content['data'][year_str][week_str][weekday_param][project]
+        and config_module.obj.content['data'][year_str][week_str][weekday_param][project][file]
     then
-        local dayContents =
-            config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday_param]
-        if dayContents.items then
-            dayContents.items = {} -- Clear items by assigning an empty table
+        local file_data_for_day =
+            config_module.obj.content['data'][year_str][week_str][weekday_param][project][file]
+        if file_data_for_day.items then
+            file_data_for_day.items = {} -- Clear items by assigning an empty table
         end
         -- Optionally reset summary for the day as well
-        -- dayContents.summary = {}
+        -- file_data_for_day.summary = {}
     end
     M.calculate({ year = year_str, weeknumber = week_str })
     utils.save()

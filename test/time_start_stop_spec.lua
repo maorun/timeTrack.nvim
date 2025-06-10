@@ -42,15 +42,15 @@ describe('TimeStart', function()
         local week_number = os_module.date('%W')
 
         assert.is_not_nil(
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday].items[1],
+            data.content.data[year][week_number][current_weekday]['default_project']['default_file'].items[1],
             'Time entry not found for current day'
         )
         assert.are.same(
             mock_time,
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday].items[1].startTime
+            data.content.data[year][week_number][current_weekday]['default_project']['default_file'].items[1].startTime
         )
         assert.is_nil(
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday].items[1].endTime
+            data.content.data[year][week_number][current_weekday]['default_project']['default_file'].items[1].endTime
         )
 
         -- Restore original functions
@@ -82,15 +82,15 @@ describe('TimeStart', function()
         local data = maorunTime.calculate({ year = year, weeknumber = week_number })
 
         assert.is_not_nil(
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[target_weekday].items[1],
+            data.content.data[year][week_number][target_weekday]['default_project']['default_file'].items[1],
             'Time entry not found for target day'
         )
         assert.are.same(
             specific_time,
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[target_weekday].items[1].startTime
+            data.content.data[year][week_number][target_weekday]['default_project']['default_file'].items[1].startTime
         )
         assert.is_nil(
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[target_weekday].items[1].endTime
+            data.content.data[year][week_number][target_weekday]['default_project']['default_file'].items[1].endTime
         )
 
         -- Restore original functions
@@ -134,15 +134,15 @@ describe('TimeStart', function()
         local data = maorunTime.calculate({ year = year, weeknumber = week_number })
         assert.are.same(
             1,
-            #data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday].items,
+            #data.content.data[year][week_number][current_weekday]['default_project']['default_file'].items,
             'Should only have one entry'
         )
         assert.are.same(
             initial_time,
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday].items[1].startTime
+            data.content.data[year][week_number][current_weekday]['default_project']['default_file'].items[1].startTime
         )
         assert.is_nil(
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday].items[1].endTime
+            data.content.data[year][week_number][current_weekday]['default_project']['default_file'].items[1].endTime
         )
 
         -- Restore original functions
@@ -181,7 +181,7 @@ describe('TimeStop', function()
         local current_weekday = original_os_date('%A', start_time)
         local data = maorunTime.calculate({ year = year, weeknumber = week_number })
         local item =
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday].items[1]
+            data.content.data[year][week_number][current_weekday]['default_project']['default_file'].items[1]
 
         assert.is_not_nil(item, 'Time entry not found')
         assert.are.same(stop_time, item.endTime)
@@ -225,7 +225,7 @@ describe('TimeStop', function()
             local week_number = original_os_date('%W', start_time)
             local data = maorunTime.calculate({ year = year, weeknumber = week_number })
             local item =
-                data.content.data[year][week_number]['default_project']['default_file'].weekdays[target_weekday].items[1]
+                data.content.data[year][week_number][target_weekday]['default_project']['default_file'].items[1]
 
             assert.is_not_nil(item, 'Time entry not found for target day')
             assert.are.same(stop_time, item.endTime)
@@ -258,19 +258,20 @@ describe('TimeStop', function()
         local data = maorunTime.calculate({ year = year, weeknumber = week_number })
 
         -- Check that no item was created or that items list is empty/nil
-        local weekday_data = data.content.data[year]
+        local file_day_data = data.content.data[year]
             and data.content.data[year][week_number]
-            and data.content.data[year][week_number]['default_project']
-            and data.content.data[year][week_number]['default_project']['default_file']
-            and data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday]
-        if weekday_data and weekday_data.items then
+            and data.content.data[year][week_number][current_weekday]
+            and data.content.data[year][week_number][current_weekday]['default_project']
+            and data.content.data[year][week_number][current_weekday]['default_project']['default_file']
+
+        if file_day_data and file_day_data.items then
             assert.are.same(
                 0,
-                #weekday_data.items,
+                #file_day_data.items,
                 'No items should exist if TimeStart was not called'
             )
         else
-            -- If weekday_data or items is nil, it also means no entry, which is correct
+            -- If file_day_data or items is nil, it also means no entry, which is correct
             assert.is_true(true)
         end
         -- We are also implicitly testing that no error occurred.
@@ -325,14 +326,14 @@ describe('TimeStop', function()
         local current_weekday = original_os_date('%A', start_time)
         local data = maorunTime.calculate({ year = year, weeknumber = week_number })
         local item =
-            data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday].items[1]
+            data.content.data[year][week_number][current_weekday]['default_project']['default_file'].items[1]
 
         assert.is_not_nil(item, 'Time entry not found')
         assert.are.same(first_stop_time, item.endTime, 'endTime should remain from the first stop')
         assert.are.same(1, item.diffInHours, 'diffInHours should remain from the first stop')
         assert.are.same(
             1,
-            #data.content.data[year][week_number]['default_project']['default_file'].weekdays[current_weekday].items,
+            #data.content.data[year][week_number][current_weekday]['default_project']['default_file'].items,
             'Should still only have one entry'
         )
 

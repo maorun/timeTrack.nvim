@@ -162,121 +162,138 @@
    8 local M = {}
 
    8 function M.init(user_config)
- 183     config_module.config =
- 366         vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
- 183     if user_config and user_config.hoursPerWeekday ~= nil then
- 140         config_module.config.hoursPerWeekday = user_config.hoursPerWeekday
+ 112     config_module.config =
+ 224         vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
+ 112     if user_config and user_config.hoursPerWeekday ~= nil then
+  69         config_module.config.hoursPerWeekday = user_config.hoursPerWeekday
          end
- 183     config_module.obj.path = config_module.config.path
- 183     local p = Path:new(config_module.obj.path)
- 549     if not p:exists() then
+ 112     config_module.obj.path = config_module.config.path
+ 112     local p = Path:new(config_module.obj.path)
+ 336     if not p:exists() then
   14         p:touch({ parents = true })
          end
 
- 549     local data = Path:new(config_module.obj.path):read()
- 183     if data ~= '' then
-  90         config_module.obj.content = vim.json.decode(data)
+ 336     local data = Path:new(config_module.obj.path):read()
+ 112     if data ~= '' then
+  53         config_module.obj.content = vim.json.decode(data)
          else
-  93         config_module.obj.content = {}
+  59         config_module.obj.content = {}
          end
          -- Ensure hoursPerWeekday is initialized if not present (e.g. new file)
- 183     if config_module.obj.content['hoursPerWeekday'] == nil then
-  95         config_module.obj.content['hoursPerWeekday'] = config_module.config.hoursPerWeekday
+ 112     if config_module.obj.content['hoursPerWeekday'] == nil then
+  60         config_module.obj.content['hoursPerWeekday'] = config_module.config.hoursPerWeekday
+         end
+         -- Ensure paused flag is initialized
+ 112     if config_module.obj.content['paused'] == nil then
+  60         config_module.obj.content['paused'] = false
          end
 
- 183     if config_module.obj.content['data'] == nil then
-  93         config_module.obj.content['data'] = {}
+ 112     if config_module.obj.content['data'] == nil then
+  59         config_module.obj.content['data'] = {}
          end
 
          -- Ensure the basic structure for current time (if needed for some initialization logic)
-         -- This part might be simplified if direct access isn't needed immediately after init
- 183     local year_str = os.date('%Y')
- 183     local week_str = os.date('%W')
-         -- Default project/file initialization can be removed if not strictly necessary at this point
-         -- as TimeStart and other functions will create them on demand.
-         -- For now, keeping it to ensure data structure exists for potential immediate access.
- 183     local project_name = 'default_project'
- 183     local file_name = 'default_file'
+ 112     local year_str = os.date('%Y')
+ 112     local week_str = os.date('%W')
+         -- Get current weekday name
+ 230     local current_wday_numeric = os.date('*t', os.time()).wday -- No longer needed here
+ 112     local weekday_name = config_module.wdayToEngName[current_wday_numeric] -- No longer needed here
 
- 183     if config_module.obj.content['data'][year_str] == nil then
- 108         config_module.obj.content['data'][year_str] = {}
+ 112     local project_name = 'default_project' -- No longer needed here
+ 112     local file_name = 'default_file' -- No longer needed here
+
+         -- Initialize year if not exists
+ 112     if config_module.obj.content['data'][year_str] == nil then
+  72         config_module.obj.content['data'][year_str] = {}
          end
- 183     if config_module.obj.content['data'][year_str][week_str] == nil then
- 108         config_module.obj.content['data'][year_str][week_str] = {}
+         -- Initialize week if not exists
+ 112     if config_module.obj.content['data'][year_str][week_str] == nil then
+  72         config_module.obj.content['data'][year_str][week_str] = {}
          end
- 183     if config_module.obj.content['data'][year_str][week_str][project_name] == nil then
- 108         config_module.obj.content['data'][year_str][week_str][project_name] = {}
+         -- Initialize weekday if not exists
+ 112     if config_module.obj.content['data'][year_str][week_str][weekday_name] == nil then
+  79         config_module.obj.content['data'][year_str][week_str][weekday_name] = {}
          end
- 183     if config_module.obj.content['data'][year_str][week_str][project_name][file_name] == nil then
- 108         config_module.obj.content['data'][year_str][week_str][project_name][file_name] = {
- 108             weekdays = {},
- 108         }
+         -- Initialize project if not exists
+ 112     if config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] == nil then
+  80         config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] = {}
          end
- 183     return config_module.obj
+         -- Initialize file with empty items and summary (previously was weekdays = {})
+         if
+ 112         config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name]
+ 112         == nil
+         then
+  80         config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] =
+                 {
+  80                 items = {},
+  80                 summary = {},
+  80             }
+         end
+ 112     return config_module.obj
      end
 
      ---@param opts {weeknumber: string|osdate, year: string|osdate}|nil
    8 function M.calculate(opts)
- 184     opts = vim.tbl_deep_extend('keep', opts or {}, {
- 180         year = os.date('%Y'),
- 180         weeknumber = os.date('%W'),
-  92     })
+ 170     opts = vim.tbl_deep_extend('keep', opts or {}, {
+ 166         year = os.date('%Y'),
+ 166         weeknumber = os.date('%W'),
+  85     })
 
-  92     local year_str = opts.year
-  92     local week_str = opts.weeknumber
+  85     local year_str = opts.year
+  85     local week_str = opts.weeknumber
 
          if
-  92         not config_module.obj.content['data'][year_str]
-  92         or not config_module.obj.content['data'][year_str][week_str]
+  85         not config_module.obj.content['data'][year_str]
+  84         or not config_module.obj.content['data'][year_str][week_str]
          then
-***0         return
+   1         return
          end
 
-  92     local current_week_data = config_module.obj.content['data'][year_str][week_str]
+  84     local current_week_data = config_module.obj.content['data'][year_str][week_str]
 
-  92     if current_week_data.summary == nil then
+  84     if current_week_data.summary == nil then
   40         current_week_data.summary = {}
          end
 
-  92     local prevWeekOverhour = 0
-  92     if config_module.obj.content['data'][year_str] then
-  92         local prev_week_number_str = string.format('%02d', tonumber(week_str) - 1)
-  92         if config_module.obj.content['data'][year_str][prev_week_number_str] then
-   2             local prev_week_data = config_module.obj.content['data'][year_str][prev_week_number_str]
-   2             if prev_week_data and prev_week_data.summary and prev_week_data.summary.overhour then
-   2                 prevWeekOverhour = prev_week_data.summary.overhour
+  84     local prevWeekOverhour = 0
+  84     if config_module.obj.content['data'][year_str] then
+  84         local prev_week_number_str = string.format('%02d', tonumber(week_str) - 1)
+  84         if config_module.obj.content['data'][year_str][prev_week_number_str] then
+***0             local prev_week_data = config_module.obj.content['data'][year_str][prev_week_number_str]
+***0             if prev_week_data and prev_week_data.summary and prev_week_data.summary.overhour then
+***0                 prevWeekOverhour = prev_week_data.summary.overhour
                  end
              end
          end
 
-  92     current_week_data.summary.overhour = prevWeekOverhour
+  84     current_week_data.summary.overhour = prevWeekOverhour
 
- 290     for project_name, project_data in pairs(current_week_data) do
- 198         if project_name ~= 'summary' then
- 216             for file_name, file_data in pairs(project_data) do
- 110                 if file_data.weekdays then
- 204                     for weekday_name, day_data in pairs(file_data.weekdays) do
-  94                         local time_in_weekday = 0
-  94                         if day_data.items then
- 199                             for _, item_entry in pairs(day_data.items) do
- 105                                 if item_entry.diffInHours ~= nil then
- 102                                     time_in_weekday = time_in_weekday + item_entry.diffInHours
-                                     end
+ 288     for weekday_name, weekday_data in pairs(current_week_data) do
+ 204         if weekday_name ~= 'summary' then -- Assuming 'summary' is not a valid weekday name
+ 243             for project_name, project_data in pairs(weekday_data) do
+ 250                 for file_name, file_data in pairs(project_data) do
+                         -- The structure is now year -> week -> weekday -> project -> file
+                         -- So file_data directly contains items and summary for that day
+ 127                     local time_in_day = 0
+ 127                     if file_data.items then
+ 232                         for _, item_entry in pairs(file_data.items) do
+ 105                             if item_entry.diffInHours ~= nil then
+ 102                                 time_in_day = time_in_day + item_entry.diffInHours
                                  end
                              end
-
-  94                         if day_data.summary == nil then
-   1                             day_data.summary = {}
-                             end
-  94                         day_data.summary.diffInHours = time_in_weekday
-
-  94                         local expected_hours = config_module.obj.content['hoursPerWeekday'][weekday_name]
-  94                             or 0
-  94                         day_data.summary.overhour = time_in_weekday - expected_hours
-
-  94                         current_week_data.summary.overhour = current_week_data.summary.overhour
-  94                             + day_data.summary.overhour
                          end
+
+ 127                     if file_data.summary == nil then
+***0                         file_data.summary = {}
+                         end
+ 127                     file_data.summary.diffInHours = time_in_day
+
+ 127                     local expected_hours = config_module.obj.content['hoursPerWeekday'][weekday_name]
+ 127                         or 0
+ 127                     file_data.summary.overhour = time_in_day - expected_hours
+
+ 127                     current_week_data.summary.overhour = current_week_data.summary.overhour
+ 127                         + file_data.summary.overhour
                      end
                  end
              end
@@ -312,14 +329,8 @@
          -- However, frequent re-init might be inefficient.
          -- Assuming init has been called once at setup.
          -- If not, this might need to call M.init or rely on it being called.
-         -- For safety, a light init if obj.content is not populated can be added.
-  72     if not config_module.obj.content or not config_module.obj.content.paused then
- 128         M.init({
-  64             path = config_module.obj.path,
-  64             hoursPerWeekday = config_module.config.hoursPerWeekday,
-             })
-         end
-  72     return config_module.obj.content.paused
+         -- Return the paused state. If not initialized, defaults to false (not paused).
+  72     return config_module.obj.content and config_module.obj.content.paused == true
      end
 
      ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
@@ -348,37 +359,34 @@
    9     local week_str = os.date('%W', time)
 
    9     if config_module.obj.content['data'][year_str] == nil then
-***0         config_module.obj.content['data'][year_str] = {}
+   8         config_module.obj.content['data'][year_str] = {}
          end
    9     if config_module.obj.content['data'][year_str][week_str] == nil then
-***0         config_module.obj.content['data'][year_str][week_str] = {}
+   8         config_module.obj.content['data'][year_str][week_str] = {}
          end
-   9     if config_module.obj.content['data'][year_str][week_str][project] == nil then
-   1         config_module.obj.content['data'][year_str][week_str][project] = {}
+         -- New structure: year -> week -> weekday -> project -> file
+   9     if config_module.obj.content['data'][year_str][week_str][weekday] == nil then
+   8         config_module.obj.content['data'][year_str][week_str][weekday] = {}
          end
-   9     if config_module.obj.content['data'][year_str][week_str][project][file] == nil then
-   1         config_module.obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
+   9     if config_module.obj.content['data'][year_str][week_str][weekday][project] == nil then
+   8         config_module.obj.content['data'][year_str][week_str][weekday][project] = {}
          end
-         if
-   9         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-   9         == nil
-         then
-   8         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] =
-                 {
-   8                 summary = {},
-   8                 items = {},
-   8             }
+   9     if config_module.obj.content['data'][year_str][week_str][weekday][project][file] == nil then
+   8         config_module.obj.content['data'][year_str][week_str][weekday][project][file] = {
+   8             summary = {},
+   8             items = {},
+   8         }
          end
 
-         local dayItem =
-   9         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+         local file_data_for_day =
+   9         config_module.obj.content['data'][year_str][week_str][weekday][project][file]
    9     local canStart = true
-  10     for _, item in pairs(dayItem.items) do
+  10     for _, item in pairs(file_data_for_day.items) do
    1         canStart = canStart and (item.startTime ~= nil and item.endTime ~= nil)
          end
    9     if canStart then
    8         local timeReadable = os.date('*t', time)
-  16         table.insert(dayItem.items, {
+  16         table.insert(file_data_for_day.items, {
    8             startTime = time,
    8             startReadable = string.format('%02d:%02d', timeReadable.hour, timeReadable.min),
              })
@@ -410,18 +418,18 @@
    7     local year_str = os.date('%Y', time)
    7     local week_str = os.date('%W', time)
 
-   7     local dayItem_path_exists = config_module.obj.content['data'][year_str]
+         -- New structure: year -> week -> weekday -> project -> file
+   7     local file_data_path_exists = config_module.obj.content['data'][year_str]
    7         and config_module.obj.content['data'][year_str][week_str]
-   7         and config_module.obj.content['data'][year_str][week_str][project]
-   7         and config_module.obj.content['data'][year_str][week_str][project][file]
-   7         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays']
-   7         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-   7         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday].items
+   6         and config_module.obj.content['data'][year_str][week_str][weekday]
+   6         and config_module.obj.content['data'][year_str][week_str][weekday][project]
+   6         and config_module.obj.content['data'][year_str][week_str][weekday][project][file]
+   6         and config_module.obj.content['data'][year_str][week_str][weekday][project][file].items
 
-   7     if dayItem_path_exists then
-             local dayItem =
-   6             config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-  12         for _, item in pairs(dayItem.items) do
+   7     if file_data_path_exists then
+             local file_data_for_day =
+   6             config_module.obj.content['data'][year_str][week_str][weekday][project][file]
+  12         for _, item in pairs(file_data_for_day.items) do
    6             if item.endTime == nil then
    5                 item.endTime = time
    5                 local timeReadable = os.date('*t', time)
@@ -443,30 +451,27 @@
   42     local week_str = os.date('%W', startTime)
 
   42     if config_module.obj.content['data'][year_str] == nil then
-***0         config_module.obj.content['data'][year_str] = {}
+  14         config_module.obj.content['data'][year_str] = {}
          end
   42     if config_module.obj.content['data'][year_str][week_str] == nil then
-***0         config_module.obj.content['data'][year_str][week_str] = {}
+  14         config_module.obj.content['data'][year_str][week_str] = {}
          end
-  42     if config_module.obj.content['data'][year_str][week_str][project] == nil then
-   5         config_module.obj.content['data'][year_str][week_str][project] = {}
+         -- New structure: year -> week -> weekday -> project -> file
+  42     if config_module.obj.content['data'][year_str][week_str][weekday] == nil then
+  26         config_module.obj.content['data'][year_str][week_str][weekday] = {}
          end
-  42     if config_module.obj.content['data'][year_str][week_str][project][file] == nil then
-   6         config_module.obj.content['data'][year_str][week_str][project][file] = { weekdays = {} }
+  42     if config_module.obj.content['data'][year_str][week_str][weekday][project] == nil then
+  27         config_module.obj.content['data'][year_str][week_str][weekday][project] = {}
          end
-         if
-  42         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-  42         == nil
-         then
-  34         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday] =
-                 {
-  34                 summary = {},
-  34                 items = {},
-  34             }
+  42     if config_module.obj.content['data'][year_str][week_str][weekday][project][file] == nil then
+  28         config_module.obj.content['data'][year_str][week_str][weekday][project][file] = {
+  28             summary = {},
+  28             items = {},
+  28         }
          end
 
-         local dayItem =
-  42         config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
+         local file_data_for_day =
+  42         config_module.obj.content['data'][year_str][week_str][weekday][project][file]
   42     local timeReadableStart = os.date('*t', startTime)
   42     local item = {
   42         startTime = startTime,
@@ -481,7 +486,7 @@
    9         item.diffInHours = -item.diffInHours
          end
 
-  42     table.insert(dayItem.items, item)
+  42     table.insert(file_data_for_day.items, item)
   42     M.calculate({ year = year_str, weeknumber = week_str })
   42     utils.save()
      end
@@ -651,21 +656,21 @@
    1     local year_str = os.date('%Y')
    1     local week_str = os.date('%W')
 
+         -- New structure: year -> week -> weekday -> project -> file
          if
    1         config_module.obj.content['data'][year_str]
    1         and config_module.obj.content['data'][year_str][week_str]
-   1         and config_module.obj.content['data'][year_str][week_str][project]
-   1         and config_module.obj.content['data'][year_str][week_str][project][file]
-   1         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays']
-   1         and config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday_param]
+   1         and config_module.obj.content['data'][year_str][week_str][weekday_param]
+   1         and config_module.obj.content['data'][year_str][week_str][weekday_param][project]
+   1         and config_module.obj.content['data'][year_str][week_str][weekday_param][project][file]
          then
-             local dayContents =
-   1             config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday_param]
-   1         if dayContents.items then
-   1             dayContents.items = {} -- Clear items by assigning an empty table
+             local file_data_for_day =
+   1             config_module.obj.content['data'][year_str][week_str][weekday_param][project][file]
+   1         if file_data_for_day.items then
+   1             file_data_for_day.items = {} -- Clear items by assigning an empty table
              end
              -- Optionally reset summary for the day as well
-             -- dayContents.summary = {}
+             -- file_data_for_day.summary = {}
          end
    1     M.calculate({ year = year_str, weeknumber = week_str })
    1     utils.save()
@@ -833,13 +838,13 @@
    8 M.clearDay = core.clearDay
    8 M.isPaused = core.isPaused
      M.calculate = function(opts) -- Match the public Time.calculate behavior
-  84     core.init({
-  42         path = config_module.obj.path,
-  42         hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+  70     core.init({
+  35         path = config_module.obj.path,
+  35         hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
          })
-  42     core.calculate(opts)
-  42     utils.save()
-  42     return config_module.obj
+  35     core.calculate(opts)
+  35     utils.save()
+  35     return config_module.obj
      end
    8 M.weekdays = config_module.weekdayNumberMap -- Expose weekday map
 
@@ -990,7 +995,7 @@
    8 local M = {}
 
    8 function M.save()
- 473     Path:new(config_module.obj.path):write(vim.fn.json_encode(config_module.obj.content), 'w')
+ 445     Path:new(config_module.obj.path):write(vim.fn.json_encode(config_module.obj.content), 'w')
      end
 
    8 function M.get_project_and_file_info(buffer_path_or_bufnr)
@@ -1091,9 +1096,9 @@ File                                                                         Hit
 -------------------------------------------------------------------------------------------------
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/autocmds.lua 16   28     36.36%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/config.lua   17   0      100.00%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua     300  23     92.88%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua     300  22     93.17%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua     36   32     52.94%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua       5    50     9.09%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua    15   35     30.00%
 -------------------------------------------------------------------------------------------------
-Total                                                                        389  168    69.84%
+Total                                                                        389  167    69.96%
