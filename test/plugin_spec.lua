@@ -72,8 +72,8 @@ describe('init plugin', function()
         -- Deeper structures (weekday, project, file) are created on demand.
         assert.are.same({
             [os.date('%Y')] = {
-                [os.date('%W')] = {}
-            }
+                [os.date('%W')] = {},
+            },
         }, data.data)
     end)
 end)
@@ -99,7 +99,8 @@ it('should add/subtract time to a specific day', function()
     local weekNum = os.date('%W')
     -- Access the data through the new structure for assertions
     -- year -> week -> weekday -> project -> file
-    local file_data_path = data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
+    local file_data_path =
+        data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
     local week_summary_path = data.content.data[year][weekNum].summary -- Week summary is still at week level
 
     local configured_hours_day = data.content.hoursPerWeekday[current_weekday]
@@ -129,13 +130,17 @@ it('should add/subtract time to a specific day', function()
         weekday = current_weekday,
     })
     -- Re-access paths as 'data' object might be new
-    file_data_path = data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
+    file_data_path =
+        data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
     week_summary_path = data.content.data[year][weekNum].summary
 
     local total_logged_hours_after_2nd_add = 4 -- (2 from first add + 2 from second)
     local expected_daily_overhour_2nd_add = total_logged_hours_after_2nd_add - configured_hours_day
     assert.is_not_nil(file_data_path, 'File data path should not be nil after 2nd addTime')
-    assert.is_not_nil(file_data_path.summary, 'File data summary should not be nil after 2nd addTime')
+    assert.is_not_nil(
+        file_data_path.summary,
+        'File data summary should not be nil after 2nd addTime'
+    )
     assert.are.same(
         expected_daily_overhour_2nd_add,
         file_data_path.summary.overhour,
@@ -150,14 +155,18 @@ it('should add/subtract time to a specific day', function()
     end
 
     data = maorunTime.subtractTime({ time = 2, weekday = current_weekday })
-    file_data_path = data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
+    file_data_path =
+        data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
     week_summary_path = data.content.data[year][weekNum].summary
 
     local final_logged_hours_after_subtract = 2 -- (4 - 2)
     local expected_daily_overhour_after_subtract = final_logged_hours_after_subtract
         - configured_hours_day
     assert.is_not_nil(file_data_path, 'File data path should not be nil after subtractTime')
-    assert.is_not_nil(file_data_path.summary, 'File data summary should not be nil after subtractTime')
+    assert.is_not_nil(
+        file_data_path.summary,
+        'File data summary should not be nil after subtractTime'
+    )
     assert.are.same(
         expected_daily_overhour_after_subtract,
         file_data_path.summary.overhour,
