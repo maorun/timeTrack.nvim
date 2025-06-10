@@ -62,7 +62,7 @@ function M.setup(user_config)
         end,
         TimePause = core.TimePause,
         TimeResume = core.TimeResume,
-        TimeStop = function() 
+        TimeStop = function()
             core.TimeStop()
 
             local notify = require('notify')
@@ -72,10 +72,12 @@ function M.setup(user_config)
             local week_str = os.date('%W', startTime)
 
             notify({
-                'Gesamt: ' .. string.format(
-                    '%.2f',
-                    config_module.obj.content['data'][year_str][week_str].summary.overhour
-                ) .. ' Stunden',
+                'Gesamt: '
+                    .. string.format(
+                        '%.2f',
+                        config_module.obj.content['data'][year_str][week_str].summary.overhour
+                    )
+                    .. ' Stunden',
             }, 'info', { title = 'TimeTracking - Stop' })
         end,
         set = function()
