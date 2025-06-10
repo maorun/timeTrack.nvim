@@ -27,6 +27,10 @@ function M.init(user_config)
     if config_module.obj.content['hoursPerWeekday'] == nil then
         config_module.obj.content['hoursPerWeekday'] = config_module.config.hoursPerWeekday
     end
+    -- Ensure paused flag is initialized
+    if config_module.obj.content['paused'] == nil then
+        config_module.obj.content['paused'] = false
+    end
 
     if config_module.obj.content['data'] == nil then
         config_module.obj.content['data'] = {}
@@ -36,11 +40,11 @@ function M.init(user_config)
     local year_str = os.date('%Y')
     local week_str = os.date('%W')
     -- Get current weekday name
-    -- local current_wday_numeric = os.date('*t', os.time()).wday -- No longer needed here
-    -- local weekday_name = config_module.wdayToEngName[current_wday_numeric] -- No longer needed here
+    local current_wday_numeric = os.date('*t', os.time()).wday -- No longer needed here
+    local weekday_name = config_module.wdayToEngName[current_wday_numeric] -- No longer needed here
 
-    -- local project_name = 'default_project' -- No longer needed here
-    -- local file_name = 'default_file' -- No longer needed here
+    local project_name = 'default_project' -- No longer needed here
+    local file_name = 'default_file' -- No longer needed here
 
     -- Initialize year if not exists
     if config_module.obj.content['data'][year_str] == nil then
@@ -51,20 +55,24 @@ function M.init(user_config)
         config_module.obj.content['data'][year_str][week_str] = {}
     end
     -- Initialize weekday if not exists
-    -- if config_module.obj.content['data'][year_str][week_str][weekday_name] == nil then
-    --    config_module.obj.content['data'][year_str][week_str][weekday_name] = {}
-    -- end
+    if config_module.obj.content['data'][year_str][week_str][weekday_name] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday_name] = {}
+    end
     -- Initialize project if not exists
-    -- if config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] == nil then
-    --    config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] = {}
-    -- end
+    if config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] == nil then
+        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] = {}
+    end
     -- Initialize file with empty items and summary (previously was weekdays = {})
-    -- if config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] == nil then
-    --    config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] = {
-    --        items = {},
-    --        summary = {},
-    --    }
-    -- end
+    if
+        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name]
+        == nil
+    then
+        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] =
+            {
+                items = {},
+                summary = {},
+            }
+    end
     return config_module.obj
 end
 
@@ -165,14 +173,8 @@ function M.isPaused()
     -- However, frequent re-init might be inefficient.
     -- Assuming init has been called once at setup.
     -- If not, this might need to call M.init or rely on it being called.
-    -- For safety, a light init if obj.content is not populated can be added.
-    if not config_module.obj.content or not config_module.obj.content.paused then
-        M.init({
-            path = config_module.obj.path,
-            hoursPerWeekday = config_module.config.hoursPerWeekday,
-        })
-    end
-    return config_module.obj.content.paused
+    -- Return the paused state. If not initialized, defaults to false (not paused).
+    return config_module.obj.content and config_module.obj.content.paused == true
 end
 
 ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }

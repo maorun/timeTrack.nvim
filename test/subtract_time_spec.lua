@@ -91,9 +91,11 @@ describe('subtractTime', function()
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
+        -- Monday: (-3) - 8 = -11. Auto-init Wednesday: 0 - 8 = -8. Total = -19.
+        local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForMonday) - 8
         assert(
-            math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForMonday)) < 0.001,
-            'Week summary overhour should be ' .. (-hoursToSubtract - defaultHoursForMonday)
+            math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
+            'Week summary overhour should be ' .. expectedWeekOverhour .. '. Got: ' .. weekSummary.overhour
         )
     end)
 
@@ -148,9 +150,11 @@ describe('subtractTime', function()
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
+        -- Tuesday: (-2.5) - 8 = -10.5. Auto-init Wednesday: 0 - 8 = -8. Total = -18.5.
+        local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForTuesday) - 8
         assert(
-            math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForTuesday)) < 0.001,
-            'Week summary overhour should reflect Tuesday subtraction'
+            math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
+            'Week summary overhour should reflect Tuesday subtraction. Expected: ' .. expectedWeekOverhour .. '. Got: ' .. weekSummary.overhour
         )
     end)
 
@@ -318,9 +322,11 @@ describe('subtractTime', function()
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
+        -- Thursday: (5-2) - 8 = -5. Auto-init Wednesday: 0 - 8 = -8. Total = -13.
+        local expectedWeekOverhour = (totalDiffInHours - defaultHoursForThursday) - 8
         assert(
-            math.abs(weekSummary.overhour - (totalDiffInHours - defaultHoursForThursday)) < 0.001,
-            'Week summary overhour should reflect combined Thursday operations'
+            math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
+            'Week summary overhour should reflect combined Thursday operations. Expected: ' .. expectedWeekOverhour .. '. Got: ' .. weekSummary.overhour
         )
     end)
 
@@ -389,9 +395,11 @@ describe('subtractTime', function()
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
+        -- Friday: (-1) - 8 = -9. Auto-init Wednesday: 0 - 8 = -8. Total = -17.
+        local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForFriday) - 8
         assert(
-            math.abs(weekSummary.overhour - (-hoursToSubtract - defaultHoursForFriday)) < 0.001,
-            'Week summary overhour should reflect Friday subtraction'
+            math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
+            'Week summary overhour should reflect Friday subtraction. Expected: ' .. expectedWeekOverhour .. '. Got: ' .. weekSummary.overhour
         )
     end)
 end)
