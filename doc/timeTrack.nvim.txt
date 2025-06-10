@@ -77,26 +77,67 @@ The structure of the JSON file is as follows:
         "YYYY": {
           "WW": {
             "summary": {
-              "overhour": 2.5
+              "overhour": -7.5
             },
-            "projectName": {
-              "fileName": {
-                "weekdays": {
-                  "WeekdayName": {
-                    "summary": {
-                      "diffInHours": 5.5,
-                      "overhour": -2.5
+            "Monday": {
+              "WorkProject": {
+                "feature-task.lua": {
+                  "summary": {
+                    "diffInHours": 6.5,
+                    "overhour": -1.5
+                  },
+                  "items": [
+                    {
+                      "startTime": 1678886400,
+                      "startReadable": "10:00",
+                      "endTime": 1678890000,
+                      "endReadable": "11:00",
+                      "diffInHours": 1.0
                     },
-                    "items": [
-                      {
-                        "startTime": 1678886400,
-                        "startReadable": "10:00",
-                        "endTime": 1678890000,
-                        "endReadable": "11:00",
-                        "diffInHours": 1.0
-                      }
-                    ]
-                  }
+                    {
+                      "startTime": 1678893600,
+                      "startReadable": "12:00",
+                      "endTime": 1678913100,
+                      "endReadable": "17:30",
+                      "diffInHours": 5.5
+                    }
+                  ]
+                }
+              },
+              "PersonalProject": {
+                "learning.md": {
+                  "summary": {
+                    "diffInHours": 2.0,
+                    "overhour": -6.0
+                  },
+                  "items": [
+                    {
+                      "startTime": 1678915200,
+                      "startReadable": "18:00",
+                      "endTime": 1678922400,
+                      "endReadable": "20:00",
+                      "diffInHours": 2.0
+                    }
+                  ]
+                }
+              }
+            },
+            "Tuesday": {
+              "WorkProject": {
+                "bug-fix.lua": {
+                  "summary": {
+                    "diffInHours": 8.0,
+                    "overhour": 0.0
+                  },
+                  "items": [
+                    {
+                      "startTime": 1678963200,
+                      "startReadable": "09:00",
+                      "endTime": 1678992000,
+                      "endReadable": "17:00",
+                      "diffInHours": 8.0
+                    }
+                  ]
                 }
               }
             }
