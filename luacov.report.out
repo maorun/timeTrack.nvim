@@ -756,7 +756,24 @@
              end,
   60         TimePause = core.TimePause,
   60         TimeResume = core.TimeResume,
-  60         TimeStop = core.TimeStop, -- Expose the core TimeStop directly
+             TimeStop = function()
+***0             core.TimeStop()
+
+***0             local notify = require('notify')
+
+***0             local startTime = os.time()
+***0             local year_str = os.date('%Y', startTime)
+***0             local week_str = os.date('%W', startTime)
+
+***0             notify({
+                     'Gesamt: '
+***0                     .. string.format(
+                             '%.2f',
+***0                         config_module.obj.content['data'][year_str][week_str].summary.overhour
+                         )
+***0                     .. ' Stunden',
+***0             }, 'info', { title = 'TimeTracking - Stop' })
+             end,
              set = function()
 ***0             ui.select(
                      {}, -- Default opts
@@ -1075,8 +1092,8 @@ File                                                                         Hit
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/autocmds.lua 16   28     36.36%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/config.lua   17   0      100.00%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua     300  23     92.88%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua     37   22     62.71%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua     36   32     52.94%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua       5    50     9.09%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua    15   35     30.00%
 -------------------------------------------------------------------------------------------------
-Total                                                                        390  158    71.17%
+Total                                                                        389  168    69.84%
