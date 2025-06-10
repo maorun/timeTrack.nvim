@@ -1030,7 +1030,7 @@
 ***0         return nil
          end
 
-***0     local file_name = file_path_obj.name
+***0     local file_name = file_path_obj.filename
 ***0     if file_name == nil or file_name == '' then
 ***0         return nil -- No valid file name (e.g. a directory path was passed)
          end
@@ -1045,7 +1045,7 @@
 ***0         and current_dir:absolute() ~= Path:new('/'):absolute()
          do
 ***0         if current_dir:joinpath('.git'):exists() then
-***0             project_name = current_dir.name
+***0             project_name = current_dir.filename
                  break
              end
 ***0         local parent_dir = current_dir:parent()
@@ -1062,14 +1062,14 @@
 ***0     if project_name == nil then
              -- Fallback: use parent directory name if .git not found
 ***0         local parent_dir_obj = file_path_obj:parent()
-***0         if parent_dir_obj and parent_dir_obj.name and parent_dir_obj.name ~= '' then
+***0         if parent_dir_obj and parent_dir_obj.filename and parent_dir_obj.filename ~= '' then
                  if
 ***0                 parent_dir_obj:is_root()
 ***0                 or parent_dir_obj:absolute() == Path:new('/'):absolute()
                  then
 ***0                 project_name = '_root_' -- Or "filesystem_root"
                  else
-***0                 project_name = parent_dir_obj.name
+***0                 project_name = parent_dir_obj.filename
                  end
              else
 ***0             project_name = 'default_project' -- Ultimate fallback

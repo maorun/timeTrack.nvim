@@ -26,7 +26,7 @@ function M.get_project_and_file_info(buffer_path_or_bufnr)
         return nil
     end
 
-    local file_name = file_path_obj.name
+    local file_name = file_path_obj.filename
     if file_name == nil or file_name == '' then
         return nil -- No valid file name (e.g. a directory path was passed)
     end
@@ -41,7 +41,7 @@ function M.get_project_and_file_info(buffer_path_or_bufnr)
         and current_dir:absolute() ~= Path:new('/'):absolute()
     do
         if current_dir:joinpath('.git'):exists() then
-            project_name = current_dir.name
+            project_name = current_dir.filename
             break
         end
         local parent_dir = current_dir:parent()
@@ -58,14 +58,14 @@ function M.get_project_and_file_info(buffer_path_or_bufnr)
     if project_name == nil then
         -- Fallback: use parent directory name if .git not found
         local parent_dir_obj = file_path_obj:parent()
-        if parent_dir_obj and parent_dir_obj.name and parent_dir_obj.name ~= '' then
+        if parent_dir_obj and parent_dir_obj.filename and parent_dir_obj.filename ~= '' then
             if
                 parent_dir_obj:is_root()
                 or parent_dir_obj:absolute() == Path:new('/'):absolute()
             then
                 project_name = '_root_' -- Or "filesystem_root"
             else
-                project_name = parent_dir_obj.name
+                project_name = parent_dir_obj.filename
             end
         else
             project_name = 'default_project' -- Ultimate fallback
