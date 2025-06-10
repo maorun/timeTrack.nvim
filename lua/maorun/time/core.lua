@@ -36,11 +36,11 @@ function M.init(user_config)
     local year_str = os.date('%Y')
     local week_str = os.date('%W')
     -- Get current weekday name
-    local current_wday_numeric = os.date('*t', os.time()).wday
-    local weekday_name = config_module.wdayToEngName[current_wday_numeric]
+    -- local current_wday_numeric = os.date('*t', os.time()).wday -- No longer needed here
+    -- local weekday_name = config_module.wdayToEngName[current_wday_numeric] -- No longer needed here
 
-    local project_name = 'default_project'
-    local file_name = 'default_file'
+    -- local project_name = 'default_project' -- No longer needed here
+    -- local file_name = 'default_file' -- No longer needed here
 
     -- Initialize year if not exists
     if config_module.obj.content['data'][year_str] == nil then
@@ -51,24 +51,20 @@ function M.init(user_config)
         config_module.obj.content['data'][year_str][week_str] = {}
     end
     -- Initialize weekday if not exists
-    if config_module.obj.content['data'][year_str][week_str][weekday_name] == nil then
-        config_module.obj.content['data'][year_str][week_str][weekday_name] = {}
-    end
+    -- if config_module.obj.content['data'][year_str][week_str][weekday_name] == nil then
+    --    config_module.obj.content['data'][year_str][week_str][weekday_name] = {}
+    -- end
     -- Initialize project if not exists
-    if config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] == nil then
-        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] = {}
-    end
+    -- if config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] == nil then
+    --    config_module.obj.content['data'][year_str][week_str][weekday_name][project_name] = {}
+    -- end
     -- Initialize file with empty items and summary (previously was weekdays = {})
-    if
-        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name]
-        == nil
-    then
-        config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] =
-            {
-                items = {},
-                summary = {},
-            }
-    end
+    -- if config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] == nil then
+    --    config_module.obj.content['data'][year_str][week_str][weekday_name][project_name][file_name] = {
+    --        items = {},
+    --        summary = {},
+    --    }
+    -- end
     return config_module.obj
 end
 

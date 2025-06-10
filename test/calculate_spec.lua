@@ -54,6 +54,7 @@ describe('calculate', function()
         assert.is_table(file_data.items, 'File data items should be a table')
         assert.is_table(file_data.summary, 'File data summary should be a table')
 
+
         maorunTime.addTime({ time = 2, weekday = targetWeekday }) -- addTime uses mocked os.time
 
         data = maorunTime.calculate() -- Uses mocked os.date for year/week
@@ -279,13 +280,15 @@ describe('calculate', function()
         }
 
         -- Ensure current week and day structure exists for default_project/default_file
-        fileData.data[currentYearForFile][currentWeekStringForFile] = fileData.data[currentYearForFile][currentWeekStringForFile]
+        fileData.data[currentYearForFile][currentWeekStringForFile] =
+            fileData.data[currentYearForFile][currentWeekStringForFile] or {}
+        fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog] =
+            fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog] or {}
+        fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog]['default_project'] =
+            fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog]['default_project']
             or {}
-        fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog] = fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog]
-            or {}
-        fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog]['default_project'] = fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog]['default_project']
-            or {}
-        fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog]['default_project']['default_file'] = fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog]['default_project']['default_file']
+        fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog]['default_project']['default_file'] =
+            fileData.data[currentYearForFile][currentWeekStringForFile][dayToLog]['default_project']['default_file']
             or {
                 items = {},
                 summary = {},
@@ -338,10 +341,10 @@ describe('calculate', function()
         local fixedEndTime = fixedStartTime + loggedHours * 3600
 
         fileContent.data[testYear][testWeek] = fileContent.data[testYear][testWeek] or {}
-        fileContent.data[testYear][testWeek][testWeekday] = fileContent.data[testYear][testWeek][testWeekday]
-            or {}
-        fileContent.data[testYear][testWeek][testWeekday]['default_project'] = fileContent.data[testYear][testWeek][testWeekday]['default_project']
-            or {}
+        fileContent.data[testYear][testWeek][testWeekday] =
+            fileContent.data[testYear][testWeek][testWeekday] or {}
+        fileContent.data[testYear][testWeek][testWeekday]['default_project'] =
+            fileContent.data[testYear][testWeek][testWeekday]['default_project'] or {}
         fileContent.data[testYear][testWeek][testWeekday]['default_project']['default_file'] = {
             items = {
                 {
@@ -419,9 +422,7 @@ describe('calculate', function()
         local currentMockedWeekday = original_os_date('%A', mock_fixed_time) -- Should be 'Wednesday'
         assert.is_not_nil(
             weekData[currentMockedWeekday],
-            'Data for current mocked weekday ('
-                .. currentMockedWeekday
-                .. ') should exist due to init'
+            'Data for current mocked weekday (' .. currentMockedWeekday .. ') should exist due to init'
         )
         assert.is_not_nil(
             weekData[currentMockedWeekday]['default_project'],
@@ -442,20 +443,11 @@ describe('calculate', function()
         )
 
         -- For any other weekday, the structure should not exist as no time was logged.
-        for _, weekdayName in ipairs({
-            'Monday',
-            'Tuesday',
-            'Thursday',
-            'Friday',
-            'Saturday',
-            'Sunday',
-        }) do
+        for _, weekdayName in ipairs({ 'Monday', 'Tuesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' }) do
             if weekdayName ~= currentMockedWeekday then
                 assert.is_nil(
                     weekData[weekdayName],
-                    'Data for weekday '
-                        .. weekdayName
-                        .. ' should not exist as no time was logged for it.'
+                    'Data for weekday ' .. weekdayName .. ' should not exist as no time was logged for it.'
                 )
             end
         end
