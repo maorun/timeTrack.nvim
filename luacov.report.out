@@ -433,33 +433,6 @@
 
    7     M.calculate({ year = year_str, weeknumber = week_str })
    7     utils.save()
-
-   7     local heute_text = 'N/A'
-   7     if dayItem_path_exists then
-             local dayItem =
-   6             config_module.obj.content['data'][year_str][week_str][project][file]['weekdays'][weekday]
-   6         if dayItem.summary and dayItem.summary.overhour then
-   6             heute_text = string.format('%.2f', dayItem.summary.overhour)
-             end
-         end
-
-   7     local gesamt_text = 'N/A'
-         if
-   7         config_module.obj.content['data'][year_str]
-   7         and config_module.obj.content['data'][year_str][week_str]
-   7         and config_module.obj.content['data'][year_str][week_str].summary
-   7         and config_module.obj.content['data'][year_str][week_str].summary.overhour
-         then
-  14         gesamt_text = string.format(
-   7             '%.2f',
-   7             config_module.obj.content['data'][year_str][week_str].summary.overhour
-  14         )
-         end
-
-  14     notify({
-   7         'Heute: ' .. heute_text .. ' Stunden',
-   7         'Gesamt: ' .. gesamt_text .. ' Stunden',
-   7     }, 'info', { title = 'TimeTracking - Stop' })
      end
 
    8 function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSubtraction) -- _clearDay param might be unused now
@@ -511,14 +484,6 @@
   42     table.insert(dayItem.items, item)
   42     M.calculate({ year = year_str, weeknumber = week_str })
   42     utils.save()
-
-  84     notify({
-  42         'Heute: ' .. string.format('%.2f', dayItem.summary.overhour) .. ' Stunden',
-  84         'Gesamt: ' .. string.format(
-  42             '%.2f',
-  42             config_module.obj.content['data'][year_str][week_str].summary.overhour
-  84         ) .. ' Stunden',
-  42     }, 'info', { title = 'TimeTracking - SaveTime' })
      end
 
      ---@param opts { time: number, weekday: string|osdate, clearDay?: string, project?: string, file?: string }
@@ -1109,9 +1074,9 @@ File                                                                         Hit
 -------------------------------------------------------------------------------------------------
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/autocmds.lua 16   28     36.36%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/config.lua   17   0      100.00%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua     325  23     93.39%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua     300  23     92.88%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua     37   22     62.71%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua       5    50     9.09%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua    15   35     30.00%
 -------------------------------------------------------------------------------------------------
-Total                                                                        415  158    72.43%
+Total                                                                        390  158    71.17%
