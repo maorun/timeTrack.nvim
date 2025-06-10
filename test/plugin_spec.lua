@@ -68,11 +68,24 @@ describe('init plugin', function()
         local data = maorunTime.setup({
             path = tempPath,
         }).content
-        -- M.init now only ensures year and week tables are created.
-        -- Deeper structures (weekday, project, file) are created on demand.
+
+        local year_str = os.date('%Y')
+        local week_str = os.date('%W')
+        local current_wday_numeric = os.date('*t', os.time()).wday
+        local weekday_name = wdayToEngName[current_wday_numeric]
+
         assert.are.same({
-            [os.date('%Y')] = {
-                [os.date('%W')] = {},
+            [year_str] = {
+                [week_str] = {
+                    [weekday_name] = {
+                        ['default_project'] = {
+                            ['default_file'] = {
+                                items = {},
+                                summary = {},
+                            },
+                        },
+                    },
+                },
             },
         }, data.data)
     end)
