@@ -144,7 +144,10 @@ describe('Project and File Tracking Functionality', function()
             assert.is_not_nil(week_data, 'Week data should exist')
             -- New structure: year -> week -> weekday -> project -> file
             local day_data_for_project_file = week_data[mock_date_params.weekday_name]
-            assert.is_not_nil(day_data_for_project_file, mock_date_params.weekday_name .. ' data should exist at week level')
+            assert.is_not_nil(
+                day_data_for_project_file,
+                mock_date_params.weekday_name .. ' data should exist at week level'
+            )
             local proj_data = day_data_for_project_file[project]
             assert.is_not_nil(proj_data, 'Project data should exist for ' .. project)
             local file_specific_data = proj_data[file]
@@ -167,7 +170,10 @@ describe('Project and File Tracking Functionality', function()
             -- New structure: year -> week -> weekday -> project -> file
             local file_specific_data =
                 data.data[mock_date_params.year][mock_date_params.week][mock_date_params.weekday_name]['default_project']['default_file']
-            assert.is_not_nil(file_specific_data, 'Data in default project/file for Monday should exist')
+            assert.is_not_nil(
+                file_specific_data,
+                'Data in default project/file for Monday should exist'
+            )
             assert.is_not_nil(file_specific_data.items, 'Items table should exist in file data')
             assert.are.same(1, #file_specific_data.items)
             assert.are.same(startTime, file_specific_data.items[1].startTime)
