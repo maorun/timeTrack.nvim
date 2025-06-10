@@ -95,7 +95,10 @@ describe('subtractTime', function()
         local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForMonday) - 8
         assert(
             math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
-            'Week summary overhour should be ' .. expectedWeekOverhour .. '. Got: ' .. weekSummary.overhour
+            'Week summary overhour should be '
+                .. expectedWeekOverhour
+                .. '. Got: '
+                .. weekSummary.overhour
         )
     end)
 
@@ -154,7 +157,10 @@ describe('subtractTime', function()
         local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForTuesday) - 8
         assert(
             math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
-            'Week summary overhour should reflect Tuesday subtraction. Expected: ' .. expectedWeekOverhour .. '. Got: ' .. weekSummary.overhour
+            'Week summary overhour should reflect Tuesday subtraction. Expected: '
+                .. expectedWeekOverhour
+                .. '. Got: '
+                .. weekSummary.overhour
         )
     end)
 
@@ -326,7 +332,10 @@ describe('subtractTime', function()
         local expectedWeekOverhour = (totalDiffInHours - defaultHoursForThursday) - 8
         assert(
             math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
-            'Week summary overhour should reflect combined Thursday operations. Expected: ' .. expectedWeekOverhour .. '. Got: ' .. weekSummary.overhour
+            'Week summary overhour should reflect combined Thursday operations. Expected: '
+                .. expectedWeekOverhour
+                .. '. Got: '
+                .. weekSummary.overhour
         )
     end)
 
@@ -399,7 +408,10 @@ describe('subtractTime', function()
         local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForFriday) - 8
         assert(
             math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
-            'Week summary overhour should reflect Friday subtraction. Expected: ' .. expectedWeekOverhour .. '. Got: ' .. weekSummary.overhour
+            'Week summary overhour should reflect Friday subtraction. Expected: '
+                .. expectedWeekOverhour
+                .. '. Got: '
+                .. weekSummary.overhour
         )
     end)
 end)
