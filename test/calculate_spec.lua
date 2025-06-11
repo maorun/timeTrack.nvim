@@ -59,34 +59,18 @@ describe('calculate', function()
         data = maorunTime.calculate() -- Uses mocked os.date for year/week
 
         -- File summary checks
-        local file_summary =
-            data.content.data[expected_year_key][expected_week_key][targetWeekday]['default_project']['default_file'].summary
+        local file_summary = data.content.data[expected_year_key][expected_week_key][targetWeekday]['default_project']['default_file'].summary
         assert.are.same(2, file_summary.diffInHours, 'File diffInHours for ' .. targetWeekday)
-        assert.is_nil(
-            file_summary.overhour,
-            'File overhour for ' .. targetWeekday .. ' should be nil'
-        )
+        assert.is_nil(file_summary.overhour, 'File overhour for ' .. targetWeekday .. ' should be nil')
 
         -- Weekday summary checks
-        local weekday_summary =
-            data.content.data[expected_year_key][expected_week_key][targetWeekday].summary
-        assert.is_not_nil(
-            weekday_summary,
-            'Weekday summary for ' .. targetWeekday .. ' should exist'
-        )
+        local weekday_summary = data.content.data[expected_year_key][expected_week_key][targetWeekday].summary
+        assert.is_not_nil(weekday_summary, 'Weekday summary for ' .. targetWeekday .. ' should exist')
         assert.are.same(2, weekday_summary.diffInHours, 'Weekday diffInHours for ' .. targetWeekday)
-        assert.are.same(
-            -6,
-            weekday_summary.overhour,
-            'Weekday overhour for ' .. targetWeekday .. ' (2 logged, 8 expected)'
-        )
+        assert.are.same(-6, weekday_summary.overhour, 'Weekday overhour for ' .. targetWeekday .. ' (2 logged, 8 expected)')
 
         -- Weekly summary check
-        assert.are.same(
-            -6,
-            data.content.data[expected_year_key][expected_week_key].summary.overhour,
-            'Weekly overhour'
-        )
+        assert.are.same(-6, data.content.data[expected_year_key][expected_week_key].summary.overhour, 'Weekly overhour')
 
         -- Item check (remains the same)
         assert.are.same(
@@ -130,55 +114,23 @@ describe('calculate', function()
             maorunTime.calculate({ year = expected_year_key, weeknumber = expected_week_key })
 
         -- File summary checks for targetWeekday (Tuesday)
-        local file_summary_tuesday =
-            data.content.data[expected_year_key][expected_week_key][targetWeekday]['default_project']['default_file'].summary
-        assert.are.same(
-            7,
-            file_summary_tuesday.diffInHours,
-            'File diffInHours for ' .. targetWeekday
-        )
-        assert.is_nil(
-            file_summary_tuesday.overhour,
-            'File overhour for ' .. targetWeekday .. ' should be nil'
-        )
+        local file_summary_tuesday = data.content.data[expected_year_key][expected_week_key][targetWeekday]['default_project']['default_file'].summary
+        assert.are.same(7, file_summary_tuesday.diffInHours, 'File diffInHours for ' .. targetWeekday)
+        assert.is_nil(file_summary_tuesday.overhour, 'File overhour for ' .. targetWeekday .. ' should be nil')
 
         -- Weekday summary checks for targetWeekday (Tuesday)
-        local weekday_summary_tuesday =
-            data.content.data[expected_year_key][expected_week_key][targetWeekday].summary
-        assert.is_not_nil(
-            weekday_summary_tuesday,
-            'Weekday summary for ' .. targetWeekday .. ' should exist'
-        )
-        assert.are.same(
-            7,
-            weekday_summary_tuesday.diffInHours,
-            'Weekday diffInHours for ' .. targetWeekday
-        )
-        assert.are.same(
-            1,
-            weekday_summary_tuesday.overhour,
-            'Weekday overhour for ' .. targetWeekday .. ' (7 logged, 6 expected)'
-        )
+        local weekday_summary_tuesday = data.content.data[expected_year_key][expected_week_key][targetWeekday].summary
+        assert.is_not_nil(weekday_summary_tuesday, 'Weekday summary for ' .. targetWeekday .. ' should exist')
+        assert.are.same(7, weekday_summary_tuesday.diffInHours, 'Weekday diffInHours for ' .. targetWeekday)
+        assert.are.same(1, weekday_summary_tuesday.overhour, 'Weekday overhour for ' .. targetWeekday .. ' (7 logged, 6 expected)')
 
         -- Weekday summary for Wednesday (auto-initialized)
         local auto_init_weekday = 'Wednesday' -- Mocked time is Wednesday
         local hours_expected_wednesday = customHours[auto_init_weekday] or 8
-        local weekday_summary_wednesday =
-            data.content.data[expected_year_key][expected_week_key][auto_init_weekday].summary
-        assert.is_not_nil(
-            weekday_summary_wednesday,
-            'Weekday summary for ' .. auto_init_weekday .. ' (auto-init) should exist'
-        )
-        assert.are.same(
-            0,
-            weekday_summary_wednesday.diffInHours,
-            'Weekday diffInHours for ' .. auto_init_weekday .. ' (auto-init)'
-        )
-        assert.are.same(
-            -hours_expected_wednesday,
-            weekday_summary_wednesday.overhour,
-            'Weekday overhour for ' .. auto_init_weekday .. ' (auto-init)'
-        )
+        local weekday_summary_wednesday = data.content.data[expected_year_key][expected_week_key][auto_init_weekday].summary
+        assert.is_not_nil(weekday_summary_wednesday, 'Weekday summary for '..auto_init_weekday..' (auto-init) should exist')
+        assert.are.same(0, weekday_summary_wednesday.diffInHours, 'Weekday diffInHours for '..auto_init_weekday..' (auto-init)')
+        assert.are.same(-hours_expected_wednesday, weekday_summary_wednesday.overhour, 'Weekday overhour for '..auto_init_weekday..' (auto-init)')
 
         -- Weekly summary check
         -- Wednesday (auto-initialized by setup, 0 logged, custom 8 expected = -8)
@@ -215,59 +167,24 @@ describe('calculate', function()
         local data = maorunTime.calculate() -- calculate uses mocked os.time for default year/week
 
         -- File summary checks for targetWeekday (Monday)
-        local file_summary_monday =
-            data.content.data[expected_year_key][expected_week_key][targetWeekday]['default_project']['default_file'].summary
-        assert.are.same(
-            5,
-            file_summary_monday.diffInHours,
-            'File diffInHours for ' .. targetWeekday
-        )
-        assert.is_nil(
-            file_summary_monday.overhour,
-            'File overhour for ' .. targetWeekday .. ' should be nil'
-        )
+        local file_summary_monday = data.content.data[expected_year_key][expected_week_key][targetWeekday]['default_project']['default_file'].summary
+        assert.are.same(5, file_summary_monday.diffInHours, 'File diffInHours for ' .. targetWeekday)
+        assert.is_nil(file_summary_monday.overhour, 'File overhour for ' .. targetWeekday .. ' should be nil')
 
         -- Weekday summary checks for targetWeekday (Monday)
-        local weekday_summary_monday =
-            data.content.data[expected_year_key][expected_week_key][targetWeekday].summary
-        assert.is_not_nil(
-            weekday_summary_monday,
-            'Weekday summary for ' .. targetWeekday .. ' should exist'
-        )
-        assert.are.same(
-            5,
-            weekday_summary_monday.diffInHours,
-            'Weekday diffInHours for ' .. targetWeekday
-        )
-        assert.are.same(
-            -3,
-            weekday_summary_monday.overhour,
-            'Weekday overhour for ' .. targetWeekday .. ' (5 logged, 8 expected)'
-        )
+        local weekday_summary_monday = data.content.data[expected_year_key][expected_week_key][targetWeekday].summary
+        assert.is_not_nil(weekday_summary_monday, 'Weekday summary for ' .. targetWeekday .. ' should exist')
+        assert.are.same(5, weekday_summary_monday.diffInHours, 'Weekday diffInHours for ' .. targetWeekday)
+        assert.are.same(-3, weekday_summary_monday.overhour, 'Weekday overhour for ' .. targetWeekday .. ' (5 logged, 8 expected)')
 
         -- Weekday summary for Wednesday (auto-initialized)
         local auto_init_weekday = 'Wednesday' -- Mocked time is Wednesday
         local current_config_content = maorunTime.get_config().content
-        local hours_expected_wednesday = (
-            current_config_content.hoursPerWeekday
-            and current_config_content.hoursPerWeekday[auto_init_weekday]
-        ) or 8
-        local weekday_summary_wednesday =
-            data.content.data[expected_year_key][expected_week_key][auto_init_weekday].summary
-        assert.is_not_nil(
-            weekday_summary_wednesday,
-            'Weekday summary for ' .. auto_init_weekday .. ' (auto-init) should exist'
-        )
-        assert.are.same(
-            0,
-            weekday_summary_wednesday.diffInHours,
-            'Weekday diffInHours for ' .. auto_init_weekday .. ' (auto-init)'
-        )
-        assert.are.same(
-            -hours_expected_wednesday,
-            weekday_summary_wednesday.overhour,
-            'Weekday overhour for ' .. auto_init_weekday .. ' (auto-init)'
-        )
+        local hours_expected_wednesday = (current_config_content.hoursPerWeekday and current_config_content.hoursPerWeekday[auto_init_weekday]) or 8
+        local weekday_summary_wednesday = data.content.data[expected_year_key][expected_week_key][auto_init_weekday].summary
+        assert.is_not_nil(weekday_summary_wednesday, 'Weekday summary for '..auto_init_weekday..' (auto-init) should exist')
+        assert.are.same(0, weekday_summary_wednesday.diffInHours, 'Weekday diffInHours for '..auto_init_weekday..' (auto-init)')
+        assert.are.same(-hours_expected_wednesday, weekday_summary_wednesday.overhour, 'Weekday overhour for '..auto_init_weekday..' (auto-init)')
 
         -- Weekly summary check
         -- Monday (logged 5, 8 expected = -3)
@@ -315,55 +232,31 @@ describe('calculate', function()
             'Summary for weekday1 should exist'
         )
         -- File summary checks for weekday1 (Wednesday)
-        local file_summary_wd1 =
-            data.content.data[expected_year_key][expected_week_key][weekday1]['default_project']['default_file'].summary
+        local file_summary_wd1 = data.content.data[expected_year_key][expected_week_key][weekday1]['default_project']['default_file'].summary
         assert.are.same(7, file_summary_wd1.diffInHours, 'File diffInHours for ' .. weekday1)
-        assert.is_nil(
-            file_summary_wd1.overhour,
-            'File overhour for ' .. weekday1 .. ' should be nil'
-        )
+        assert.is_nil(file_summary_wd1.overhour, 'File overhour for ' .. weekday1 .. ' should be nil')
 
         -- Weekday summary checks for weekday1 (Wednesday)
-        local weekday_summary_wd1 =
-            data.content.data[expected_year_key][expected_week_key][weekday1].summary
-        assert.is_not_nil(
-            weekday_summary_wd1,
-            'Weekday summary for ' .. weekday1 .. ' should exist'
-        )
+        local weekday_summary_wd1 = data.content.data[expected_year_key][expected_week_key][weekday1].summary
+        assert.is_not_nil(weekday_summary_wd1, 'Weekday summary for ' .. weekday1 .. ' should exist')
         assert.are.same(7, weekday_summary_wd1.diffInHours, 'Weekday diffInHours for ' .. weekday1)
-        assert.are.same(
-            -1,
-            weekday_summary_wd1.overhour,
-            'Weekday overhour for ' .. weekday1 .. ' (7 logged, 8 expected)'
-        )
+        assert.are.same(-1, weekday_summary_wd1.overhour, 'Weekday overhour for ' .. weekday1 .. ' (7 logged, 8 expected)')
 
         -- File summary checks for weekday2 (Thursday)
         assert.is_not_nil(
             data.content.data[expected_year_key][expected_week_key][weekday2]['default_project']['default_file'],
             'Data for weekday2 should exist'
         )
-        local file_summary_wd2 =
-            data.content.data[expected_year_key][expected_week_key][weekday2]['default_project']['default_file'].summary
+        local file_summary_wd2 = data.content.data[expected_year_key][expected_week_key][weekday2]['default_project']['default_file'].summary
         assert.is_not_nil(file_summary_wd2, 'Summary for weekday2 should exist')
         assert.are.same(9, file_summary_wd2.diffInHours, 'File diffInHours for ' .. weekday2)
-        assert.is_nil(
-            file_summary_wd2.overhour,
-            'File overhour for ' .. weekday2 .. ' should be nil'
-        )
+        assert.is_nil(file_summary_wd2.overhour, 'File overhour for ' .. weekday2 .. ' should be nil')
 
         -- Weekday summary checks for weekday2 (Thursday)
-        local weekday_summary_wd2 =
-            data.content.data[expected_year_key][expected_week_key][weekday2].summary
-        assert.is_not_nil(
-            weekday_summary_wd2,
-            'Weekday summary for ' .. weekday2 .. ' should exist'
-        )
+        local weekday_summary_wd2 = data.content.data[expected_year_key][expected_week_key][weekday2].summary
+        assert.is_not_nil(weekday_summary_wd2, 'Weekday summary for ' .. weekday2 .. ' should exist')
         assert.are.same(9, weekday_summary_wd2.diffInHours, 'Weekday diffInHours for ' .. weekday2)
-        assert.are.same(
-            1,
-            weekday_summary_wd2.overhour,
-            'Weekday overhour for ' .. weekday2 .. ' (9 logged, 8 expected)'
-        )
+        assert.are.same(1, weekday_summary_wd2.overhour, 'Weekday overhour for ' .. weekday2 .. ' (9 logged, 8 expected)')
 
         -- Weekly summary check
         -- Wednesday (logged 7, 8 expected = -1)
@@ -445,64 +338,30 @@ describe('calculate', function()
         local weekFromMock = '50' -- Expected from mocked time
 
         -- File summary check for dayToLog (Monday)
-        local file_summary_day_to_log =
-            data.content.data[yearFromMock][weekFromMock][dayToLog]['default_project']['default_file'].summary
-        assert.are.same(6, file_summary_day_to_log.diffInHours, 'File diffInHours for ' .. dayToLog)
-        assert.is_nil(
-            file_summary_day_to_log.overhour,
-            'File overhour for ' .. dayToLog .. ' should be nil'
-        )
+        local file_summary_day_to_log = data.content.data[yearFromMock][weekFromMock][dayToLog]['default_project']['default_file'].summary
+        assert.are.same(6, file_summary_day_to_log.diffInHours, "File diffInHours for " .. dayToLog)
+        assert.is_nil(file_summary_day_to_log.overhour, "File overhour for " .. dayToLog .. " should be nil")
 
         -- Weekday summary check for dayToLog (Monday)
-        local weekday_summary_day_to_log =
-            data.content.data[yearFromMock][weekFromMock][dayToLog].summary
-        assert.is_not_nil(
-            weekday_summary_day_to_log,
-            'Weekday summary for ' .. dayToLog .. ' should exist'
-        )
-        assert.are.same(
-            6,
-            weekday_summary_day_to_log.diffInHours,
-            'Weekday diffInHours for ' .. dayToLog
-        )
-        assert.are.same(
-            -2,
-            weekday_summary_day_to_log.overhour,
-            'Weekday overhour for ' .. dayToLog .. ' (6 logged, 8 expected)'
-        )
+        local weekday_summary_day_to_log = data.content.data[yearFromMock][weekFromMock][dayToLog].summary
+        assert.is_not_nil(weekday_summary_day_to_log, "Weekday summary for " .. dayToLog .. " should exist")
+        assert.are.same(6, weekday_summary_day_to_log.diffInHours, "Weekday diffInHours for " .. dayToLog)
+        assert.are.same(-2, weekday_summary_day_to_log.overhour, "Weekday overhour for " .. dayToLog .. " (6 logged, 8 expected)")
 
         -- Weekday summary for Wednesday (auto-initialized by M.init in setup because mocked time is Wednesday)
         local auto_init_weekday = 'Wednesday'
-        local hours_expected_wednesday = (
-            fileData.hoursPerWeekday and fileData.hoursPerWeekday[auto_init_weekday]
-        ) or 8
-        local weekday_summary_auto_init =
-            data.content.data[yearFromMock][weekFromMock][auto_init_weekday].summary
-        assert.is_not_nil(
-            weekday_summary_auto_init,
-            'Weekday summary for ' .. auto_init_weekday .. ' (auto-init) should exist'
-        )
-        assert.are.same(
-            0,
-            weekday_summary_auto_init.diffInHours,
-            'Weekday diffInHours for ' .. auto_init_weekday .. ' (auto-init)'
-        )
-        assert.are.same(
-            -hours_expected_wednesday,
-            weekday_summary_auto_init.overhour,
-            'Weekday overhour for ' .. auto_init_weekday .. ' (auto-init)'
-        )
+        local hours_expected_wednesday = (fileData.hoursPerWeekday and fileData.hoursPerWeekday[auto_init_weekday]) or 8
+        local weekday_summary_auto_init = data.content.data[yearFromMock][weekFromMock][auto_init_weekday].summary
+        assert.is_not_nil(weekday_summary_auto_init, "Weekday summary for "..auto_init_weekday.." (auto-init) should exist")
+        assert.are.same(0, weekday_summary_auto_init.diffInHours, "Weekday diffInHours for "..auto_init_weekday.." (auto-init)")
+        assert.are.same(-hours_expected_wednesday, weekday_summary_auto_init.overhour, "Weekday overhour for "..auto_init_weekday.." (auto-init)")
 
         -- Weekly summary check
         -- prevWeekOverhourValue = 5 (from manually written data)
         -- Monday (dayToLog: logged 6, 8 expected = -2)
         -- Wednesday (auto-initialized by setup, 0 logged, 8 expected = -8)
         -- Total = 5 (prev) - 2 (Mon) - 8 (Wed) = -5
-        assert.are.same(
-            -5,
-            data.content.data[yearFromMock][weekFromMock].summary.overhour,
-            'Weekly overhour calculation'
-        )
+        assert.are.same(-5, data.content.data[yearFromMock][weekFromMock].summary.overhour, "Weekly overhour calculation")
     end)
 
     it('should calculate correctly for a specific year and weeknumber option', function()
@@ -570,29 +429,14 @@ describe('calculate', function()
         local file_day_data = weekData[testWeekday]['default_project']['default_file']
         assert.is_not_nil(file_day_data, 'Data for ' .. testWeekday .. ' should exist')
         -- File summary check
-        assert.are.same(
-            loggedHours,
-            file_day_data.summary.diffInHours,
-            'File diffInHours for ' .. testWeekday
-        )
-        assert.is_nil(
-            file_day_data.summary.overhour,
-            'File overhour for ' .. testWeekday .. ' should be nil'
-        )
+        assert.are.same(loggedHours, file_day_data.summary.diffInHours, 'File diffInHours for ' .. testWeekday)
+        assert.is_nil(file_day_data.summary.overhour, 'File overhour for ' .. testWeekday .. ' should be nil')
 
         -- Weekday summary check
         local weekday_summary = weekData[testWeekday].summary
-        assert.is_not_nil(weekday_summary, 'Weekday summary for ' .. testWeekday .. ' should exist')
-        assert.are.same(
-            loggedHours,
-            weekday_summary.diffInHours,
-            'Weekday diffInHours for ' .. testWeekday
-        )
-        assert.are.same(
-            expectedDailyOvertime,
-            weekday_summary.overhour,
-            'Weekday overhour for ' .. testWeekday
-        )
+        assert.is_not_nil(weekday_summary, "Weekday summary for " .. testWeekday .. " should exist")
+        assert.are.same(loggedHours, weekday_summary.diffInHours, "Weekday diffInHours for " .. testWeekday)
+        assert.are.same(expectedDailyOvertime, weekday_summary.overhour, "Weekday overhour for " .. testWeekday)
 
         -- Weekly summary check
         -- Only testWeekday has entries. Other days in this week are not auto-initialized because calculate is called with specific year/week.
@@ -628,54 +472,26 @@ describe('calculate', function()
         -- calculate() will then process this structure.
         local currentMockedWeekday = original_os_date('%A', mock_fixed_time) -- Should be 'Wednesday'
         local current_config_content_for_zero_total = maorunTime.get_config().content
-        local hours_expected_mocked_weekday = (
-            current_config_content_for_zero_total.hoursPerWeekday
-            and current_config_content_for_zero_total.hoursPerWeekday[currentMockedWeekday]
-        ) or 8
+        local hours_expected_mocked_weekday = (current_config_content_for_zero_total.hoursPerWeekday and current_config_content_for_zero_total.hoursPerWeekday[currentMockedWeekday]) or 8
 
         -- Weekday summary check for the auto-initialized day
         local weekday_summary_init = weekData[currentMockedWeekday].summary
-        assert.is_not_nil(
-            weekday_summary_init,
-            'Weekday summary for auto-initialized ' .. currentMockedWeekday .. ' should exist'
-        )
-        assert.are.same(
-            0,
-            weekday_summary_init.diffInHours,
-            'Weekday diffInHours for auto-initialized ' .. currentMockedWeekday
-        )
-        assert.are.same(
-            -hours_expected_mocked_weekday,
-            weekday_summary_init.overhour,
-            'Weekday overhour for auto-initialized ' .. currentMockedWeekday
-        )
+        assert.is_not_nil(weekday_summary_init, "Weekday summary for auto-initialized " .. currentMockedWeekday .. " should exist")
+        assert.are.same(0, weekday_summary_init.diffInHours, "Weekday diffInHours for auto-initialized " .. currentMockedWeekday)
+        assert.are.same(-hours_expected_mocked_weekday, weekday_summary_init.overhour, "Weekday overhour for auto-initialized " .. currentMockedWeekday)
 
         -- Weekly summary check
         assert.are.same(
             -hours_expected_mocked_weekday,
             weekData.summary.overhour,
-            'Weekly overhour should be '
-                .. -hours_expected_mocked_weekday
-                .. ' due to auto-initialized '
-                .. currentMockedWeekday
+            'Weekly overhour should be ' .. -hours_expected_mocked_weekday .. ' due to auto-initialized ' .. currentMockedWeekday
         )
 
         -- File summary check for the auto-initialized day
-        local file_summary_init =
-            weekData[currentMockedWeekday]['default_project']['default_file'].summary
-        assert.is_not_nil(
-            file_summary_init,
-            'File summary for auto-initialized ' .. currentMockedWeekday .. ' should exist'
-        )
-        assert.are.same(
-            0,
-            file_summary_init.diffInHours,
-            'File diffInHours for auto-initialized ' .. currentMockedWeekday
-        )
-        assert.is_nil(
-            file_summary_init.overhour,
-            'File overhour for auto-initialized ' .. currentMockedWeekday .. ' should be nil'
-        )
+        local file_summary_init = weekData[currentMockedWeekday]['default_project']['default_file'].summary
+        assert.is_not_nil(file_summary_init, "File summary for auto-initialized " .. currentMockedWeekday .. " should exist")
+        assert.are.same(0, file_summary_init.diffInHours, "File diffInHours for auto-initialized " .. currentMockedWeekday)
+        assert.is_nil(file_summary_init.overhour, "File overhour for auto-initialized " .. currentMockedWeekday .. " should be nil")
 
         assert.is_table(
             weekData[currentMockedWeekday]['default_project']['default_file'].items,
@@ -754,55 +570,22 @@ describe('calculate', function()
         assert.is_not_nil(file_day_data.summary, 'Summary for ' .. targetWeekday .. ' should exist')
 
         -- File summary checks for targetWeekday (Saturday)
-        assert.are.same(
-            loggedHours,
-            file_day_data.summary.diffInHours,
-            'File diffInHours for ' .. targetWeekday
-        )
-        assert.is_nil(
-            file_day_data.summary.overhour,
-            'File overhour for ' .. targetWeekday .. ' should be nil'
-        )
+        assert.are.same(loggedHours, file_day_data.summary.diffInHours, 'File diffInHours for ' .. targetWeekday)
+        assert.is_nil(file_day_data.summary.overhour, 'File overhour for ' .. targetWeekday .. ' should be nil')
 
         -- Weekday summary checks for targetWeekday (Saturday)
         local weekday_summary_target = weekData[targetWeekday].summary
-        assert.is_not_nil(
-            weekday_summary_target,
-            'Weekday summary for ' .. targetWeekday .. ' should exist'
-        )
-        assert.are.same(
-            loggedHours,
-            weekday_summary_target.diffInHours,
-            'Weekday diffInHours for ' .. targetWeekday
-        )
-        assert.are.same(
-            loggedHours,
-            weekday_summary_target.overhour,
-            'Weekday overhour for '
-                .. targetWeekday
-                .. ' (logged '
-                .. loggedHours
-                .. ', 0 expected)'
-        )
+        assert.is_not_nil(weekday_summary_target, "Weekday summary for " .. targetWeekday .. " should exist")
+        assert.are.same(loggedHours, weekday_summary_target.diffInHours, "Weekday diffInHours for " .. targetWeekday)
+        assert.are.same(loggedHours, weekday_summary_target.overhour, "Weekday overhour for " .. targetWeekday .. " (logged " .. loggedHours .. ", 0 expected)")
 
         -- Weekday summary for Wednesday (auto-initialized by setup because mocked time is Wednesday)
         local auto_init_weekday = 'Wednesday'
         local hours_expected_wednesday = customHours[auto_init_weekday] or 8
         local weekday_summary_auto_init = weekData[auto_init_weekday].summary
-        assert.is_not_nil(
-            weekday_summary_auto_init,
-            'Weekday summary for ' .. auto_init_weekday .. ' (auto-init) should exist'
-        )
-        assert.are.same(
-            0,
-            weekday_summary_auto_init.diffInHours,
-            'Weekday diffInHours for ' .. auto_init_weekday .. ' (auto-init)'
-        )
-        assert.are.same(
-            -hours_expected_wednesday,
-            weekday_summary_auto_init.overhour,
-            'Weekday overhour for ' .. auto_init_weekday .. ' (auto-init)'
-        )
+        assert.is_not_nil(weekday_summary_auto_init, "Weekday summary for "..auto_init_weekday.." (auto-init) should exist")
+        assert.are.same(0, weekday_summary_auto_init.diffInHours, "Weekday diffInHours for "..auto_init_weekday.." (auto-init)")
+        assert.are.same(-hours_expected_wednesday, weekday_summary_auto_init.overhour, "Weekday overhour for "..auto_init_weekday.." (auto-init)")
 
         -- Weekly summary check
         -- Saturday (logged 2, 0 expected = +2)
@@ -811,10 +594,7 @@ describe('calculate', function()
         assert.are.same(
             -6,
             weekData.summary.overhour,
-            'Weekly overhour should be -6 to reflect '
-                .. targetWeekday
-                .. ' overtime and auto-initialized '
-                .. auto_init_weekday
+            'Weekly overhour should be -6 to reflect ' .. targetWeekday .. ' overtime and auto-initialized ' .. auto_init_weekday
         )
     end)
 end)

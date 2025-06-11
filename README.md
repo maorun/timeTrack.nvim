@@ -40,6 +40,7 @@ require('maorun.time').setup({
 The data is stored in a JSON file. The default path is `~/.local/share/nvim/maorun-time.json` (or equivalent `vim.fn.stdpath('data') .. '/maorun-time.json'`).
 
 The structure of the JSON file is as follows:
+The `summary` object within each weekday (e.g., `Monday.summary`) now contains the total `diffInHours` for that day and the daily `overhour`. The `summary` for individual files (e.g., `feature-task.lua.summary`) only contains `diffInHours` for that specific file.
 
 ```json
 {
@@ -49,22 +50,25 @@ The structure of the JSON file is as follows:
     "Wednesday": 8,
     "Thursday": 8,
     "Friday": 8,
-    "Saturday": 8,
-    "Sunday": 8
+    "Saturday": 0,
+    "Sunday": 0
   },
   "paused": false,
   "data": {
     "YYYY": {
       "WW": {
         "summary": {
-          "overhour": -7.5
+          "overhour": -1.0
         },
         "Monday": {
+          "summary": {
+            "diffInHours": 8.5,
+            "overhour": 0.5
+          },
           "WorkProject": {
             "feature-task.lua": {
               "summary": {
-                "diffInHours": 6.5,
-                "overhour": -1.5
+                "diffInHours": 6.5
               },
               "items": [
                 {
@@ -87,8 +91,7 @@ The structure of the JSON file is as follows:
           "PersonalProject": {
             "learning.md": {
               "summary": {
-                "diffInHours": 2.0,
-                "overhour": -6.0
+                "diffInHours": 2.0
               },
               "items": [
                 {
@@ -103,19 +106,22 @@ The structure of the JSON file is as follows:
           }
         },
         "Tuesday": {
+          "summary": {
+            "diffInHours": 6.5,
+            "overhour": -1.5
+          },
           "WorkProject": {
             "bug-fix.lua": {
               "summary": {
-                "diffInHours": 8.0,
-                "overhour": 0.0
+                "diffInHours": 6.5
               },
               "items": [
                 {
                   "startTime": 1678963200,
                   "startReadable": "09:00",
-                  "endTime": 1678992000,
-                  "endReadable": "17:00",
-                  "diffInHours": 8.0
+                  "endTime": 1678988100,
+                  "endReadable": "15:30",
+                  "diffInHours": 6.5
                 }
               ]
             }
