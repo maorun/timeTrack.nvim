@@ -125,35 +125,29 @@ function M.calculate(opts)
             local total_hours_for_weekday = 0
 
             for project_name, project_data in pairs(weekday_data) do
-                -- Skip 'summary' if it somehow appears as a project name
-                if project_name == 'summary' then goto continue_project end
-
-                for file_name, file_data in pairs(project_data) do
-                    -- Skip 'summary' if it somehow appears as a file name (though less likely)
-                    if file_name == 'summary' then goto continue_file end
-
-                    local time_in_file = 0
-                    if file_data.items then
-                        for _, item_entry in pairs(file_data.items) do
-                            if item_entry.diffInHours ~= nil then
-                                time_in_file = time_in_file + item_entry.diffInHours
+                if project_name ~= 'summary' then -- Check project_name
+                    for file_name, file_data in pairs(project_data) do
+                        if file_name ~= 'summary' then -- Check file_name
+                            local time_in_file = 0
+                            if file_data.items then
+                                for _, item_entry in pairs(file_data.items) do
+                                    if item_entry.diffInHours ~= nil then
+                                        time_in_file = time_in_file + item_entry.diffInHours
+                                    end
+                                end
                             end
-                        end
-                    end
 
-                    if file_data.summary == nil then
-                        file_data.summary = {}
-                    end
-                    file_data.summary.diffInHours = time_in_file
-                    -- REMOVE overhour from file_data.summary
-                    file_data.summary.overhour = nil -- Explicitly remove/nil it
+                            if file_data.summary == nil then
+                                file_data.summary = {}
+                            end
+                            file_data.summary.diffInHours = time_in_file
+                            file_data.summary.overhour = nil -- Explicitly remove/nil it
 
-                    total_hours_for_weekday = total_hours_for_weekday + time_in_file
-
-                    ::continue_file::
-                end
-                ::continue_project::
-            end
+                            total_hours_for_weekday = total_hours_for_weekday + time_in_file
+                        end -- end if file_name ~= 'summary'
+                    end -- end for file_name
+                end -- end if project_name ~= 'summary'
+            end -- end for project_name
 
             -- Now calculate the summary for the entire weekday
             weekday_data.summary.diffInHours = total_hours_for_weekday
