@@ -319,28 +319,30 @@ describe('Project and File Tracking Functionality', function()
                 data.data[mock_date_params.year][mock_date_params.week]['Monday']['Bravo']['init.lua'].summary
 
             -- File summaries
-            assert.is_near(2, alpha_main_mon.diffInHours, 0.001, "Alpha/main.lua Mon diffInHours")
-            assert.is_nil(alpha_main_mon.overhour, "Alpha/main.lua Mon overhour should be nil")
+            assert.is_near(2, alpha_main_mon.diffInHours, 0.001, 'Alpha/main.lua Mon diffInHours')
+            assert.is_nil(alpha_main_mon.overhour, 'Alpha/main.lua Mon overhour should be nil')
 
-            assert.is_near(3, alpha_utils_mon.diffInHours, 0.001, "Alpha/utils.lua Mon diffInHours")
-            assert.is_nil(alpha_utils_mon.overhour, "Alpha/utils.lua Mon overhour should be nil")
+            assert.is_near(3, alpha_utils_mon.diffInHours, 0.001, 'Alpha/utils.lua Mon diffInHours')
+            assert.is_nil(alpha_utils_mon.overhour, 'Alpha/utils.lua Mon overhour should be nil')
 
-            assert.is_near(4, alpha_main_tue.diffInHours, 0.001, "Alpha/main.lua Tue diffInHours")
-            assert.is_nil(alpha_main_tue.overhour, "Alpha/main.lua Tue overhour should be nil")
+            assert.is_near(4, alpha_main_tue.diffInHours, 0.001, 'Alpha/main.lua Tue diffInHours')
+            assert.is_nil(alpha_main_tue.overhour, 'Alpha/main.lua Tue overhour should be nil')
 
-            assert.is_near(1, bravo_init_mon.diffInHours, 0.001, "Bravo/init.lua Mon diffInHours")
-            assert.is_nil(bravo_init_mon.overhour, "Bravo/init.lua Mon overhour should be nil")
+            assert.is_near(1, bravo_init_mon.diffInHours, 0.001, 'Bravo/init.lua Mon diffInHours')
+            assert.is_nil(bravo_init_mon.overhour, 'Bravo/init.lua Mon overhour should be nil')
 
             -- Weekday summaries
-            local monday_summary = data.data[mock_date_params.year][mock_date_params.week]['Monday'].summary
-            assert.is_not_nil(monday_summary, "Monday weekday summary should exist")
-            assert.is_near(2 + 3 + 1, monday_summary.diffInHours, 0.001, "Monday total diffInHours") -- 2 (Alpha/main) + 3 (Alpha/utils) + 1 (Bravo/init)
-            assert.is_near((2 + 3 + 1) - 8, monday_summary.overhour, 0.001, "Monday total overhour") -- 6 - 8 = -2
+            local monday_summary =
+                data.data[mock_date_params.year][mock_date_params.week]['Monday'].summary
+            assert.is_not_nil(monday_summary, 'Monday weekday summary should exist')
+            assert.is_near(2 + 3 + 1, monday_summary.diffInHours, 0.001, 'Monday total diffInHours') -- 2 (Alpha/main) + 3 (Alpha/utils) + 1 (Bravo/init)
+            assert.is_near((2 + 3 + 1) - 8, monday_summary.overhour, 0.001, 'Monday total overhour') -- 6 - 8 = -2
 
-            local tuesday_summary = data.data[mock_date_params.year][mock_date_params.week]['Tuesday'].summary
-            assert.is_not_nil(tuesday_summary, "Tuesday weekday summary should exist")
-            assert.is_near(4, tuesday_summary.diffInHours, 0.001, "Tuesday total diffInHours") -- 4 (Alpha/main)
-            assert.is_near(4 - 8, tuesday_summary.overhour, 0.001, "Tuesday total overhour") -- 4 - 8 = -4
+            local tuesday_summary =
+                data.data[mock_date_params.year][mock_date_params.week]['Tuesday'].summary
+            assert.is_not_nil(tuesday_summary, 'Tuesday weekday summary should exist')
+            assert.is_near(4, tuesday_summary.diffInHours, 0.001, 'Tuesday total diffInHours') -- 4 (Alpha/main)
+            assert.is_near(4 - 8, tuesday_summary.overhour, 0.001, 'Tuesday total overhour') -- 4 - 8 = -4
 
             -- Week summary
             -- Monday overhour (-2) + Tuesday overhour (-4) = -6
@@ -350,7 +352,8 @@ describe('Project and File Tracking Functionality', function()
                 -6,
                 week_summary.overhour,
                 0.001,
-                'Week summary overhour incorrect. Expected -6. Got: ' .. inspect(week_summary.overhour)
+                'Week summary overhour incorrect. Expected -6. Got: '
+                    .. inspect(week_summary.overhour)
             )
         end)
     end)

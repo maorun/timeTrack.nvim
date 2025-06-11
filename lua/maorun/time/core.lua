@@ -151,11 +151,13 @@ function M.calculate(opts)
 
             -- Now calculate the summary for the entire weekday
             weekday_data.summary.diffInHours = total_hours_for_weekday
-            local expected_hours_for_weekday = config_module.obj.content['hoursPerWeekday'][weekday_name] or 0
+            local expected_hours_for_weekday = config_module.obj.content['hoursPerWeekday'][weekday_name]
+                or 0
             weekday_data.summary.overhour = total_hours_for_weekday - expected_hours_for_weekday
 
             -- Add this weekday's overhour to the total week's overhour
-            current_week_data.summary.overhour = current_week_data.summary.overhour + weekday_data.summary.overhour
+            current_week_data.summary.overhour = current_week_data.summary.overhour
+                + weekday_data.summary.overhour
         end
     end
 end
