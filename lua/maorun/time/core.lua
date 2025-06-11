@@ -76,7 +76,6 @@ function M.init(user_config)
     return config_module.obj
 end
 
----@param opts {weeknumber: string|osdate, year: string|osdate}|nil
 function M.calculate(opts)
     opts = vim.tbl_deep_extend('keep', opts or {}, {
         year = os.date('%Y'),
@@ -100,6 +99,7 @@ function M.calculate(opts)
     end
 
     local prevWeekOverhour = 0
+    -- Previous week overhour calculation (remains unchanged)
     if config_module.obj.content['data'][year_str] then
         local prev_week_number_str = string.format('%02d', tonumber(week_str) - 1)
         if config_module.obj.content['data'][year_str][prev_week_number_str] then
@@ -110,19 +110,33 @@ function M.calculate(opts)
         end
     end
 
-    current_week_data.summary.overhour = prevWeekOverhour
+    current_week_data.summary.overhour = prevWeekOverhour -- Initialize with previous week's overhour
 
     for weekday_name, weekday_data in pairs(current_week_data) do
         if weekday_name ~= 'summary' then -- Assuming 'summary' is not a valid weekday name
+            -- Initialize daily summary for the weekday
+            if weekday_data.summary == nil then
+                weekday_data.summary = { diffInHours = 0, overhour = 0 } -- diffInHours will accumulate
+            else -- Ensure it's reset/initialized correctly for recalculation
+                weekday_data.summary.diffInHours = 0
+                weekday_data.summary.overhour = 0
+            end
+
+            local total_hours_for_weekday = 0
+
             for project_name, project_data in pairs(weekday_data) do
+                -- Skip 'summary' if it somehow appears as a project name
+                if project_name == 'summary' then goto continue_project end
+
                 for file_name, file_data in pairs(project_data) do
-                    -- The structure is now year -> week -> weekday -> project -> file
-                    -- So file_data directly contains items and summary for that day
-                    local time_in_day = 0
+                    -- Skip 'summary' if it somehow appears as a file name (though less likely)
+                    if file_name == 'summary' then goto continue_file end
+
+                    local time_in_file = 0
                     if file_data.items then
                         for _, item_entry in pairs(file_data.items) do
                             if item_entry.diffInHours ~= nil then
-                                time_in_day = time_in_day + item_entry.diffInHours
+                                time_in_file = time_in_file + item_entry.diffInHours
                             end
                         end
                     end
@@ -130,16 +144,24 @@ function M.calculate(opts)
                     if file_data.summary == nil then
                         file_data.summary = {}
                     end
-                    file_data.summary.diffInHours = time_in_day
+                    file_data.summary.diffInHours = time_in_file
+                    -- REMOVE overhour from file_data.summary
+                    file_data.summary.overhour = nil -- Explicitly remove/nil it
 
-                    local expected_hours = config_module.obj.content['hoursPerWeekday'][weekday_name]
-                        or 0
-                    file_data.summary.overhour = time_in_day - expected_hours
+                    total_hours_for_weekday = total_hours_for_weekday + time_in_file
 
-                    current_week_data.summary.overhour = current_week_data.summary.overhour
-                        + file_data.summary.overhour
+                    ::continue_file::
                 end
+                ::continue_project::
             end
+
+            -- Now calculate the summary for the entire weekday
+            weekday_data.summary.diffInHours = total_hours_for_weekday
+            local expected_hours_for_weekday = config_module.obj.content['hoursPerWeekday'][weekday_name] or 0
+            weekday_data.summary.overhour = total_hours_for_weekday - expected_hours_for_weekday
+
+            -- Add this weekday's overhour to the total week's overhour
+            current_week_data.summary.overhour = current_week_data.summary.overhour + weekday_data.summary.overhour
         end
     end
 end
@@ -534,6 +556,10 @@ function M.setTime(opts)
         project = project,
         file = file,
     })
+end
+
+function M.get_config()
+    return config_module.obj
 end
 
 return M

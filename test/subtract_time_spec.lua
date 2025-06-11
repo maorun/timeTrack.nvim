@@ -79,20 +79,30 @@ describe('subtractTime', function()
             'diffInHours should be approximately ' .. -hoursToSubtract
         )
 
-        local weekdaySummary =
+        -- File Summary
+        local fileSummary =
             data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
-            math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
-            'Weekday summary diffInHours should be approximately ' .. -hoursToSubtract
+            math.abs(fileSummary.diffInHours - -hoursToSubtract) < 0.001,
+            'File summary diffInHours should be approximately ' .. -hoursToSubtract
+        )
+        assert.is_nil(fileSummary.overhour, 'File summary overhour should be nil')
+
+        -- Weekday Summary (actual day summary)
+        local daySummary = data.content.data[expected_year_key][expected_week_key][weekday].summary
+        assert.is_not_nil(daySummary, "Day summary for "..weekday.." should exist")
+        assert(
+            math.abs(daySummary.diffInHours - -hoursToSubtract) < 0.001,
+            'Day summary diffInHours should be approximately ' .. -hoursToSubtract
         )
         assert(
-            math.abs(weekdaySummary.overhour - (-hoursToSubtract - defaultHoursForMonday)) < 0.001,
-            'Weekday summary overhour should be ' .. (-hoursToSubtract - defaultHoursForMonday)
+            math.abs(daySummary.overhour - (-hoursToSubtract - defaultHoursForMonday)) < 0.001,
+            'Day summary overhour should be ' .. (-hoursToSubtract - defaultHoursForMonday)
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
-        -- Monday: (-3) - 8 = -11. Auto-init Wednesday: 0 - 8 = -8. Total = -19.
-        local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForMonday) - 8
+        -- Monday: (-3) - 8 = -11. No auto-init Wednesday in this calculate context.
+        local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForMonday) -- Was: (-hoursToSubtract - defaultHoursForMonday) - 8
         assert(
             math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
             'Week summary overhour should be '
@@ -141,20 +151,30 @@ describe('subtractTime', function()
             'diffInHours for Tuesday should be approximately ' .. -hoursToSubtract
         )
 
-        local weekdaySummary =
+        -- File Summary
+        local fileSummaryTuesday =
             data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
-            math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
-            'Tuesday summary diffInHours should be approximately ' .. -hoursToSubtract
+            math.abs(fileSummaryTuesday.diffInHours - -hoursToSubtract) < 0.001,
+            'File summary diffInHours for Tuesday should be approximately ' .. -hoursToSubtract
+        )
+        assert.is_nil(fileSummaryTuesday.overhour, 'File summary overhour for Tuesday should be nil')
+
+        -- Weekday Summary (actual day summary)
+        local daySummaryTuesday = data.content.data[expected_year_key][expected_week_key][weekday].summary
+        assert.is_not_nil(daySummaryTuesday, "Day summary for "..weekday.." should exist")
+        assert(
+            math.abs(daySummaryTuesday.diffInHours - -hoursToSubtract) < 0.001,
+            'Day summary diffInHours for Tuesday should be approximately ' .. -hoursToSubtract
         )
         assert(
-            math.abs(weekdaySummary.overhour - (-hoursToSubtract - defaultHoursForTuesday)) < 0.001,
-            'Tuesday summary overhour should be ' .. (-hoursToSubtract - defaultHoursForTuesday)
+            math.abs(daySummaryTuesday.overhour - (-hoursToSubtract - defaultHoursForTuesday)) < 0.001,
+            'Day summary overhour for Tuesday should be ' .. (-hoursToSubtract - defaultHoursForTuesday)
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
-        -- Tuesday: (-2.5) - 8 = -10.5. Auto-init Wednesday: 0 - 8 = -8. Total = -18.5.
-        local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForTuesday) - 8
+        -- Tuesday: (-2.5) - 8 = -10.5. No auto-init Wednesday.
+        local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForTuesday) -- Was: (-hoursToSubtract - defaultHoursForTuesday) - 8
         assert(
             math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
             'Week summary overhour should reflect Tuesday subtraction. Expected: '
@@ -204,16 +224,26 @@ describe('subtractTime', function()
             'diffInHours for current day should be approximately ' .. -hoursToSubtract
         )
 
-        local weekdaySummary =
+        -- File Summary
+        local fileSummaryCurrentDay =
             data.content.data[expected_year_key][expected_week_key][currentWeekday]['default_project']['default_file'].summary
         assert(
-            math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
-            'Current day summary diffInHours should be approximately ' .. -hoursToSubtract
+            math.abs(fileSummaryCurrentDay.diffInHours - -hoursToSubtract) < 0.001,
+            'File summary diffInHours for current day should be approximately ' .. -hoursToSubtract
+        )
+        assert.is_nil(fileSummaryCurrentDay.overhour, 'File summary overhour for current day should be nil')
+
+        -- Weekday Summary (actual day summary)
+        local daySummaryCurrentDay = data.content.data[expected_year_key][expected_week_key][currentWeekday].summary
+        assert.is_not_nil(daySummaryCurrentDay, "Day summary for "..currentWeekday.." should exist")
+        assert(
+            math.abs(daySummaryCurrentDay.diffInHours - -hoursToSubtract) < 0.001,
+            'Day summary diffInHours for current day should be approximately ' .. -hoursToSubtract
         )
         assert(
-            math.abs(weekdaySummary.overhour - (-hoursToSubtract - defaultHoursForCurrentDay))
+            math.abs(daySummaryCurrentDay.overhour - (-hoursToSubtract - defaultHoursForCurrentDay))
                 < 0.001,
-            'Current day summary overhour calculation'
+            'Day summary overhour for current day calculation'
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
@@ -262,16 +292,26 @@ describe('subtractTime', function()
             'diffInHours for Wednesday should be approximately ' .. -hoursToSubtract
         )
 
-        local weekdaySummary =
+        -- File Summary
+        local fileSummaryWednesday =
             data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
-            math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
-            'Wednesday summary diffInHours should be approximately ' .. -hoursToSubtract
+            math.abs(fileSummaryWednesday.diffInHours - -hoursToSubtract) < 0.001,
+            'File summary diffInHours for Wednesday should be approximately ' .. -hoursToSubtract
+        )
+        assert.is_nil(fileSummaryWednesday.overhour, 'File summary overhour for Wednesday should be nil')
+
+        -- Weekday Summary (actual day summary)
+        local daySummaryWednesday = data.content.data[expected_year_key][expected_week_key][weekday].summary
+        assert.is_not_nil(daySummaryWednesday, "Day summary for "..weekday.." should exist")
+        assert(
+            math.abs(daySummaryWednesday.diffInHours - -hoursToSubtract) < 0.001,
+            'Day summary diffInHours for Wednesday should be approximately ' .. -hoursToSubtract
         )
         assert(
-            math.abs(weekdaySummary.overhour - (-hoursToSubtract - defaultHoursForWednesday))
+            math.abs(daySummaryWednesday.overhour - (-hoursToSubtract - defaultHoursForWednesday))
                 < 0.001,
-            'Wednesday summary overhour calculation'
+            'Day summary overhour for Wednesday calculation'
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
@@ -316,20 +356,30 @@ describe('subtractTime', function()
         )
 
         local totalDiffInHours = initialHours - hoursToSubtract
-        local weekdaySummary =
+        -- File Summary
+        local fileSummaryThursday =
             data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
-            math.abs(weekdaySummary.diffInHours - totalDiffInHours) < 0.001,
-            'Thursday summary diffInHours should be ' .. totalDiffInHours
+            math.abs(fileSummaryThursday.diffInHours - totalDiffInHours) < 0.001, -- This now reflects sum of items in file
+            'File summary diffInHours for Thursday should be ' .. totalDiffInHours
+        )
+        assert.is_nil(fileSummaryThursday.overhour, 'File summary overhour for Thursday should be nil')
+
+        -- Weekday Summary (actual day summary)
+        local daySummaryThursday = data.content.data[expected_year_key][expected_week_key][weekday].summary
+        assert.is_not_nil(daySummaryThursday, "Day summary for "..weekday.." should exist")
+        assert(
+            math.abs(daySummaryThursday.diffInHours - totalDiffInHours) < 0.001,
+            'Day summary diffInHours for Thursday should be ' .. totalDiffInHours
         )
         assert(
-            math.abs(weekdaySummary.overhour - (totalDiffInHours - defaultHoursForThursday)) < 0.001,
-            'Thursday summary overhour should be ' .. (totalDiffInHours - defaultHoursForThursday)
+            math.abs(daySummaryThursday.overhour - (totalDiffInHours - defaultHoursForThursday)) < 0.001,
+            'Day summary overhour for Thursday should be ' .. (totalDiffInHours - defaultHoursForThursday)
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
-        -- Thursday: (5-2) - 8 = -5. Auto-init Wednesday: 0 - 8 = -8. Total = -13.
-        local expectedWeekOverhour = (totalDiffInHours - defaultHoursForThursday) - 8
+        -- Thursday: (5-2) - 8 = -5. No auto-init Wednesday.
+        local expectedWeekOverhour = (totalDiffInHours - defaultHoursForThursday) -- Was: (totalDiffInHours - defaultHoursForThursday) - 8
         assert(
             math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,
             'Week summary overhour should reflect combined Thursday operations. Expected: '
@@ -392,19 +442,31 @@ describe('subtractTime', function()
             'diffInHours for Friday should be approximately ' .. -hoursToSubtract
         )
 
-        local weekdaySummary =
+        -- File Summary
+        local fileSummaryFriday =
             data.content.data[expected_year_key][expected_week_key][weekday]['default_project']['default_file'].summary
         assert(
-            math.abs(weekdaySummary.diffInHours - -hoursToSubtract) < 0.001,
-            'Friday summary diffInHours should be approximately ' .. -hoursToSubtract
+            math.abs(fileSummaryFriday.diffInHours - -hoursToSubtract) < 0.001,
+            'File summary diffInHours for Friday should be approximately ' .. -hoursToSubtract
+        )
+        assert.is_nil(fileSummaryFriday.overhour, 'File summary overhour for Friday should be nil')
+
+        -- Weekday Summary (actual day summary)
+        local daySummaryFriday = data.content.data[expected_year_key][expected_week_key][weekday].summary
+        assert.is_not_nil(daySummaryFriday, "Day summary for "..weekday.." should exist")
+        assert(
+            math.abs(daySummaryFriday.diffInHours - -hoursToSubtract) < 0.001,
+            'Day summary diffInHours for Friday should be approximately ' .. -hoursToSubtract
         )
         assert(
-            math.abs(weekdaySummary.overhour - (-hoursToSubtract - defaultHoursForFriday)) < 0.001,
-            'Friday summary overhour calculation'
+            math.abs(daySummaryFriday.overhour - (-hoursToSubtract - defaultHoursForFriday)) < 0.001,
+            'Day summary overhour for Friday calculation'
         )
 
         local weekSummary = data.content.data[expected_year_key][expected_week_key].summary
-        -- Friday: (-1) - 8 = -9. Auto-init Wednesday: 0 - 8 = -8. Total = -17.
+        -- Friday: (-1 logged - 8 expected) = -9.
+        -- Auto-initialized Wednesday (by setup in before_each): (0 logged - 8 expected) = -8.
+        -- Total = -9 - 8 = -17.
         local expectedWeekOverhour = (-hoursToSubtract - defaultHoursForFriday) - 8
         assert(
             math.abs(weekSummary.overhour - expectedWeekOverhour) < 0.001,

@@ -139,14 +139,15 @@ M.setTime = core.setTime
 M.clearDay = core.clearDay
 M.isPaused = core.isPaused
 M.calculate = function(opts) -- Match the public Time.calculate behavior
-    core.init({
-        path = config_module.obj.path,
-        hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
-    })
+    -- core.init({
+    --     path = config_module.obj.path,
+    --     hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
+    -- }) -- THIS CALL IS REMOVED/COMMENTED OUT
     core.calculate(opts)
     utils.save()
     return config_module.obj
 end
 M.weekdays = config_module.weekdayNumberMap -- Expose weekday map
+M.get_config = core.get_config -- Expose the get_config function
 
 return M
