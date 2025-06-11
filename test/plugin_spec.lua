@@ -123,12 +123,27 @@ it('should add/subtract time to a specific day', function()
 
     assert.is_not_nil(file_data, 'File data should not be nil after addTime')
     assert.is_not_nil(file_data.summary, 'File data summary should not be nil')
-    assert.are.same(expected_logged_hours_1st_add, file_data.summary.diffInHours, 'File diffInHours for ' .. current_weekday .. ' after 1st add')
-    assert.is_nil(file_data.summary.overhour, 'File overhour for ' .. current_weekday .. ' after 1st add should be nil')
+    assert.are.same(
+        expected_logged_hours_1st_add,
+        file_data.summary.diffInHours,
+        'File diffInHours for ' .. current_weekday .. ' after 1st add'
+    )
+    assert.is_nil(
+        file_data.summary.overhour,
+        'File overhour for ' .. current_weekday .. ' after 1st add should be nil'
+    )
 
     assert.is_not_nil(weekday_summary, 'Weekday summary should not be nil after addTime')
-    assert.are.same(expected_logged_hours_1st_add, weekday_summary.diffInHours, 'Weekday diffInHours for ' .. current_weekday .. ' after 1st add')
-    assert.are.same(expected_daily_overhour_1st_add, weekday_summary.overhour, 'Weekday overhour for ' .. current_weekday .. ' after 1st add')
+    assert.are.same(
+        expected_logged_hours_1st_add,
+        weekday_summary.diffInHours,
+        'Weekday diffInHours for ' .. current_weekday .. ' after 1st add'
+    )
+    assert.are.same(
+        expected_daily_overhour_1st_add,
+        weekday_summary.overhour,
+        'Weekday overhour for ' .. current_weekday .. ' after 1st add'
+    )
 
     assert.is_not_nil(
         week_total_summary,
@@ -147,8 +162,7 @@ it('should add/subtract time to a specific day', function()
         weekday = current_weekday,
     })
     -- Re-access paths as 'data' object might be new
-    file_data =
-        data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
+    file_data = data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
     weekday_summary = data.content.data[year][weekNum][current_weekday].summary
     week_total_summary = data.content.data[year][weekNum].summary
 
@@ -157,12 +171,27 @@ it('should add/subtract time to a specific day', function()
 
     assert.is_not_nil(file_data, 'File data should not be nil after 2nd addTime')
     assert.is_not_nil(file_data.summary, 'File data summary should not be nil after 2nd addTime')
-    assert.are.same(total_logged_hours_after_2nd_add, file_data.summary.diffInHours, 'File diffInHours for ' .. current_weekday .. ' after 2nd add')
-    assert.is_nil(file_data.summary.overhour, 'File overhour for ' .. current_weekday .. ' after 2nd add should be nil')
+    assert.are.same(
+        total_logged_hours_after_2nd_add,
+        file_data.summary.diffInHours,
+        'File diffInHours for ' .. current_weekday .. ' after 2nd add'
+    )
+    assert.is_nil(
+        file_data.summary.overhour,
+        'File overhour for ' .. current_weekday .. ' after 2nd add should be nil'
+    )
 
     assert.is_not_nil(weekday_summary, 'Weekday summary should not be nil after 2nd addTime')
-    assert.are.same(total_logged_hours_after_2nd_add, weekday_summary.diffInHours, 'Weekday diffInHours for ' .. current_weekday .. ' after 2nd add')
-    assert.are.same(expected_daily_overhour_2nd_add, weekday_summary.overhour, 'Weekday overhour for ' .. current_weekday .. ' after 2nd add')
+    assert.are.same(
+        total_logged_hours_after_2nd_add,
+        weekday_summary.diffInHours,
+        'Weekday diffInHours for ' .. current_weekday .. ' after 2nd add'
+    )
+    assert.are.same(
+        expected_daily_overhour_2nd_add,
+        weekday_summary.overhour,
+        'Weekday overhour for ' .. current_weekday .. ' after 2nd add'
+    )
 
     if week_total_summary then
         assert.are.same(
@@ -173,22 +202,37 @@ it('should add/subtract time to a specific day', function()
     end
 
     data = maorunTime.subtractTime({ time = 2, weekday = current_weekday })
-    file_data =
-        data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
+    file_data = data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
     weekday_summary = data.content.data[year][weekNum][current_weekday].summary
     week_total_summary = data.content.data[year][weekNum].summary
 
     local final_logged_hours_after_subtract = 2 -- (4 - 2)
-    local expected_daily_overhour_after_subtract = final_logged_hours_after_subtract - configured_hours_day
+    local expected_daily_overhour_after_subtract = final_logged_hours_after_subtract
+        - configured_hours_day
 
     assert.is_not_nil(file_data, 'File data should not be nil after subtractTime')
     assert.is_not_nil(file_data.summary, 'File data summary should not be nil after subtractTime')
-    assert.are.same(final_logged_hours_after_subtract, file_data.summary.diffInHours, 'File diffInHours for ' .. current_weekday .. ' after subtract')
-    assert.is_nil(file_data.summary.overhour, 'File overhour for ' .. current_weekday .. ' after subtract should be nil')
+    assert.are.same(
+        final_logged_hours_after_subtract,
+        file_data.summary.diffInHours,
+        'File diffInHours for ' .. current_weekday .. ' after subtract'
+    )
+    assert.is_nil(
+        file_data.summary.overhour,
+        'File overhour for ' .. current_weekday .. ' after subtract should be nil'
+    )
 
     assert.is_not_nil(weekday_summary, 'Weekday summary should not be nil after subtractTime')
-    assert.are.same(final_logged_hours_after_subtract, weekday_summary.diffInHours, 'Weekday diffInHours for ' .. current_weekday .. ' after subtract')
-    assert.are.same(expected_daily_overhour_after_subtract, weekday_summary.overhour, 'Weekday overhour for ' .. current_weekday .. ' after subtract')
+    assert.are.same(
+        final_logged_hours_after_subtract,
+        weekday_summary.diffInHours,
+        'Weekday diffInHours for ' .. current_weekday .. ' after subtract'
+    )
+    assert.are.same(
+        expected_daily_overhour_after_subtract,
+        weekday_summary.overhour,
+        'Weekday overhour for ' .. current_weekday .. ' after subtract'
+    )
 
     if week_total_summary then
         assert.are.same(
