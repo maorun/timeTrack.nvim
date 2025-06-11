@@ -112,29 +112,48 @@ it('should add/subtract time to a specific day', function()
     local weekNum = os.date('%W')
     -- Access the data through the new structure for assertions
     -- year -> week -> weekday -> project -> file
-    local file_data_path =
+    local file_data =
         data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
-    local week_summary_path = data.content.data[year][weekNum].summary -- Week summary is still at week level
+    local weekday_summary = data.content.data[year][weekNum][current_weekday].summary
+    local week_total_summary = data.content.data[year][weekNum].summary
 
     local configured_hours_day = data.content.hoursPerWeekday[current_weekday]
+    local expected_logged_hours_1st_add = 2
+    local expected_daily_overhour_1st_add = expected_logged_hours_1st_add - configured_hours_day
 
-    local expected_daily_overhour_1st_add = 2 - configured_hours_day
-    assert.is_not_nil(file_data_path, 'File data path should not be nil after addTime')
-    assert.is_not_nil(file_data_path.summary, 'File data summary should not be nil')
+    assert.is_not_nil(file_data, 'File data should not be nil after addTime')
+    assert.is_not_nil(file_data.summary, 'File data summary should not be nil')
+    assert.are.same(
+        expected_logged_hours_1st_add,
+        file_data.summary.diffInHours,
+        'File diffInHours for ' .. current_weekday .. ' after 1st add'
+    )
+    assert.is_nil(
+        file_data.summary.overhour,
+        'File overhour for ' .. current_weekday .. ' after 1st add should be nil'
+    )
+
+    assert.is_not_nil(weekday_summary, 'Weekday summary should not be nil after addTime')
+    assert.are.same(
+        expected_logged_hours_1st_add,
+        weekday_summary.diffInHours,
+        'Weekday diffInHours for ' .. current_weekday .. ' after 1st add'
+    )
     assert.are.same(
         expected_daily_overhour_1st_add,
-        file_data_path.summary.overhour,
-        'Daily overhour for ' .. current_weekday .. ' after 1st add'
+        weekday_summary.overhour,
+        'Weekday overhour for ' .. current_weekday .. ' after 1st add'
     )
+
     assert.is_not_nil(
-        week_summary_path,
-        'Week summary should exist after calculate (called by addTime via saveTime)'
+        week_total_summary,
+        'Week total summary should exist after calculate (called by addTime via saveTime)'
     )
-    if week_summary_path then -- Guard against nil if calculate didn't run or create it
+    if week_total_summary then -- Guard against nil if calculate didn't run or create it
         assert.are.same(
             expected_daily_overhour_1st_add,
-            week_summary_path.overhour,
-            'Weekly overhour after 1st add'
+            week_total_summary.overhour,
+            'Weekly total overhour after 1st add'
         )
     end
 
@@ -143,53 +162,83 @@ it('should add/subtract time to a specific day', function()
         weekday = current_weekday,
     })
     -- Re-access paths as 'data' object might be new
-    file_data_path =
-        data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
-    week_summary_path = data.content.data[year][weekNum].summary
+    file_data = data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
+    weekday_summary = data.content.data[year][weekNum][current_weekday].summary
+    week_total_summary = data.content.data[year][weekNum].summary
 
     local total_logged_hours_after_2nd_add = 4 -- (2 from first add + 2 from second)
     local expected_daily_overhour_2nd_add = total_logged_hours_after_2nd_add - configured_hours_day
-    assert.is_not_nil(file_data_path, 'File data path should not be nil after 2nd addTime')
-    assert.is_not_nil(
-        file_data_path.summary,
-        'File data summary should not be nil after 2nd addTime'
+
+    assert.is_not_nil(file_data, 'File data should not be nil after 2nd addTime')
+    assert.is_not_nil(file_data.summary, 'File data summary should not be nil after 2nd addTime')
+    assert.are.same(
+        total_logged_hours_after_2nd_add,
+        file_data.summary.diffInHours,
+        'File diffInHours for ' .. current_weekday .. ' after 2nd add'
+    )
+    assert.is_nil(
+        file_data.summary.overhour,
+        'File overhour for ' .. current_weekday .. ' after 2nd add should be nil'
+    )
+
+    assert.is_not_nil(weekday_summary, 'Weekday summary should not be nil after 2nd addTime')
+    assert.are.same(
+        total_logged_hours_after_2nd_add,
+        weekday_summary.diffInHours,
+        'Weekday diffInHours for ' .. current_weekday .. ' after 2nd add'
     )
     assert.are.same(
         expected_daily_overhour_2nd_add,
-        file_data_path.summary.overhour,
-        'Daily overhour for ' .. current_weekday .. ' after 2nd add'
+        weekday_summary.overhour,
+        'Weekday overhour for ' .. current_weekday .. ' after 2nd add'
     )
-    if week_summary_path then
+
+    if week_total_summary then
         assert.are.same(
             expected_daily_overhour_2nd_add,
-            week_summary_path.overhour,
-            'Weekly overhour after 2nd add'
+            week_total_summary.overhour,
+            'Weekly total overhour after 2nd add'
         )
     end
 
     data = maorunTime.subtractTime({ time = 2, weekday = current_weekday })
-    file_data_path =
-        data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
-    week_summary_path = data.content.data[year][weekNum].summary
+    file_data = data.content.data[year][weekNum][current_weekday]['default_project']['default_file']
+    weekday_summary = data.content.data[year][weekNum][current_weekday].summary
+    week_total_summary = data.content.data[year][weekNum].summary
 
     local final_logged_hours_after_subtract = 2 -- (4 - 2)
     local expected_daily_overhour_after_subtract = final_logged_hours_after_subtract
         - configured_hours_day
-    assert.is_not_nil(file_data_path, 'File data path should not be nil after subtractTime')
-    assert.is_not_nil(
-        file_data_path.summary,
-        'File data summary should not be nil after subtractTime'
+
+    assert.is_not_nil(file_data, 'File data should not be nil after subtractTime')
+    assert.is_not_nil(file_data.summary, 'File data summary should not be nil after subtractTime')
+    assert.are.same(
+        final_logged_hours_after_subtract,
+        file_data.summary.diffInHours,
+        'File diffInHours for ' .. current_weekday .. ' after subtract'
+    )
+    assert.is_nil(
+        file_data.summary.overhour,
+        'File overhour for ' .. current_weekday .. ' after subtract should be nil'
+    )
+
+    assert.is_not_nil(weekday_summary, 'Weekday summary should not be nil after subtractTime')
+    assert.are.same(
+        final_logged_hours_after_subtract,
+        weekday_summary.diffInHours,
+        'Weekday diffInHours for ' .. current_weekday .. ' after subtract'
     )
     assert.are.same(
         expected_daily_overhour_after_subtract,
-        file_data_path.summary.overhour,
-        'Daily overhour for ' .. current_weekday .. ' after subtract'
+        weekday_summary.overhour,
+        'Weekday overhour for ' .. current_weekday .. ' after subtract'
     )
-    if week_summary_path then
+
+    if week_total_summary then
         assert.are.same(
             expected_daily_overhour_after_subtract,
-            week_summary_path.overhour,
-            'Weekly overhour after subtract'
+            week_total_summary.overhour,
+            'Weekly total overhour after subtract'
         )
     end
 end)
