@@ -4,5 +4,6 @@ include = {
 exclude = {
   "^/home/runner/.local/*",
   "^/home/runner/work/timeTrack.nvim/timeTrack.nvim/.luarocks/*",
-  "*/.luarocks/*"
+  "*/.luarocks/*",
+  "^/home/runner/nvim-nightly/*"
 }
