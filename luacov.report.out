@@ -341,11 +341,11 @@
 ==============================================================================
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/config.lua
 ==============================================================================
-   9 local os_sep = require('plenary.path').path.sep
+  10 local os_sep = require('plenary.path').path.sep
 
-   9 local M = {}
+  10 local M = {}
 
-   9 M.wdayToEngName = {
+  10 M.wdayToEngName = {
          [1] = 'Sunday',
          [2] = 'Monday',
          [3] = 'Tuesday',
@@ -353,9 +353,9 @@
          [5] = 'Thursday',
          [6] = 'Friday',
          [7] = 'Saturday',
-   9 }
+  10 }
 
-   9 M.defaultHoursPerWeekday = {
+  10 M.defaultHoursPerWeekday = {
          Monday = 8,
          Tuesday = 8,
          Wednesday = 8,
@@ -363,9 +363,9 @@
          Friday = 8,
          Saturday = 0,
          Sunday = 0,
-   9 }
+  10 }
 
-   9 M.weekdayNumberMap = {
+  10 M.weekdayNumberMap = {
          Sunday = 0,
          Monday = 1,
          Tuesday = 2,
@@ -373,25 +373,25 @@
          Thursday = 4,
          Friday = 5,
          Saturday = 6,
-   9 }
+  10 }
 
-   9 M.obj = {
+  10 M.obj = {
          path = nil,
-   9     content = {}, -- Initialize content as an empty table
-   9 }
+  10     content = {}, -- Initialize content as an empty table
+  10 }
 
-   9 M.defaults = {
-  18     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
-   9     hoursPerWeekday = M.defaultHoursPerWeekday,
-   9 }
+  10 M.defaults = {
+  20     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
+  10     hoursPerWeekday = M.defaultHoursPerWeekday,
+  10 }
 
      -- This 'config' table will be populated by the init function later
      -- For now, it can be initialized with defaults, or left empty
      -- and the main init.lua or core.lua will handle merging user_config with defaults.
      -- Let's initialize it with defaults for now.
-   9 M.config = vim.deepcopy(M.defaults) -- Use deepcopy to avoid modifying defaults unintentionally
+  10 M.config = vim.deepcopy(M.defaults) -- Use deepcopy to avoid modifying defaults unintentionally
 
-   9 return M
+  10 return M
 
 ==============================================================================
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua
@@ -1166,7 +1166,7 @@
   84         table.insert(sorted_weekdays, { name = day, value = num })
          end
   24     table.sort(sorted_weekdays, function(a, b)
- 192         return a.value < b.value
+ 180         return a.value < b.value
          end)
 
   96     for _, day_info in ipairs(sorted_weekdays) do
@@ -1254,83 +1254,78 @@
 ==============================================================================
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua
 ==============================================================================
-   9 local Path = require('plenary.path')
-   9 local config_module = require('maorun.time.config') -- Adjusted path
+  21 local Path = require('plenary.path')
+  21 local config_module = require('maorun.time.config') -- Adjusted path
 
-   9 local M = {}
+  21 local M = {}
 
-   9 function M.save()
- 445     Path:new(config_module.obj.path):write(vim.fn.json_encode(config_module.obj.content), 'w')
+  21 function M.save()
+ 448     Path:new(config_module.obj.path):write(vim.fn.json_encode(config_module.obj.content), 'w')
      end
 
-   9 function M.get_project_and_file_info(buffer_path_or_bufnr)
+  21 function M.get_project_and_file_info(buffer_path_or_bufnr)
          local filepath_str
-***0     if type(buffer_path_or_bufnr) == 'number' then
-***0         filepath_str = vim.api.nvim_buf_get_name(buffer_path_or_bufnr)
-***0     elseif type(buffer_path_or_bufnr) == 'string' then
-***0         filepath_str = buffer_path_or_bufnr
+  10     if type(buffer_path_or_bufnr) == 'number' then
+   6         filepath_str = vim.api.nvim_buf_get_name(buffer_path_or_bufnr)
+   7     elseif type(buffer_path_or_bufnr) == 'string' then
+   6         filepath_str = buffer_path_or_bufnr
          else
-***0         return nil -- Invalid input type
+   1         return nil -- Invalid input type
          end
 
-***0     if filepath_str == nil or filepath_str == '' then
+   9     if filepath_str == nil or filepath_str == '' then
+   3         return nil
+         end
+
+   6     local file_path_obj = Path:new(filepath_str)
+   6     if not file_path_obj then -- Ensure Path object was created
 ***0         return nil
          end
 
-***0     local file_path_obj = Path:new(filepath_str)
-***0     if not file_path_obj then -- Ensure Path object was created
-***0         return nil
+   6     local file_name = file_path_obj.filename
+   6     if file_name == nil or file_name == '' then
+   1         return nil -- No valid file name (e.g. a directory path was passed)
          end
 
-***0     local file_name = file_path_obj.filename
-***0     if file_name == nil or file_name == '' then
-***0         return nil -- No valid file name (e.g. a directory path was passed)
+   5     local project_name = nil
+   5     local current_dir = file_path_obj:parent()
+   5     local last_sensible_parent = file_path_obj:parent() -- Initialize with the first parent
+
+         -- Loop upwards to find .git directory
+  11     while current_dir do
+  30         if current_dir:joinpath('.git'):exists() then
+   2             project_name = current_dir.filename
+   2             break
+             end
+  16         if current_dir:is_root() then
+   2             break
+             end
+   6         last_sensible_parent = current_dir -- Update before going higher
+  12         current_dir = current_dir:parent()
          end
 
-         local project_name = nil
-***0     local current_dir = file_path_obj:parent()
-
-         -- Loop upwards to find .git directory or stop at root
-***0     while
-             current_dir
-***0         and current_dir:absolute() ~= ''
-***0         and current_dir:absolute() ~= Path:new('/'):absolute()
-         do
-***0         if current_dir:joinpath('.git'):exists() then
-***0             project_name = current_dir.filename
-                 break
-             end
-***0         local parent_dir = current_dir:parent()
-             -- Break if parent is the same as current (indicates root or error)
-***0         if parent_dir and parent_dir:absolute() == current_dir:absolute() then
-                 break
-             end
-***0         current_dir = parent_dir
-***0         if not current_dir then -- Safety break if parent() returns nil unexpectedly
-                 break
-             end
-         end
-
-***0     if project_name == nil then
-             -- Fallback: use parent directory name if .git not found
-***0         local parent_dir_obj = file_path_obj:parent()
-***0         if parent_dir_obj and parent_dir_obj.filename and parent_dir_obj.filename ~= '' then
-                 if
-***0                 parent_dir_obj:is_root()
-***0                 or parent_dir_obj:absolute() == Path:new('/'):absolute()
-                 then
-***0                 project_name = '_root_' -- Or "filesystem_root"
+   5     if project_name == nil then
+             -- Fallback logic using last_sensible_parent
+   3         if last_sensible_parent then
+   6             if last_sensible_parent:is_root() then
+   1                 project_name = '_root_'
+   2             elseif last_sensible_parent.filename and last_sensible_parent.filename ~= '' then
+   1                 project_name = last_sensible_parent.filename
                  else
-***0                 project_name = parent_dir_obj.filename
+   1                 project_name = 'default_project'
                  end
              else
-***0             project_name = 'default_project' -- Ultimate fallback
+***0             project_name = 'default_project'
              end
+         end
+
+   5     if project_name == '' then
+***0         project_name = '_root_'
          end
 
          -- Ensure file_name is not nil or empty before returning
-***0     if file_name and file_name ~= '' then
-***0         return { project = project_name, file = file_name }
+   5     if file_name and file_name ~= '' then
+   5         return { project = project_name, file = file_name }
          else
              -- This case should ideally be caught earlier, but as a safeguard:
 ***0         return nil
@@ -1338,20 +1333,20 @@
      end
 
      -- calculate an average over the hoursPerWeekday
-   9 function M.calculateAverage()
-   2     local sum = 0
-   2     local count = 0
-  14     for _, value in pairs(config_module.config.hoursPerWeekday) do
-  12         sum = sum + value
-  12         count = count + 1
+  21 function M.calculateAverage()
+   6     local sum = 0
+   6     local count = 0
+  31     for _, value in pairs(config_module.config.hoursPerWeekday) do
+  25         sum = sum + value
+  25         count = count + 1
          end
-   2     if count == 0 then
-***0         return 0
+   6     if count == 0 then
+   1         return 0
          end -- Avoid division by zero
-   2     return sum / count
+   5     return sum / count
      end
 
-   9 return M
+  21 return M
 
 ==============================================================================
 Summary
@@ -1365,6 +1360,6 @@ File                                                                         Hit
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua     315  19     94.31%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua     34   32     51.52%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua       31   24     56.36%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua    15   35     30.00%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua    49   4      92.45%
 -------------------------------------------------------------------------------------------------
-Total                                                                        434  218    66.56%
+Total                                                                        468  187    71.45%
