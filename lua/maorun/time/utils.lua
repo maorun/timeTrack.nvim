@@ -63,8 +63,8 @@ function M.get_project_and_file_info(buffer_path_or_bufnr)
         end
     end
 
-    if project_name == "" then
-        project_name = "_root_"
+    if project_name == '' then
+        project_name = '_root_'
     end
 
     -- Ensure file_name is not nil or empty before returning
