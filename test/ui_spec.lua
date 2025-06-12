@@ -5,24 +5,42 @@ local time_ui = require('maorun.time.ui') -- CORRECTED: System Under Test
 
 -- Helper for assertions (minimal version for this environment)
 local assert = {
-  is_true = function(val, msg) if not val then error(msg or "Assertion failed: expected true") end end,
-  is_false = function(val, msg) if val then error(msg or "Assertion failed: expected false") end end,
-  are_equal = function(expected, actual, msg)
-    if expected ~= actual then
-      -- Special handling for nil vs string comparison for better error messages
-      local exp_str = expected == nil and "nil" or "'" .. tostring(expected) .. "'"
-      local act_str = actual == nil and "nil" or "'" .. tostring(actual) .. "'"
-      error(string.format(msg or "Assertion failed: expected %s, got %s", exp_str, act_str))
-    end
-  end,
-  is_nil = function(val, msg) if val ~= nil then error(msg or "Assertion failed: expected nil, got '" .. tostring(val) .. "'") end end,
-  is_not_nil = function(val, msg) if val == nil then error(msg or "Assertion failed: expected not nil") end end,
-  table_contains = function(tbl, val, msg)
-    for _, v in ipairs(tbl) do
-      if v == val then return end
-    end
-    error(msg or "Assertion failed: table does not contain " .. tostring(val))
-  end,
+    is_true = function(val, msg)
+        if not val then
+            error(msg or 'Assertion failed: expected true')
+        end
+    end,
+    is_false = function(val, msg)
+        if val then
+            error(msg or 'Assertion failed: expected false')
+        end
+    end,
+    are_equal = function(expected, actual, msg)
+        if expected ~= actual then
+            -- Special handling for nil vs string comparison for better error messages
+            local exp_str = expected == nil and 'nil' or "'" .. tostring(expected) .. "'"
+            local act_str = actual == nil and 'nil' or "'" .. tostring(actual) .. "'"
+            error(string.format(msg or 'Assertion failed: expected %s, got %s', exp_str, act_str))
+        end
+    end,
+    is_nil = function(val, msg)
+        if val ~= nil then
+            error(msg or "Assertion failed: expected nil, got '" .. tostring(val) .. "'")
+        end
+    end,
+    is_not_nil = function(val, msg)
+        if val == nil then
+            error(msg or 'Assertion failed: expected not nil')
+        end
+    end,
+    table_contains = function(tbl, val, msg)
+        for _, v in ipairs(tbl) do
+            if v == val then
+                return
+            end
+        end
+        error(msg or 'Assertion failed: table does not contain ' .. tostring(val))
+    end,
 }
 
 -- The maorun.time.ui module might have a setup function.
@@ -33,209 +51,281 @@ if time_ui.setup then
     time_ui.setup({ weekday_select_module = package.loaded['maorun.time.weekday_select'] })
 end
 
-
 local function describe(text, fn)
-  print("DESCRIBE: " .. text)
-  fn()
+    print('DESCRIBE: ' .. text)
+    fn()
 end
 
-local current_test_name = ""
+local current_test_name = ''
 local function it(text, fn)
-  current_test_name = text
-  print("  IT: " .. text)
+    current_test_name = text
+    print('  IT: ' .. text)
 
-  -- Reset all mock states and flags before each test
-  mock_helpers.input_mock:reset()
-  mock_helpers.select_mock:reset()
-  mock_helpers.weekday_select_mock:reset()
-  mock_helpers.notify_mock:reset()
-  mock_helpers.reset_all_was_called_flags()
+    -- Reset all mock states and flags before each test
+    mock_helpers.input_mock:reset()
+    mock_helpers.select_mock:reset()
+    mock_helpers.weekday_select_mock:reset()
+    mock_helpers.notify_mock:reset()
+    mock_helpers.reset_all_was_called_flags()
 
-  local success, err = pcall(fn)
+    local success, err = pcall(fn)
 
-  if not success then
-    print("    TEST FAILED: " .. tostring(err))
+    if not success then
+        print('    TEST FAILED: ' .. tostring(err))
     -- Consider re-throwing the error if using a real test runner
     -- error("Test failed: " .. current_test_name .. "\n" .. tostring(err))
-  else
-    print("    TEST PASSED")
-  end
+    else
+        print('    TEST PASSED')
+    end
 
-  -- Teardown all global mocks after each test
-  mock_helpers.teardown_all_mocks()
-  current_test_name = "" -- Reset test name
+    -- Teardown all global mocks after each test
+    mock_helpers.teardown_all_mocks()
+    current_test_name = '' -- Reset test name
 end
 
-describe("maorun.time.ui.select", function()
+describe('maorun.time.ui.select', function()
+    it('should handle default options (all true)', function()
+        local cb_hours, cb_weekday, cb_project, cb_file
+        local callback = function(h, wd, p, f)
+            cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f
+        end
 
-  it("should handle default options (all true)", function()
-    local cb_hours, cb_weekday, cb_project, cb_file
-    local callback = function(h, wd, p, f)
-      cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f
-    end
+        mock_helpers.input_mock:set_texts_to_return({
+            'test_project_default',
+            'test_file_default',
+            '5',
+        })
+        mock_helpers.weekday_select_mock:set_selected_weekday('Monday')
 
-    mock_helpers.input_mock:set_texts_to_return({"test_project_default", "test_file_default", "5"})
-    mock_helpers.weekday_select_mock:set_selected_weekday("Monday")
+        time_ui.select({ project = true, file = true, weekday = true, hours = true }, callback)
 
-    time_ui.select({ project=true, file=true, weekday=true, hours=true }, callback)
+        assert.are_equal('test_project_default', cb_project)
+        assert.are_equal('test_file_default', cb_file)
+        assert.are_equal('Monday', cb_weekday)
+        assert.are_equal(5, cb_hours)
 
-    assert.are_equal("test_project_default", cb_project)
-    assert.are_equal("test_file_default", cb_file)
-    assert.are_equal("Monday", cb_weekday)
-    assert.are_equal(5, cb_hours)
+        assert.are_equal(3, mock_helpers.input_mock:get_call_count())
+        local prompts = mock_helpers.input_mock:get_prompts_called_with()
+        assert.table_contains(prompts, 'Enter project name:')
+        assert.table_contains(prompts, 'Enter file name:')
+        assert.table_contains(prompts, 'Enter hours (0-24):')
+        assert.is_true(mock_helpers.weekday_select_mock:was_called_flag())
+        assert.are_equal(
+            'Select weekday:',
+            mock_helpers.weekday_select_mock:get_show_called_with_options().prompt
+        )
+    end)
 
-    assert.are_equal(3, mock_helpers.input_mock:get_call_count())
-    local prompts = mock_helpers.input_mock:get_prompts_called_with()
-    assert.table_contains(prompts, "Enter project name:")
-    assert.table_contains(prompts, "Enter file name:")
-    assert.table_contains(prompts, "Enter hours (0-24):")
-    assert.is_true(mock_helpers.weekday_select_mock:was_called_flag())
-    assert.are_equal("Select weekday:", mock_helpers.weekday_select_mock:get_show_called_with_options().prompt)
-  end)
+    it('should handle opts.hours = false', function()
+        local cb_hours, cb_weekday, cb_project, cb_file
+        local callback = function(h, wd, p, f)
+            cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f
+        end
 
-  it("should handle opts.hours = false", function()
-    local cb_hours, cb_weekday, cb_project, cb_file
-    local callback = function(h, wd, p, f) cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f end
+        mock_helpers.input_mock:set_texts_to_return({ 'project_no_hours', 'file_no_hours' })
+        mock_helpers.weekday_select_mock:set_selected_weekday('Tuesday')
 
-    mock_helpers.input_mock:set_texts_to_return({"project_no_hours", "file_no_hours"})
-    mock_helpers.weekday_select_mock:set_selected_weekday("Tuesday")
+        time_ui.select({ hours = false }, callback) -- project, file, weekday default to true
 
-    time_ui.select({ hours = false }, callback) -- project, file, weekday default to true
+        assert.are_equal('project_no_hours', cb_project)
+        assert.are_equal('file_no_hours', cb_file)
+        assert.are_equal('Tuesday', cb_weekday)
+        assert.are_equal(0, cb_hours)
+        assert.are_equal(
+            2,
+            mock_helpers.input_mock:get_call_count(),
+            'vim.ui.input should be called twice for project and file'
+        )
+        assert.is_true(mock_helpers.weekday_select_mock:was_called_flag())
+    end)
 
-    assert.are_equal("project_no_hours", cb_project)
-    assert.are_equal("file_no_hours", cb_file)
-    assert.are_equal("Tuesday", cb_weekday)
-    assert.are_equal(0, cb_hours)
-    assert.are_equal(2, mock_helpers.input_mock:get_call_count(), "vim.ui.input should be called twice for project and file")
-    assert.is_true(mock_helpers.weekday_select_mock:was_called_flag())
-  end)
+    it('should handle opts.weekday = false (and hours = true, causing warning)', function()
+        local cb_called_with_data = false
+        local callback = function(h, wd, p, f)
+            -- This callback should ideally not be called with valid data if there's a prerequisite failure
+            if h or wd or p or f then
+                cb_called_with_data = true
+            end
+        end
 
-  it("should handle opts.weekday = false (and hours = true, causing warning)", function()
-    local cb_called_with_data = false
-    local callback = function(h, wd, p, f)
-        -- This callback should ideally not be called with valid data if there's a prerequisite failure
-        if h or wd or p or f then cb_called_with_data = true end
-    end
+        mock_helpers.input_mock:set_texts_to_return({ 'project_no_wd', 'file_no_wd' })
+        -- No call to weekday_select_mock:set_selected_weekday needed
+        -- No call to input_mock for hours needed if error happens before
 
-    mock_helpers.input_mock:set_texts_to_return({"project_no_wd", "file_no_wd"})
-    -- No call to weekday_select_mock:set_selected_weekday needed
-    -- No call to input_mock for hours needed if error happens before
+        time_ui.select({ weekday = false, hours = true }, callback) -- project, file default to true
 
-    time_ui.select({ weekday = false, hours = true }, callback) -- project, file default to true
+        assert.is_false(cb_called_with_data, 'Callback should not be called with data on warning')
+        assert.is_true(mock_helpers.notify_mock:was_called_flag(), 'Notify should be called')
+        assert.are_equal(
+            'Weekday is required when hours are enabled.',
+            mock_helpers.notify_mock:get_message()
+        )
+        assert.are_equal(vim.log.levels.WARN, mock_helpers.notify_mock:get_level())
+        assert.is_false(
+            mock_helpers.weekday_select_mock:was_called_flag(),
+            'Weekday select should not be called'
+        )
+        -- Depending on implementation, input calls might be 2 (proj, file) then error, or fewer.
+        -- The SUT (maorun/time/ui.lua) from previous step would call for project and file.
+        assert.are_equal(
+            2,
+            mock_helpers.input_mock:get_call_count(),
+            'Input should be called for project and file only'
+        )
+    end)
 
-    assert.is_false(cb_called_with_data, "Callback should not be called with data on warning")
-    assert.is_true(mock_helpers.notify_mock:was_called_flag(), "Notify should be called")
-    assert.are_equal("Weekday is required when hours are enabled.", mock_helpers.notify_mock:get_message())
-    assert.are_equal(vim.log.levels.WARN, mock_helpers.notify_mock:get_level())
-    assert.is_false(mock_helpers.weekday_select_mock:was_called_flag(), "Weekday select should not be called")
-    -- Depending on implementation, input calls might be 2 (proj, file) then error, or fewer.
-    -- The SUT (maorun/time/ui.lua) from previous step would call for project and file.
-    assert.are_equal(2, mock_helpers.input_mock:get_call_count(), "Input should be called for project and file only")
-  end)
+    it('should handle opts.weekday = false and opts.hours = false', function()
+        local cb_hours, cb_weekday, cb_project, cb_file
+        local callback = function(h, wd, p, f)
+            cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f
+        end
 
-  it("should handle opts.weekday = false and opts.hours = false", function()
-    local cb_hours, cb_weekday, cb_project, cb_file
-    local callback = function(h, wd, p, f) cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f end
+        mock_helpers.input_mock:set_texts_to_return({ 'project_no_wd_no_hr', 'file_no_wd_no_hr' })
 
-    mock_helpers.input_mock:set_texts_to_return({"project_no_wd_no_hr", "file_no_wd_no_hr"})
+        time_ui.select({ weekday = false, hours = false }, callback) -- project, file default to true
 
-    time_ui.select({ weekday = false, hours = false }, callback) -- project, file default to true
+        assert.are_equal('project_no_wd_no_hr', cb_project)
+        assert.are_equal('file_no_wd_no_hr', cb_file)
+        assert.is_nil(cb_weekday)
+        assert.are_equal(0, cb_hours)
+        assert.is_false(
+            mock_helpers.weekday_select_mock:was_called_flag(),
+            'Weekday select should not be called'
+        )
+        assert.is_false(mock_helpers.notify_mock:was_called_flag(), 'Notify should not be called')
+        assert.are_equal(2, mock_helpers.input_mock:get_call_count())
+    end)
 
-    assert.are_equal("project_no_wd_no_hr", cb_project)
-    assert.are_equal("file_no_wd_no_hr", cb_file)
-    assert.is_nil(cb_weekday)
-    assert.are_equal(0, cb_hours)
-    assert.is_false(mock_helpers.weekday_select_mock:was_called_flag(), "Weekday select should not be called")
-    assert.is_false(mock_helpers.notify_mock:was_called_flag(), "Notify should not be called")
-    assert.are_equal(2, mock_helpers.input_mock:get_call_count())
-  end)
+    it('should handle opts.project = false', function()
+        local cb_hours, cb_weekday, cb_project, cb_file
+        local callback = function(h, wd, p, f)
+            cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f
+        end
 
-  it("should handle opts.project = false", function()
-    local cb_hours, cb_weekday, cb_project, cb_file
-    local callback = function(h, wd, p, f) cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f end
+        mock_helpers.input_mock:set_texts_to_return({ 'file_no_proj', '7' }) -- For file and hours
+        mock_helpers.weekday_select_mock:set_selected_weekday('Wednesday')
 
-    mock_helpers.input_mock:set_texts_to_return({"file_no_proj", "7"}) -- For file and hours
-    mock_helpers.weekday_select_mock:set_selected_weekday("Wednesday")
+        -- Assuming 'time_ui.default_project' exists or is handled by SUT
+        local expected_project = (time_ui.default_project or 'default_project')
+        time_ui.select({ project = false }, callback) -- file, weekday, hours default true
 
-    -- Assuming 'time_ui.default_project' exists or is handled by SUT
-    local expected_project = (time_ui.default_project or "default_project")
-    time_ui.select({ project = false }, callback) -- file, weekday, hours default true
+        assert.are_equal(expected_project, cb_project)
+        assert.are_equal('file_no_proj', cb_file)
+        assert.are_equal('Wednesday', cb_weekday)
+        assert.are_equal(7, cb_hours)
+        assert.are_equal(2, mock_helpers.input_mock:get_call_count()) -- file, hours
+        assert.is_true(mock_helpers.weekday_select_mock:was_called_flag())
+    end)
 
-    assert.are_equal(expected_project, cb_project)
-    assert.are_equal("file_no_proj", cb_file)
-    assert.are_equal("Wednesday", cb_weekday)
-    assert.are_equal(7, cb_hours)
-    assert.are_equal(2, mock_helpers.input_mock:get_call_count()) -- file, hours
-    assert.is_true(mock_helpers.weekday_select_mock:was_called_flag())
-  end)
+    it('should handle opts.file = false', function()
+        local cb_hours, cb_weekday, cb_project, cb_file
+        local callback = function(h, wd, p, f)
+            cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f
+        end
 
-  it("should handle opts.file = false", function()
-    local cb_hours, cb_weekday, cb_project, cb_file
-    local callback = function(h, wd, p, f) cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f end
+        mock_helpers.input_mock:set_texts_to_return({ 'project_no_file', '8' }) -- For project and hours
+        mock_helpers.weekday_select_mock:set_selected_weekday('Thursday')
 
-    mock_helpers.input_mock:set_texts_to_return({"project_no_file", "8"}) -- For project and hours
-    mock_helpers.weekday_select_mock:set_selected_weekday("Thursday")
+        local expected_file = (time_ui.default_file or 'default_file')
+        time_ui.select({ file = false }, callback) -- project, weekday, hours default true
 
-    local expected_file = (time_ui.default_file or "default_file")
-    time_ui.select({ file = false }, callback) -- project, weekday, hours default true
+        assert.are_equal('project_no_file', cb_project)
+        assert.are_equal(expected_file, cb_file)
+        assert.are_equal('Thursday', cb_weekday)
+        assert.are_equal(8, cb_hours)
+        assert.are_equal(2, mock_helpers.input_mock:get_call_count()) -- project, hours
+        assert.is_true(mock_helpers.weekday_select_mock:was_called_flag())
+    end)
 
-    assert.are_equal("project_no_file", cb_project)
-    assert.are_equal(expected_file, cb_file)
-    assert.are_equal("Thursday", cb_weekday)
-    assert.are_equal(8, cb_hours)
-    assert.are_equal(2, mock_helpers.input_mock:get_call_count()) -- project, hours
-    assert.is_true(mock_helpers.weekday_select_mock:was_called_flag())
-  end)
+    it('should handle all options false', function()
+        local cb_hours, cb_weekday, cb_project, cb_file
+        local callback = function(h, wd, p, f)
+            cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f
+        end
 
-  it("should handle all options false", function()
-    local cb_hours, cb_weekday, cb_project, cb_file
-    local callback = function(h, wd, p, f) cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f end
+        local expected_project = (time_ui.default_project or 'default_project')
+        local expected_file = (time_ui.default_file or 'default_file')
 
-    local expected_project = (time_ui.default_project or "default_project")
-    local expected_file = (time_ui.default_file or "default_file")
+        time_ui.select({ project = false, file = false, weekday = false, hours = false }, callback)
 
-    time_ui.select({ project = false, file = false, weekday = false, hours = false }, callback)
+        assert.are_equal(expected_project, cb_project)
+        assert.are_equal(expected_file, cb_file)
+        assert.is_nil(cb_weekday)
+        assert.are_equal(0, cb_hours)
 
-    assert.are_equal(expected_project, cb_project)
-    assert.are_equal(expected_file, cb_file)
-    assert.is_nil(cb_weekday)
-    assert.are_equal(0, cb_hours)
+        assert.are_equal(
+            0,
+            mock_helpers.input_mock:get_call_count(),
+            'vim.ui.input should not be called'
+        )
+        assert.is_false(
+            mock_helpers.weekday_select_mock:was_called_flag(),
+            'Weekday select should not be called'
+        )
+        assert.is_false(mock_helpers.notify_mock:was_called_flag(), 'Notify should not be called')
+    end)
 
-    assert.are_equal(0, mock_helpers.input_mock:get_call_count(), "vim.ui.input should not be called")
-    assert.is_false(mock_helpers.weekday_select_mock:was_called_flag(), "Weekday select should not be called")
-    assert.is_false(mock_helpers.notify_mock:was_called_flag(), "Notify should not be called")
-  end)
+    describe('input validation for hours', function()
+        local function test_invalid_hours(hours_input_val, test_label, expected_notify_msg)
+            print('    SUB-TEST: ' .. test_label)
+            local cb_called_with_data = false
+            local callback = function(h, wd, p, f)
+                if h or wd or p or f then
+                    cb_called_with_data = true
+                end
+            end
 
-  describe("input validation for hours", function()
-    local function test_invalid_hours(hours_input_val, test_label, expected_notify_msg)
-      print("    SUB-TEST: " .. test_label)
-      local cb_called_with_data = false
-      local callback = function(h,wd,p,f) if h or wd or p or f then cb_called_with_data = true end end
+            mock_helpers.input_mock:set_texts_to_return({
+                'proj_val_hr',
+                'file_val_hr',
+                hours_input_val,
+            })
+            mock_helpers.weekday_select_mock:set_selected_weekday('Friday')
 
-      mock_helpers.input_mock:set_texts_to_return({"proj_val_hr", "file_val_hr", hours_input_val})
-      mock_helpers.weekday_select_mock:set_selected_weekday("Friday")
+            time_ui.select({ project = true, file = true, weekday = true, hours = true }, callback)
 
-      time_ui.select({ project = true, file = true, weekday = true, hours = true }, callback)
+            assert.is_false(
+                cb_called_with_data,
+                'Callback should not be called with data on invalid hours for ' .. test_label
+            )
+            assert.is_true(
+                mock_helpers.notify_mock:was_called_flag(),
+                'Notify should be called for ' .. test_label
+            )
+            assert.are_equal(expected_notify_msg, mock_helpers.notify_mock:get_message())
+            assert.are_equal(vim.log.levels.WARN, mock_helpers.notify_mock:get_level())
+            assert.are_equal(
+                3,
+                mock_helpers.input_mock:get_call_count(),
+                'Input should be called thrice for ' .. test_label
+            )
+            assert.is_true(
+                mock_helpers.weekday_select_mock:was_called_flag(),
+                'Weekday select should have been called before hours input for ' .. test_label
+            )
+        end
 
-      assert.is_false(cb_called_with_data, "Callback should not be called with data on invalid hours for " .. test_label)
-      assert.is_true(mock_helpers.notify_mock:was_called_flag(), "Notify should be called for " .. test_label)
-      assert.are_equal(expected_notify_msg, mock_helpers.notify_mock:get_message())
-      assert.are_equal(vim.log.levels.WARN, mock_helpers.notify_mock:get_level())
-      assert.are_equal(3, mock_helpers.input_mock:get_call_count(), "Input should be called thrice for " .. test_label)
-      assert.is_true(mock_helpers.weekday_select_mock:was_called_flag(), "Weekday select should have been called before hours input for " .. test_label)
-    end
+        local invalid_hours_msg = 'Invalid hours. Please enter a number between 0 and 24.'
+        local cancelled_hours_msg = 'Hours input cancelled.' -- Or specific message from SUT
 
-    local invalid_hours_msg = "Invalid hours. Please enter a number between 0 and 24."
-    local cancelled_hours_msg = "Hours input cancelled." -- Or specific message from SUT
-
-    it("should warn on invalid hours string 'invalid_input'", function() test_invalid_hours("invalid_input", "string", invalid_hours_msg) end)
-    it("should warn on nil hours input", function() test_invalid_hours(nil, "nil", cancelled_hours_msg) end)
-    it("should warn on empty string '' hours input", function() test_invalid_hours("", "empty_string", cancelled_hours_msg) end)
-    it("should warn on hours < 0", function() test_invalid_hours("-5", "negative_hours", invalid_hours_msg) end)
-    it("should warn on hours > 24", function() test_invalid_hours("25", "too_many_hours", invalid_hours_msg) end)
-  end)
+        it("should warn on invalid hours string 'invalid_input'", function()
+            test_invalid_hours('invalid_input', 'string', invalid_hours_msg)
+        end)
+        it('should warn on nil hours input', function()
+            test_invalid_hours(nil, 'nil', cancelled_hours_msg)
+        end)
+        it("should warn on empty string '' hours input", function()
+            test_invalid_hours('', 'empty_string', cancelled_hours_msg)
+        end)
+        it('should warn on hours < 0', function()
+            test_invalid_hours('-5', 'negative_hours', invalid_hours_msg)
+        end)
+        it('should warn on hours > 24', function()
+            test_invalid_hours('25', 'too_many_hours', invalid_hours_msg)
+        end)
+    end)
 end)
 
-print("All tests described in test/ui_spec.lua. Mock helpers are in test/mock_helpers.lua.")
+print('All tests described in test/ui_spec.lua. Mock helpers are in test/mock_helpers.lua.')
 -- To actually run these, a Lua test runner would typically execute the file.
 -- The print statements and pcall are for basic feedback in this environment.
