@@ -33,43 +33,38 @@ function M.get_project_and_file_info(buffer_path_or_bufnr)
 
     local project_name = nil
     local current_dir = file_path_obj:parent()
+    local last_sensible_parent = file_path_obj:parent() -- Initialize with the first parent
 
-    -- Loop upwards to find .git directory or stop at root
-    while
-        current_dir
-        and current_dir:absolute() ~= ''
-        and current_dir:absolute() ~= Path:new('/'):absolute()
-    do
+    -- Loop upwards to find .git directory
+    while current_dir do
         if current_dir:joinpath('.git'):exists() then
             project_name = current_dir.filename
             break
         end
-        local parent_dir = current_dir:parent()
-        -- Break if parent is the same as current (indicates root or error)
-        if parent_dir and parent_dir:absolute() == current_dir:absolute() then
+        if current_dir:is_root() then
             break
         end
-        current_dir = parent_dir
-        if not current_dir then -- Safety break if parent() returns nil unexpectedly
-            break
-        end
+        last_sensible_parent = current_dir -- Update before going higher
+        current_dir = current_dir:parent()
     end
 
     if project_name == nil then
-        -- Fallback: use parent directory name if .git not found
-        local parent_dir_obj = file_path_obj:parent()
-        if parent_dir_obj and parent_dir_obj.filename and parent_dir_obj.filename ~= '' then
-            if
-                parent_dir_obj:is_root()
-                or parent_dir_obj:absolute() == Path:new('/'):absolute()
-            then
-                project_name = '_root_' -- Or "filesystem_root"
+        -- Fallback logic using last_sensible_parent
+        if last_sensible_parent then
+            if last_sensible_parent:is_root() then
+                project_name = '_root_'
+            elseif last_sensible_parent.filename and last_sensible_parent.filename ~= '' then
+                project_name = last_sensible_parent.filename
             else
-                project_name = parent_dir_obj.filename
+                project_name = 'default_project'
             end
         else
-            project_name = 'default_project' -- Ultimate fallback
+            project_name = 'default_project'
         end
+    end
+
+    if project_name == "" then
+        project_name = "_root_"
     end
 
     -- Ensure file_name is not nil or empty before returning
