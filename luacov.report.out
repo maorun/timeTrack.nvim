@@ -1,4 +1,246 @@
 ==============================================================================
+/home/runner/nvim-nightly/share/nvim/runtime/lua/vim/ui.lua
+==============================================================================
+   1 local M = {}
+
+     --- Prompts the user to pick from a list of items, allowing arbitrary (potentially asynchronous)
+     --- work until `on_choice`.
+     ---
+     --- Example:
+     ---
+     --- ```lua
+     --- vim.ui.select({ 'tabs', 'spaces' }, {
+     ---     prompt = 'Select tabs or spaces:',
+     ---     format_item = function(item)
+     ---         return "I'd like to choose " .. item
+     ---     end,
+     --- }, function(choice)
+     ---     if choice == 'spaces' then
+     ---         vim.o.expandtab = true
+     ---     else
+     ---         vim.o.expandtab = false
+     ---     end
+     --- end)
+     --- ```
+     ---
+     ---@generic T
+     ---@param items T[] Arbitrary items
+     ---@param opts table Additional options
+     ---     - prompt (string|nil)
+     ---               Text of the prompt. Defaults to `Select one of:`
+     ---     - format_item (function item -> text)
+     ---               Function to format an
+     ---               individual item from `items`. Defaults to `tostring`.
+     ---     - kind (string|nil)
+     ---               Arbitrary hint string indicating the item shape.
+     ---               Plugins reimplementing `vim.ui.select` may wish to
+     ---               use this to infer the structure or semantics of
+     ---               `items`, or the context in which select() was called.
+     ---@param on_choice fun(item: T|nil, idx: integer|nil)
+     ---               Called once the user made a choice.
+     ---               `idx` is the 1-based index of `item` within `items`.
+     ---               `nil` if the user aborted the dialog.
+   1 function M.select(items, opts, on_choice)
+***0   vim.validate('items', items, 'table')
+***0   vim.validate('on_choice', on_choice, 'function')
+***0   opts = opts or {}
+***0   local choices = { opts.prompt or 'Select one of:' }
+***0   local format_item = opts.format_item or tostring
+***0   for i, item in
+***0     ipairs(items --[[@as any[] ]])
+       do
+***0     table.insert(choices, string.format('%d: %s', i, format_item(item)))
+       end
+***0   local choice = vim.fn.inputlist(choices)
+***0   if choice < 1 or choice > #items then
+***0     on_choice(nil, nil)
+       else
+***0     on_choice(items[choice], choice)
+       end
+     end
+
+     --- Prompts the user for input, allowing arbitrary (potentially asynchronous) work until
+     --- `on_confirm`.
+     ---
+     --- Example:
+     ---
+     --- ```lua
+     --- vim.ui.input({ prompt = 'Enter value for shiftwidth: ' }, function(input)
+     ---     vim.o.shiftwidth = tonumber(input)
+     --- end)
+     --- ```
+     ---
+     ---@param opts table? Additional options. See |input()|
+     ---     - prompt (string|nil)
+     ---               Text of the prompt
+     ---     - default (string|nil)
+     ---               Default reply to the input
+     ---     - completion (string|nil)
+     ---               Specifies type of completion supported
+     ---               for input. Supported types are the same
+     ---               that can be supplied to a user-defined
+     ---               command using the "-complete=" argument.
+     ---               See |:command-completion|
+     ---     - highlight (function)
+     ---               Function that will be used for highlighting
+     ---               user inputs.
+     ---@param on_confirm function ((input|nil) -> ())
+     ---               Called once the user confirms or abort the input.
+     ---               `input` is what the user typed (it might be
+     ---               an empty string if nothing was entered), or
+     ---               `nil` if the user aborted the dialog.
+   1 function M.input(opts, on_confirm)
+***0   vim.validate('opts', opts, 'table', true)
+***0   vim.validate('on_confirm', on_confirm, 'function')
+
+***0   opts = (opts and not vim.tbl_isempty(opts)) and opts or vim.empty_dict()
+
+       -- Note that vim.fn.input({}) returns an empty string when cancelled.
+       -- vim.ui.input() should distinguish aborting from entering an empty string.
+***0   local _canceled = vim.NIL
+***0   opts = vim.tbl_extend('keep', opts, { cancelreturn = _canceled })
+
+***0   local ok, input = pcall(vim.fn.input, opts)
+***0   if not ok or input == _canceled then
+***0     on_confirm(nil)
+       else
+***0     on_confirm(input)
+       end
+     end
+
+     --- Opens `path` with the system default handler (macOS `open`, Windows `explorer.exe`, Linux
+     --- `xdg-open`, …), or returns (but does not show) an error message on failure.
+     ---
+     --- Can also be invoked with `:Open`. [:Open]()
+     ---
+     --- Expands "~/" and environment variables in filesystem paths.
+     ---
+     --- Examples:
+     ---
+     --- ```lua
+     --- -- Asynchronous.
+     --- vim.ui.open("https://neovim.io/")
+     --- vim.ui.open("~/path/to/file")
+     --- -- Use the "osurl" command to handle the path or URL.
+     --- vim.ui.open("gh#neovim/neovim!29490", { cmd = { 'osurl' } })
+     --- -- Synchronous (wait until the process exits).
+     --- local cmd, err = vim.ui.open("$VIMRUNTIME")
+     --- if cmd then
+     ---   cmd:wait()
+     --- end
+     --- ```
+     ---
+     ---@param path string Path or URL to open
+     ---@param opt? { cmd?: string[] } Options
+     ---     - cmd string[]|nil Command used to open the path or URL.
+     ---
+     ---@return vim.SystemObj|nil # Command object, or nil if not found.
+     ---@return nil|string # Error message on failure, or nil on success.
+     ---
+     ---@see |vim.system()|
+   1 function M.open(path, opt)
+***0   vim.validate('path', path, 'string')
+***0   local is_uri = path:match('%w+:')
+***0   if not is_uri then
+***0     path = vim.fs.normalize(path)
+       end
+
+***0   opt = opt or {}
+       local cmd ---@type string[]
+***0   local job_opt = { text = true, detach = true } --- @type vim.SystemOpts
+
+***0   if opt.cmd then
+***0     cmd = vim.list_extend(opt.cmd --[[@as string[] ]], { path })
+***0   elseif vim.fn.has('mac') == 1 then
+***0     cmd = { 'open', path }
+***0   elseif vim.fn.has('win32') == 1 then
+***0     if vim.fn.executable('rundll32') == 1 then
+***0       cmd = { 'rundll32', 'url.dll,FileProtocolHandler', path }
+         else
+***0       return nil, 'vim.ui.open: rundll32 not found'
+         end
+***0   elseif vim.fn.executable('xdg-open') == 1 then
+***0     cmd = { 'xdg-open', path }
+***0     job_opt.stdout = false
+***0     job_opt.stderr = false
+***0   elseif vim.fn.executable('wslview') == 1 then
+***0     cmd = { 'wslview', path }
+***0   elseif vim.fn.executable('explorer.exe') == 1 then
+***0     cmd = { 'explorer.exe', path }
+***0   elseif vim.fn.executable('lemonade') == 1 then
+***0     cmd = { 'lemonade', 'open', path }
+       else
+***0     return nil, 'vim.ui.open: no handler found (tried: wslview, explorer.exe, xdg-open, lemonade)'
+       end
+
+***0   return vim.system(cmd, job_opt), nil
+     end
+
+     --- Returns all URLs at cursor, if any.
+     --- @return string[]
+   1 function M._get_urls()
+***0   local urls = {} ---@type string[]
+
+***0   local bufnr = vim.api.nvim_get_current_buf()
+***0   local cursor = vim.api.nvim_win_get_cursor(0)
+***0   local row = cursor[1] - 1
+***0   local col = cursor[2]
+***0   local extmarks = vim.api.nvim_buf_get_extmarks(bufnr, -1, { row, col }, { row, col }, {
+         details = true,
+         type = 'highlight',
+         overlap = true,
+       })
+***0   for _, v in ipairs(extmarks) do
+***0     local details = v[4]
+***0     if details and details.url then
+***0       urls[#urls + 1] = details.url
+         end
+       end
+
+***0   local highlighter = vim.treesitter.highlighter.active[bufnr]
+***0   if highlighter then
+***0     local range = { row, col, row, col }
+***0     local ltree = highlighter.tree:language_for_range(range)
+***0     local lang = ltree:lang()
+***0     local query = vim.treesitter.query.get(lang, 'highlights')
+***0     if query then
+***0       local tree = assert(ltree:tree_for_range(range))
+***0       for _, match, metadata in query:iter_matches(tree:root(), bufnr, row, row + 1) do
+***0         for id, nodes in pairs(match) do
+***0           for _, node in ipairs(nodes) do
+***0             if vim.treesitter.node_contains(node, range) then
+***0               local url = metadata[id] and metadata[id].url
+***0               if url and match[url] then
+***0                 for _, n in
+***0                   ipairs(match[url] --[[@as TSNode[] ]])
+                     do
+***0                   urls[#urls + 1] =
+***0                     vim.treesitter.get_node_text(n, bufnr, { metadata = metadata[url] })
+                     end
+                   end
+                 end
+               end
+             end
+           end
+         end
+       end
+
+***0   if #urls == 0 then
+         -- If all else fails, use the filename under the cursor
+***0     table.insert(
+           urls,
+***0       vim._with({ go = { isfname = vim.o.isfname .. ',@-@' } }, function()
+***0         return vim.fn.expand('<cfile>')
+           end)
+         )
+       end
+
+***0   return urls
+     end
+
+   1 return M
+
+==============================================================================
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/autocmds.lua
 ==============================================================================
    8 local core = require('maorun.time.core')
@@ -99,11 +341,11 @@
 ==============================================================================
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/config.lua
 ==============================================================================
-   8 local os_sep = require('plenary.path').path.sep
+   9 local os_sep = require('plenary.path').path.sep
 
-   8 local M = {}
+   9 local M = {}
 
-   8 M.wdayToEngName = {
+   9 M.wdayToEngName = {
          [1] = 'Sunday',
          [2] = 'Monday',
          [3] = 'Tuesday',
@@ -111,9 +353,9 @@
          [5] = 'Thursday',
          [6] = 'Friday',
          [7] = 'Saturday',
-   8 }
+   9 }
 
-   8 M.defaultHoursPerWeekday = {
+   9 M.defaultHoursPerWeekday = {
          Monday = 8,
          Tuesday = 8,
          Wednesday = 8,
@@ -121,9 +363,9 @@
          Friday = 8,
          Saturday = 0,
          Sunday = 0,
-   8 }
+   9 }
 
-   8 M.weekdayNumberMap = {
+   9 M.weekdayNumberMap = {
          Sunday = 0,
          Monday = 1,
          Tuesday = 2,
@@ -131,37 +373,37 @@
          Thursday = 4,
          Friday = 5,
          Saturday = 6,
-   8 }
+   9 }
 
-   8 M.obj = {
+   9 M.obj = {
          path = nil,
-   8     content = {}, -- Initialize content as an empty table
-   8 }
+   9     content = {}, -- Initialize content as an empty table
+   9 }
 
-   8 M.defaults = {
-  16     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
-   8     hoursPerWeekday = M.defaultHoursPerWeekday,
-   8 }
+   9 M.defaults = {
+  18     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
+   9     hoursPerWeekday = M.defaultHoursPerWeekday,
+   9 }
 
      -- This 'config' table will be populated by the init function later
      -- For now, it can be initialized with defaults, or left empty
      -- and the main init.lua or core.lua will handle merging user_config with defaults.
      -- Let's initialize it with defaults for now.
-   8 M.config = vim.deepcopy(M.defaults) -- Use deepcopy to avoid modifying defaults unintentionally
+   9 M.config = vim.deepcopy(M.defaults) -- Use deepcopy to avoid modifying defaults unintentionally
 
-   8 return M
+   9 return M
 
 ==============================================================================
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua
 ==============================================================================
-   8 local Path = require('plenary.path')
-   8 local notify = require('notify')
-   8 local config_module = require('maorun.time.config')
-   8 local utils = require('maorun.time.utils')
+   9 local Path = require('plenary.path')
+   9 local notify = require('notify')
+   9 local config_module = require('maorun.time.config')
+   9 local utils = require('maorun.time.utils')
 
-   8 local M = {}
+   9 local M = {}
 
-   8 function M.init(user_config)
+   9 function M.init(user_config)
   79     config_module.config =
  158         vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
   79     if user_config and user_config.hoursPerWeekday ~= nil then
@@ -232,7 +474,7 @@
   79     return config_module.obj
      end
 
-   8 function M.calculate(opts)
+   9 function M.calculate(opts)
  170     opts = vim.tbl_deep_extend('keep', opts or {}, {
  166         year = os.date('%Y'),
  166         weeknumber = os.date('%W'),
@@ -318,7 +560,7 @@
          end
      end
 
-   8 function M.TimePause()
+   9 function M.TimePause()
   20     M.init({
   10         path = config_module.obj.path,
   10         hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
@@ -330,7 +572,7 @@
   10     }, 'info', { title = 'TimeTracking - Pause' })
      end
 
-   8 function M.TimeResume()
+   9 function M.TimeResume()
   14     M.init({
    7         path = config_module.obj.path,
    7         hoursPerWeekday = config_module.obj.content['hoursPerWeekday'],
@@ -342,7 +584,7 @@
    7     }, 'info', { title = 'TimeTracking - Resume' })
      end
 
-   8 function M.isPaused()
+   9 function M.isPaused()
          -- Ensure data is loaded before checking pause state, especially if called early.
          -- However, frequent re-init might be inefficient.
          -- Assuming init has been called once at setup.
@@ -352,7 +594,7 @@
      end
 
      ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
-   8 function M.TimeStart(opts)
+   9 function M.TimeStart(opts)
    9     opts = opts or {}
          -- Similar to isPaused, ensure init has run.
          -- M.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
@@ -413,7 +655,7 @@
      end
 
      ---@param opts? { weekday?: string|osdate, time?: number, project?: string, file?: string }
-   8 function M.TimeStop(opts)
+   9 function M.TimeStop(opts)
    7     opts = opts or {}
          -- M.init({ path = config_module.obj.path, hoursPerWeekday = config_module.obj.content['hoursPerWeekday'] })
   14     if M.isPaused() then
@@ -461,7 +703,7 @@
    7     utils.save()
      end
 
-   8 function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSubtraction) -- _clearDay param might be unused now
+   9 function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSubtraction) -- _clearDay param might be unused now
   42     project = project or 'default_project'
   42     file = file or 'default_file'
   42     isSubtraction = isSubtraction or false
@@ -510,7 +752,7 @@
      end
 
      ---@param opts { time: number, weekday: string|osdate, clearDay?: string, project?: string, file?: string }
-   8 function M.addTime(opts)
+   9 function M.addTime(opts)
   33     local clearDay_param = opts.clearDay -- Store original clearDay for potential future use, though saveTime ignores it now
   33     local project = opts.project or 'default_project'
   33     local file = opts.file or 'default_file'
@@ -584,7 +826,7 @@
      end
 
      ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
-   8 function M.subtractTime(opts)
+   9 function M.subtractTime(opts)
    9     local project = opts.project or 'default_project'
    9     local file = opts.file or 'default_file'
 
@@ -657,7 +899,7 @@
    9     return config_module.obj
      end
 
-   8 function M.setIllDay(weekday_param, project, file) -- Added project and file params
+   9 function M.setIllDay(weekday_param, project, file) -- Added project and file params
    4     M.addTime({
    4         time = utils.calculateAverage(),
    2         weekday = weekday_param,
@@ -668,7 +910,7 @@
    2     return config_module.obj
      end
 
-   8 function M.clearDay(weekday_param, project, file)
+   9 function M.clearDay(weekday_param, project, file)
    1     project = project or 'default_project'
    1     file = file or 'default_file'
    1     local year_str = os.date('%Y')
@@ -695,7 +937,7 @@
      end
 
      ---@param opts { time: number, weekday: string|osdate, project?: string, file?: string }
-   8 function M.setTime(opts)
+   9 function M.setTime(opts)
    1     opts = opts or {}
    1     local project = opts.project or 'default_project'
    1     local file = opts.file or 'default_file'
@@ -710,11 +952,11 @@
          })
      end
 
-   8 function M.get_config()
+   9 function M.get_config()
    2     return config_module.obj
      end
 
-   8 return M
+   9 return M
 
 ==============================================================================
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua
@@ -876,61 +1118,61 @@
 ==============================================================================
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua
 ==============================================================================
-   8 local core = require('maorun.time.core')
-   8 local config_module = require('maorun.time.config') -- For weekdayNumberMap
+   9 local core = require('maorun.time.core')
+   9 local config_module = require('maorun.time.config') -- For weekdayNumberMap
 
-   8 local M = {}
+   9 local M = {}
 
      ---@param opts { hours?: boolean, weekday?: boolean, project?: boolean, file?: boolean }
      ---@param callback fun(hours:number, weekday: string, project:string, file:string) the function to call
-   8 function M.select(opts, callback)
-***0     opts = vim.tbl_deep_extend('force', {
+   9 function M.select(opts, callback)
+  24     opts = vim.tbl_deep_extend('force', {
              hours = true,
              weekday = true,
              project = true,
              file = true,
-***0     }, opts or {})
+  24     }, opts or {})
 
-***0     local selected_project = 'default_project'
-***0     local selected_file = 'default_file'
+  12     local selected_project = 'default_project'
+  12     local selected_file = 'default_file'
 
          local function get_file_input()
-***0         if opts.file then
-***0             vim.ui.input({ prompt = 'File name? (default: default_file) ' }, function(input)
-***0                 selected_file = (input and input ~= '') and input or 'default_file'
-***0                 get_weekday_selection()
+  12         if opts.file then
+  20             vim.ui.input({ prompt = 'File name? (default: default_file) ' }, function(input)
+  10                 selected_file = (input and input ~= '') and input or 'default_file'
+  10                 get_weekday_selection()
                  end)
              else
-***0             get_weekday_selection()
+   2             get_weekday_selection()
              end
          end
 
          local function get_project_input()
-***0         if opts.project then
-***0             vim.ui.input({ prompt = 'Project name? (default: default_project) ' }, function(input)
-***0                 selected_project = (input and input ~= '') and input or 'default_project'
-***0                 get_file_input()
+  12         if opts.project then
+  20             vim.ui.input({ prompt = 'Project name? (default: default_project) ' }, function(input)
+  10                 selected_project = (input and input ~= '') and input or 'default_project'
+  10                 get_file_input()
                  end)
              else
-***0             get_file_input()
+   2             get_file_input()
              end
          end
 
-***0     local selections = {}
-***0     local selectionNumbers = {}
+  12     local selections = {}
+  12     local selectionNumbers = {}
          -- Sort weekdayNumberMap by value to ensure consistent order for vim.ui.select
-***0     local sorted_weekdays = {}
-***0     for day, num in pairs(config_module.weekdayNumberMap) do
-***0         table.insert(sorted_weekdays, { name = day, value = num })
+  12     local sorted_weekdays = {}
+  96     for day, num in pairs(config_module.weekdayNumberMap) do
+  84         table.insert(sorted_weekdays, { name = day, value = num })
          end
-***0     table.sort(sorted_weekdays, function(a, b)
-***0         return a.value < b.value
+  24     table.sort(sorted_weekdays, function(a, b)
+ 192         return a.value < b.value
          end)
 
-***0     for _, day_info in ipairs(sorted_weekdays) do
-***0         if not selectionNumbers[day_info.value] then -- This check might be redundant if weekdayNumberMap has unique values
-***0             selectionNumbers[day_info.value] = 1
-***0             selections[#selections + 1] = day_info.name
+  96     for _, day_info in ipairs(sorted_weekdays) do
+  84         if not selectionNumbers[day_info.value] then -- This check might be redundant if weekdayNumberMap has unique values
+  84             selectionNumbers[day_info.value] = 1
+  84             selections[#selections + 1] = day_info.name
              end
          end
 
@@ -1004,24 +1246,24 @@
              end
          end
 
-***0     get_project_input()
+  12     get_project_input()
      end
 
-   8 return M
+   9 return M
 
 ==============================================================================
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua
 ==============================================================================
-   8 local Path = require('plenary.path')
-   8 local config_module = require('maorun.time.config') -- Adjusted path
+   9 local Path = require('plenary.path')
+   9 local config_module = require('maorun.time.config') -- Adjusted path
 
-   8 local M = {}
+   9 local M = {}
 
-   8 function M.save()
+   9 function M.save()
  445     Path:new(config_module.obj.path):write(vim.fn.json_encode(config_module.obj.content), 'w')
      end
 
-   8 function M.get_project_and_file_info(buffer_path_or_bufnr)
+   9 function M.get_project_and_file_info(buffer_path_or_bufnr)
          local filepath_str
 ***0     if type(buffer_path_or_bufnr) == 'number' then
 ***0         filepath_str = vim.api.nvim_buf_get_name(buffer_path_or_bufnr)
@@ -1096,7 +1338,7 @@
      end
 
      -- calculate an average over the hoursPerWeekday
-   8 function M.calculateAverage()
+   9 function M.calculateAverage()
    2     local sum = 0
    2     local count = 0
   14     for _, value in pairs(config_module.config.hoursPerWeekday) do
@@ -1109,7 +1351,7 @@
    2     return sum / count
      end
 
-   8 return M
+   9 return M
 
 ==============================================================================
 Summary
@@ -1117,11 +1359,12 @@ Summary
 
 File                                                                         Hits Missed Coverage
 -------------------------------------------------------------------------------------------------
+/home/runner/nvim-nightly/share/nvim/runtime/lua/vim/ui.lua                  6    80     6.98%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/autocmds.lua 16   28     36.36%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/config.lua   17   0      100.00%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua     315  19     94.31%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua     34   32     51.52%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua       5    50     9.09%
+/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua       31   24     56.36%
 /home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua    15   35     30.00%
 -------------------------------------------------------------------------------------------------
-Total                                                                        402  164    71.02%
+Total                                                                        434  218    66.56%
