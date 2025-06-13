@@ -169,7 +169,22 @@ jobs:
       - name: Generate Luacov report
         run: luacov -c .luacov
 
-      - name: Commit coverage report
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run script to update README with coverage summary
+        run: python ./update_readme_coverage.py
+
+      - name: Commit updated README.md
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'docs(readme): update coverage summary [skip ci]'
+          file_pattern: README.md
+
+      - name: Commit coverage report files
+        id: commit_coverage_files
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore(ci): update coverage report [skip ci]'
