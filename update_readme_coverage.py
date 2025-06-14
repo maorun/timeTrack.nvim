@@ -2,6 +2,7 @@
 
 import re
 import sys
+import time
 
 def read_file_content(filepath):
     """Reads the content of a file.
@@ -34,7 +35,7 @@ def extract_summary_from_report(report_content):
     if not report_content:
         return None
 
-    summary_start_pattern = r"^===============================================================================\nSummary\n==============================================================================="
+    summary_start_pattern = r"^={50,}\nSummary\n={50,}$"
     match = re.search(summary_start_pattern, report_content, re.MULTILINE)
 
     if not match:
@@ -135,17 +136,51 @@ def main():
     luacov_report_path = "luacov.report.out"
     readme_path = "README.md"
 
-    report_content = read_file_content(luacov_report_path)
-    if report_content is None:
+    report_content = None
+    summary_table = None
+    max_retries = 3
+    retry_delay_seconds = 2
+
+    for attempt in range(max_retries):
+        print(f"Attempt {attempt + 1} to read and parse {luacov_report_path}...", file=sys.stderr)
+        current_report_content = read_file_content(luacov_report_path)
+        if current_report_content:
+            report_content = current_report_content # Store last successful read
+            current_summary_table = extract_summary_from_report(report_content)
+            if current_summary_table and current_summary_table.strip():
+                summary_table = current_summary_table
+                print(f"Successfully parsed summary on attempt {attempt + 1}.", file=sys.stderr)
+                break  # Success
+            else:
+                # Summary found but it's empty, or extract_summary_from_report returned None (and printed an error)
+                if current_summary_table is None:
+                    # extract_summary_from_report already printed its error
+                    pass
+                elif not current_summary_table.strip():
+                    print(f"Warning: Extracted summary was empty on attempt {attempt + 1}.", file=sys.stderr)
+                summary_table = None # Ensure summary_table is None if strip check fails
+        else:
+            # read_file_content already printed its error
+            report_content = None # Ensure report_content is None if read fails
+
+        if attempt < max_retries - 1:
+            print(f"Attempt {attempt + 1} failed. Retrying in {retry_delay_seconds} seconds...", file=sys.stderr)
+            time.sleep(retry_delay_seconds)
+        else:
+            print(f"All {max_retries} attempts to read or parse {luacov_report_path} failed.", file=sys.stderr)
+
+    if not report_content: # Handles case where file itself was never read successfully
+        # Error already printed by read_file_content or loop
         sys.exit(1)
 
-    summary_table = extract_summary_from_report(report_content)
-    if summary_table is None:
+    if not summary_table: # Handles case where summary was never extracted or was empty after all retries
+        # Error already printed by extract_summary_from_report or loop
         sys.exit(1)
 
-    # Ensure summary_table is not empty after stripping
-    if not summary_table.strip():
-        print("Error: Extracted summary table is empty after stripping. Cannot update README.", file=sys.stderr)
+    # This check is now more of a safeguard, as the loop should ensure summary_table is valid and stripped.
+    # However, keeping it doesn't hurt.
+    if not summary_table.strip(): # Should have been caught by the loop's `if current_summary_table and current_summary_table.strip():`
+        print("Error: Extracted summary table is empty after stripping (final check). Cannot update README.", file=sys.stderr)
         sys.exit(1)
 
     readme_content = read_file_content(readme_path)
