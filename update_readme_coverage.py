@@ -35,7 +35,7 @@ def extract_summary_from_report(report_content):
     if not report_content:
         return None
 
-    summary_start_pattern = r"^==============================================================================\nSummary\n=============================================================================="
+    summary_start_pattern = r"^={50,}\nSummary\n={50,}$"
     match = re.search(summary_start_pattern, report_content, re.MULTILINE)
 
     if not match:

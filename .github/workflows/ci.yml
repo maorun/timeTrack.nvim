@@ -172,14 +172,6 @@ jobs:
       - name: Flush filesystem buffers
         run: sync
 
-      - name: Display luacov.report.out details (pre-script)
-        run: |
-          echo "--- Details for luacov.report.out (pre-script) ---"
-          ls -l luacov.report.out
-          echo "--- Content of luacov.report.out (pre-script) ---"
-          cat luacov.report.out
-          echo "--- End of luacov.report.out (pre-script) ---"
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
