@@ -169,6 +169,9 @@ jobs:
       - name: Generate Luacov report
         run: luacov -c .luacov
 
+      - name: Flush filesystem buffers
+        run: sync
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
