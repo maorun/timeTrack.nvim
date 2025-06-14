@@ -35,6 +35,25 @@ def extract_summary_from_report(report_content):
     if not report_content:
         return None
 
+    print("--- Debug: Inside extract_summary_from_report ---", file=sys.stderr)
+    # Try a simple string search for "Summary"
+    summary_keyword_index = report_content.find("\nSummary\n")
+    if summary_keyword_index != -1:
+        print(f"Debug: Found '\\nSummary\\n' at index: {summary_keyword_index}", file=sys.stderr)
+        # Define a window around the found keyword for context
+        context_start = max(0, summary_keyword_index - 150) # 150 chars before an
+        context_end = min(len(report_content), summary_keyword_index + 150) # 150 chars after
+        snippet = report_content[context_start:context_end]
+        print(f"Debug: Snippet around '\\nSummary\\n':\n{snippet}", file=sys.stderr)
+        print(f"Debug: repr(snippet):\n{repr(snippet)}", file=sys.stderr)
+    else:
+        print("Debug: '\\nSummary\\n' not found via string.find(). Printing last 500 chars as fallback.", file=sys.stderr)
+        # Fallback: print last 500 characters if "Summary" not found, as summary is at the end
+        snippet = report_content[-500:]
+        print(f"Debug: Last 500 chars of report_content:\n{snippet}", file=sys.stderr)
+        print(f"Debug: repr(Last 500 chars):\n{repr(report_content[-500:])}", file=sys.stderr)
+    print("--- End Debug: Inside extract_summary_from_report ---", file=sys.stderr)
+
     summary_start_pattern = r"^===============================================================================\nSummary\n==============================================================================="
     match = re.search(summary_start_pattern, report_content, re.MULTILINE)
 
