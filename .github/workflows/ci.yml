@@ -222,7 +222,7 @@ jobs:
             echo "Listing contents of temp_lint before rsync:"
             ls -AlR temp_lint/
             echo "-------------------------------------------"
-            rsync -av --delete --exclude='.git/' temp_lint/ ./
+            rsync -av --exclude='.git/' temp_lint/ ./
             echo "Listing contents of temp_lint after rsync:"
             ls -AlR temp_lint/
             echo "-------------------------------------------"
