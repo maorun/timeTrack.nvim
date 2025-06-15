@@ -219,20 +219,14 @@ jobs:
 
           if [ -d "temp_lint" ] && [ "$(ls -A temp_lint)" ]; then
             echo "Applying linted files..."
-            echo "Listing contents of temp_lint before rsync:"
-            ls -AlR temp_lint/
-            echo "-------------------------------------------"
-            rsync -av --exclude='.git/' temp_lint/ ./
-            echo "Listing contents of temp_lint after rsync:"
-            ls -AlR temp_lint/
-            echo "-------------------------------------------"
+            rsync -av --delete --exclude='.git/' --exclude='/temp_lint/' temp_lint/ ./
           else
             echo "Lint artifact not found or is empty."
           fi
 
           if [ -d "temp_docs" ] && [ "$(ls -A temp_docs)" ]; then
             echo "Applying documentation files..."
-            rsync -av --delete --exclude='.git/' temp_docs/ ./
+            rsync -av --delete --exclude='.git/' --exclude='/temp_docs/' temp_docs/ ./
           else
             echo "Documentation artifact not found or is empty."
           fi
