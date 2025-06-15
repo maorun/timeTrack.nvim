@@ -6,7 +6,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Stylua
@@ -15,6 +15,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
           args: .
+      - name: List workspace before artifacting in lint job
+        run: |
+          echo "Workspace contents in lint job just before artifacting:"
+          ls -AlR ./
+          echo "----------------------------------------------------"
+        shell: bash
       - name: Upload formatted code artifact
         uses: actions/upload-artifact@v4
         with:
@@ -215,7 +221,11 @@ jobs:
       - name: List contents of temp_docs
         run: |
           echo "Contents of temp_docs (from documentation artifact):"
-          ls -AlR temp_docs/
+          if [ -d "temp_docs" ] && [ "$(ls -A temp_docs)" ]; then
+            ls -AlR temp_docs/
+          else
+            echo "temp_docs directory not found or is empty (this may be expected if docs job was skipped)."
+          fi
           echo "---------------------------------------------------"
         shell: bash
 
