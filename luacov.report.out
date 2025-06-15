@@ -1166,7 +1166,7 @@
   84         table.insert(sorted_weekdays, { name = day, value = num })
          end
   24     table.sort(sorted_weekdays, function(a, b)
- 192         return a.value < b.value
+ 216         return a.value < b.value
          end)
 
   96     for _, day_info in ipairs(sorted_weekdays) do
