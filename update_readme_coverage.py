@@ -87,30 +87,45 @@ def extract_summary_from_report(report_content):
 
 
 def update_readme(readme_content, summary_table):
-    """Updates the README content with the summary table.
-
-    Args:
-        readme_content (str): The content of README.md.
-        summary_table (str): The summary table to insert.
-
-    Returns:
-        str: The updated README content, or None if the target line is not found.
-    """
     if not readme_content or not summary_table:
+        # It might be better to raise an error or handle this more explicitly
+        # if called with None, but for now, align with original script's implicit behavior.
         return None
 
-    target_line = "The latest report is committed to the repository and can be viewed here: [luacov.report.out](luacov.report.out)."
-    replacement_text = f"""The latest summary is:
+    # This is the specific line we are looking for in README.md
+    target_line_to_find = "The latest report is committed to the repository and can be viewed here: [luacov.report.out](luacov.report.out)."
+
+    # This is the new content that will replace the target_line_to_find
+    # The f-string will correctly handle newlines within the block.
+    replacement_block = f"""The latest summary is:
 
 ```markdown
 {summary_table}
 ```"""
 
-    if target_line not in readme_content:
-        print(f"Error: Target line not found in README.md:\n'{target_line}'", file=sys.stderr)
+    lines = readme_content.splitlines()
+    new_readme_lines = []
+    found_target = False
+
+    for line in lines:
+        # Compare stripped versions to handle potential leading/trailing whitespace issues
+        if not found_target and line.strip() == target_line_to_find.strip():
+            new_readme_lines.append(replacement_block)
+            found_target = True
+        else:
+            new_readme_lines.append(line)
+
+    if not found_target:
+        # Use the original target_line_to_find for the error message for clarity
+        print(f"Error: Target line not found in README.md:\n'{target_line_to_find}'", file=sys.stderr)
         return None
 
-    updated_readme_content = readme_content.replace(target_line, replacement_text)
+    # Join the lines back. Add a single trailing newline if not already present.
+    # Most text files, including Markdown, should end with a newline.
+    updated_readme_content = "\n".join(new_readme_lines)
+    if not updated_readme_content.endswith("\n"):
+        updated_readme_content += "\n"
+
     return updated_readme_content
 
 def write_file_content(filepath, content):
