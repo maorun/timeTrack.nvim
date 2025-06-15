@@ -1,0 +1,270 @@
+name: Ci
+
+on: [push]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stylua
+        uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: .
+      - name: Upload formatted code artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: formatted-code
+          path: .
+
+  test:
+    needs: lint
+    name: Run Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        id: vim
+        with:
+          neovim: true
+          version: nightly
+
+      - name: Cache Lua installation
+        uses: actions/cache@v4
+        id: cache-luajit
+        with:
+          path: .lua/
+          key: ${{ runner.os }}-lua-5.1
+          restore-keys: |
+            ${{ runner.os }}-lua-5.1
+
+      - name: Setup Lua
+        uses: leafo/gh-actions-lua@v11
+        if: steps.cache-luajit.outputs.cache-hit != 'true'
+        with:
+          luaVersion: "5.1"
+
+      - name: Cache Luarocks packages
+        uses: actions/cache@v4
+        id: cache-luarocks
+        with:
+          path: ~/.luarocks
+          key: ${{ runner.os }}-lua-5.1-luarocks-${{ hashFiles('**/rockspec') }}
+          restore-keys: |
+            ${{ runner.os }}-lua-5.1-luarocks-
+
+      - name: luarocks
+        uses: leafo/gh-actions-luarocks@v5
+
+      - name: install dependencies
+        shell: bash
+        run: |
+          luarocks install vusted
+          luarocks install inspect
+
+      - name: run test
+        shell: bash
+        run: |
+          vusted ./test
+
+  docs:
+    needs: test
+    runs-on: ubuntu-latest
+    name: pandoc to vimdoc
+    if: ${{ github.ref == 'refs/heads/master' }}
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+      - name: panvimdoc
+        uses: kdheepak/panvimdoc@main
+        with:
+          vimdoc: timeTrack.nvim
+          treesitter: true
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: .
+
+  coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    name: Generate and Commit Coverage Report
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Setup Neovim
+        uses: rhysd/action-setup-vim@v1
+        id: nvim
+        with:
+          neovim: true
+          version: nightly
+
+      - name: Cache Lua installation
+        uses: actions/cache@v4
+        id: cache-luajit # Added id for consistency, step name matches test job
+        with:
+          path: .lua/
+          key: ${{ runner.os }}-lua-5.1 # Note: runner.os for coverage job will always be ubuntu-latest
+          restore-keys: |
+            ${{ runner.os }}-lua-5.1
+
+      - name: Setup Lua
+        uses: leafo/gh-actions-lua@v11
+        if: steps.cache-luajit.outputs.cache-hit != 'true'
+        with:
+          luaVersion: "5.1"
+
+      - name: Cache Luarocks packages
+        uses: actions/cache@v4
+        id: cache-luarocks # Added id
+        with:
+          path: ~/.luarocks
+          # Since coverage job doesn't have rockspec typically, we might simplify the key
+          # or keep it consistent. For now, keep consistent.
+          key: ${{ runner.os }}-lua-5.1-luarocks-${{ hashFiles('**/rockspec') }}
+          restore-keys: |
+            ${{ runner.os }}-lua-5.1-luarocks-
+
+      - name: Setup Luarocks
+        uses: leafo/gh-actions-luarocks@v5
+
+      - name: Install dependencies
+        run: |
+          luarocks install vusted
+          luarocks install luacov
+          luarocks install inspect
+          luarocks show luacov
+
+      - name: Clean up old coverage files
+        shell: bash
+        run: |
+          echo "Deleting old luacov files if they exist..."
+          rm -f luacov.stats.out
+          rm -f luacov.report.out
+          echo "Old luacov files deleted."
+
+      - name: Run tests for coverage
+        shell: bash
+        run: |
+          vusted --coverage ./test
+
+      - name: Generate Luacov report
+        run: luacov -c .luacov
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-files
+          path: |
+            luacov.report.out
+            luacov.stats.out
+
+  consolidate-and-commit:
+    runs-on: ubuntu-latest
+    needs: [lint, docs, coverage]
+    if: ${{ !cancelled() }} # Run unless the whole workflow was cancelled
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }} # Use PAT for potential push to protected branches
+          ref: ${{ github.head_ref || github.ref }} # Checkout the appropriate branch/PR head
+
+      - name: Download formatted code
+        uses: actions/download-artifact@v4
+        with:
+          name: formatted-code
+          path: temp_lint
+        continue-on-error: true
+
+      - name: List contents of temp_lint
+        run: |
+          echo "Contents of temp_lint (from formatted-code artifact):"
+          ls -AlR temp_lint/
+          echo "-----------------------------------------------------"
+        shell: bash
+
+      - name: Download documentation
+        uses: actions/download-artifact@v4
+        with:
+          name: documentation
+          path: temp_docs
+        continue-on-error: true
+
+      - name: List contents of temp_docs
+        run: |
+          echo "Contents of temp_docs (from documentation artifact):"
+          ls -AlR temp_docs/
+          echo "---------------------------------------------------"
+        shell: bash
+
+      - name: Download coverage files
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-files
+          path: temp_coverage
+        continue-on-error: true
+
+      - name: Apply changes from artifacts
+        run: |
+          set -e # Exit immediately if a command exits with a non-zero status.
+          echo "Applying changes from artifacts..."
+
+          if [ -d "temp_lint" ] && [ "$(ls -A temp_lint)" ]; then
+            echo "Applying linted files..."
+            rsync -av --delete --exclude='.git/' --exclude='/temp_lint/' temp_lint/ ./
+          else
+            echo "Lint artifact not found or is empty."
+          fi
+
+          if [ -d "temp_docs" ] && [ "$(ls -A temp_docs)" ]; then
+            echo "Applying documentation files..."
+            rsync -av --delete --exclude='.git/' --exclude='/temp_docs/' temp_docs/ ./
+          else
+            echo "Documentation artifact not found or is empty."
+          fi
+
+          if [ -d "temp_coverage" ] && [ "$(ls -A temp_coverage)" ]; then
+            echo "Applying coverage files..."
+            cp -R temp_coverage/* ./
+          else
+            echo "Coverage artifact not found or is empty."
+          fi
+
+          echo "Cleaning up temporary artifact directories..."
+          rm -rf temp_lint temp_docs temp_coverage
+
+          echo "Current git status:"
+          git status
+        shell: bash
+
+      - name: Commit consolidated changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore(ci): auto-generated changes from CI [skip ci]'
+          token: ${{ secrets.PAT }} # Use PAT for commit/push
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
+          # No file_pattern is needed; the action commits all detected changes by default.
