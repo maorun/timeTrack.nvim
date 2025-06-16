@@ -1,6 +1,6 @@
 local helper = require('test.helper')
 helper.plenary_dep() -- Ensure plenary is cloned/available
-helper.notify_dep()  -- Might as well ensure notify is also there, like other specs
+helper.notify_dep() -- Might as well ensure notify is also there, like other specs
 
 local time_init_module = require('maorun.time.init')
 local fs = require('plenary.path') -- This should now work if plenary_dep sets up paths or if LUA_PATH is correct
@@ -11,7 +11,7 @@ describe('Project and File Tracking Functionality', function()
     local test_json_filename = 'test_project_file_maorun_time.json'
     local test_json_path = '/tmp/' .. test_json_filename -- Using /tmp for simplicity
     local original_os_date
-    local time_data_obj                                  -- To access internal state for assertions
+    local time_data_obj -- To access internal state for assertions
 
     local function safe_delete_test_file()
         if fs:new(test_json_path):exists() then
@@ -177,16 +177,15 @@ describe('Project and File Tracking Functionality', function()
 
         it("should default to 'default_project' and 'default_file' if not specified", function()
             local startTime = get_mock_time()
-            local stopTime = get_mock_time(3600)                                 -- 1 hour later
+            local stopTime = get_mock_time(3600) -- 1 hour later
 
             time_init_module.TimeStart({ time = startTime, weekday = 'Monday' }) -- No project/file
-            time_init_module.TimeStop({ time = stopTime, weekday = 'Monday' })   -- No project/file
+            time_init_module.TimeStop({ time = stopTime, weekday = 'Monday' }) -- No project/file
 
             local data = get_data_from_json()
             -- New structure: year -> week -> weekday -> project -> file
             local file_specific_data =
-                data.data[mock_date_params.year][mock_date_params.week][mock_date_params.weekday_name]
-                ['default_project']['default_file']
+                data.data[mock_date_params.year][mock_date_params.week][mock_date_params.weekday_name]['default_project']['default_file']
             assert.is_not_nil(
                 file_specific_data,
                 'Data in default project/file for Monday should exist'
@@ -219,8 +218,7 @@ describe('Project and File Tracking Functionality', function()
             local data = get_data_from_json()
             -- New structure: year -> week -> weekday -> project -> file
             local day_items =
-                data.data[mock_date_params.year][mock_date_params.week]['Wednesday']['default_project']['default_file']
-                .items
+                data.data[mock_date_params.year][mock_date_params.week]['Wednesday']['default_project']['default_file'].items
             assert.are.same(1, #day_items)
             assert.is_near(1.5, day_items[1].diffInHours, 0.001)
         end)
@@ -344,7 +342,7 @@ describe('Project and File Tracking Functionality', function()
                 data.data[mock_date_params.year][mock_date_params.week]['Tuesday'].summary
             assert.is_not_nil(tuesday_summary, 'Tuesday weekday summary should exist')
             assert.is_near(4, tuesday_summary.diffInHours, 0.001, 'Tuesday total diffInHours') -- 4 (Alpha/main)
-            assert.is_near(4 - 8, tuesday_summary.overhour, 0.001, 'Tuesday total overhour')   -- 4 - 8 = -4
+            assert.is_near(4 - 8, tuesday_summary.overhour, 0.001, 'Tuesday total overhour') -- 4 - 8 = -4
 
             -- Week summary
             -- Monday overhour (-2) + Tuesday overhour (-4) = -6
@@ -355,7 +353,7 @@ describe('Project and File Tracking Functionality', function()
                 week_summary.overhour,
                 0.001,
                 'Week summary overhour incorrect. Expected -6. Got: '
-                .. inspect(week_summary.overhour)
+                    .. inspect(week_summary.overhour)
             )
         end)
     end)
