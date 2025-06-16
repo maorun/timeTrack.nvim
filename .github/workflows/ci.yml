@@ -16,13 +16,15 @@ jobs:
           version: latest
           args: .
       - name: Create tarball of linted workspace
-        run: tar czf ./formatted-code.tgz --exclude=./.git --exclude=./formatted-code.tgz .
+        run: |
+          mkdir -p ./artifact_output
+          tar czf ./artifact_output/formatted-code.tgz --exclude=./.git --exclude=./artifact_output .
         shell: bash
       - name: Upload formatted code artifact
         uses: actions/upload-artifact@v4
         with:
           name: formatted-code-archive
-          path: ./formatted-code.tgz
+          path: ./artifact_output/formatted-code.tgz
 
   test:
     needs: lint
@@ -98,13 +100,15 @@ jobs:
           vimdoc: timeTrack.nvim
           treesitter: true
       - name: Create tarball of docs workspace
-        run: tar czf ./documentation.tgz --exclude=./.git --exclude=./documentation.tgz .
+        run: |
+          mkdir -p ./artifact_output
+          tar czf ./artifact_output/documentation.tgz --exclude=./.git --exclude=./artifact_output .
         shell: bash
       - name: Upload documentation artifact
         uses: actions/upload-artifact@v4
         with:
           name: documentation-archive
-          path: ./documentation.tgz
+          path: ./artifact_output/documentation.tgz
 
   coverage:
     needs: test
