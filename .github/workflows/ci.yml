@@ -29,7 +29,6 @@ jobs:
           path: ./artifact_output/formatted-code.tgz
 
   test:
-    needs: lint
     name: Run Test
     runs-on: ${{ matrix.os }}
     strategy:
@@ -84,7 +83,6 @@ jobs:
           vusted ./test
 
   docs:
-    needs: test
     runs-on: ubuntu-latest
     name: pandoc to vimdoc
     if: ${{ github.ref == 'refs/heads/master' }}
@@ -111,9 +109,8 @@ jobs:
           path: ./artifact_output/documentation.tgz
 
   coverage:
-    needs: test
     runs-on: ubuntu-latest
-    name: Generate and Commit Coverage Report
+    name: Generate Coverage Report
     permissions:
       contents: write
     steps:
@@ -297,7 +294,7 @@ jobs:
           git status
         shell: bash
 
-      - name: Commit coverage report
+      - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: 'chore(ci): auto-generated changes from CI [skip ci]'

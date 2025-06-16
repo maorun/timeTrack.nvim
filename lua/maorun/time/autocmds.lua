@@ -82,11 +82,22 @@ function M.setup_autocmds()
         end,
     })
 
-    vim.api.nvim_create_autocmd('VimLeave', {
+    vim.api.nvim_create_autocmd('VimLeavePre', {
         group = timeGroup,
         desc = 'End Timetracking on VimLeave (general stop)',
-        callback = function()
-            core.TimeStop()
+        callback = function(args)
+            -- Prevent execution if buffer name is empty or special buffer
+            local bufname = vim.api.nvim_buf_get_name(args.buf)
+            if bufname == '' or vim.bo[args.buf].buftype ~= '' then
+                return
+            end
+
+            local info = utils.get_project_and_file_info(args.buf)
+            if info then
+                core.TimeStop({ project = info.project, file = info.file })
+            else
+                core.TimeStop()
+            end
         end,
     })
 end
