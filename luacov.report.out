@@ -1166,7 +1166,7 @@
   84         table.insert(sorted_weekdays, { name = day, value = num })
          end
   24     table.sort(sorted_weekdays, function(a, b)
- 168         return a.value < b.value
+ 192         return a.value < b.value
          end)
 
   96     for _, day_info in ipairs(sorted_weekdays) do
@@ -1297,7 +1297,7 @@
    2             project_name = current_dir.filename
    2             break
              end
-  16         if current_dir:is_root() then
+   8         if current_dir.filename == '/' then
    2             break
              end
    6         last_sensible_parent = current_dir -- Update before going higher
@@ -1307,7 +1307,7 @@
    5     if project_name == nil then
              -- Fallback logic using last_sensible_parent
    3         if last_sensible_parent then
-   6             if last_sensible_parent:is_root() then
+   3             if last_sensible_parent.filename == '/' then
    1                 project_name = '_root_'
    2             elseif last_sensible_parent.filename and last_sensible_parent.filename ~= '' then
    1                 project_name = last_sensible_parent.filename
