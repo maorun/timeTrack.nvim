@@ -41,7 +41,7 @@ function M.get_project_and_file_info(buffer_path_or_bufnr)
             project_name = current_dir.filename
             break
         end
-        if current_dir:is_root() then
+        if current_dir.filename == '/' then
             break
         end
         last_sensible_parent = current_dir -- Update before going higher
@@ -51,7 +51,7 @@ function M.get_project_and_file_info(buffer_path_or_bufnr)
     if project_name == nil then
         -- Fallback logic using last_sensible_parent
         if last_sensible_parent then
-            if last_sensible_parent:is_root() then
+            if last_sensible_parent.filename == '/' then
                 project_name = '_root_'
             elseif last_sensible_parent.filename and last_sensible_parent.filename ~= '' then
                 project_name = last_sensible_parent.filename

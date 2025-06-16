@@ -18,7 +18,6 @@ local path_mock_ctrl = {
     write_was_called_with_mode = nil,
     write_return_value = nil, -- typically nil for write
     exists_return_value = false,
-    is_root_return_value = false,
     parent_return_value = nil, -- This should be another Path mock or a table simulating it
     absolute_return_value = '',
     filename_value = 'mock_filename', -- Default filename for mock Path objects
@@ -45,7 +44,6 @@ describe('Utils Tests', function()
         path_mock_ctrl.write_was_called_with_mode = nil
         path_mock_ctrl.write_return_value = nil
         path_mock_ctrl.exists_return_value = false
-        path_mock_ctrl.is_root_return_value = false
         path_mock_ctrl.parent_return_value = nil
         path_mock_ctrl.absolute_return_value = ''
         path_mock_ctrl.filename_value = 'mock_filename'
@@ -125,9 +123,6 @@ describe('Utils Tests', function()
                     end,
                     exists = function()
                         return path_mock_ctrl.exists_return_value
-                    end,
-                    is_root = function()
-                        return path_mock_ctrl.is_root_return_value
                     end,
                     parent = function()
                         return path_mock_ctrl.parent_return_value
@@ -231,9 +226,6 @@ describe('Utils Tests', function()
                     absolute = function()
                         return '/projects/myNeovimPlugin/.git'
                     end,
-                    is_root = function()
-                        return false
-                    end,
                 }
 
                 local project_path_obj_mock = {
@@ -260,13 +252,7 @@ describe('Utils Tests', function()
                             absolute = function()
                                 return self:absolute() .. name
                             end,
-                            is_root = function()
-                                return false
-                            end,
                         }
-                    end,
-                    is_root = function()
-                        return false
                     end,
                     parent = function()
                         -- Mock parent of project dir (e.g., "/projects/")
@@ -274,9 +260,6 @@ describe('Utils Tests', function()
                             filename = 'projects',
                             absolute = function()
                                 return '/projects/'
-                            end,
-                            is_root = function()
-                                return false
                             end,
                             parent = function()
                                 return {
@@ -286,9 +269,6 @@ describe('Utils Tests', function()
                                     end,
                                     parent = function()
                                         return nil
-                                    end,
-                                    is_root = function()
-                                        return true
                                     end,
                                 }
                             end, -- root
@@ -311,9 +291,6 @@ describe('Utils Tests', function()
                     parent = function()
                         return project_path_obj_mock
                     end, -- This setup is a bit simplified, focusing on the .git check path
-                    is_root = function()
-                        return false
-                    end,
                     joinpath = function(self, name)
                         if name == '.git' then
                             -- This case implies .git is a subdirectory of 'some', which is not the structure we're aiming for here.
@@ -420,9 +397,6 @@ describe('Utils Tests', function()
                 absolute = function()
                     return '/work/anotherProject/.git'
                 end,
-                is_root = function()
-                    return false
-                end,
             }
             local project_path_obj_mock = {
                 exists = function()
@@ -443,13 +417,7 @@ describe('Utils Tests', function()
                         absolute = function()
                             return self:absolute() .. name
                         end,
-                        is_root = function()
-                            return false
-                        end,
                     }
-                end,
-                is_root = function()
-                    return false
                 end,
                 parent = function()
                     return {
@@ -457,17 +425,11 @@ describe('Utils Tests', function()
                         absolute = function()
                             return '/work/'
                         end,
-                        is_root = function()
-                            return false
-                        end,
                         parent = function()
                             return {
                                 filename = '',
                                 absolute = function()
                                     return '/'
-                                end,
-                                is_root = function()
-                                    return true
                                 end,
                                 parent = function()
                                     return nil
@@ -491,9 +453,6 @@ describe('Utils Tests', function()
                 end,
                 parent = function()
                     return project_path_obj_mock
-                end,
-                is_root = function()
-                    return false
                 end,
                 joinpath = function()
                     return {
@@ -608,9 +567,6 @@ describe('Utils Tests', function()
                         end,
                     }
                 end, -- .git not found
-                is_root = function()
-                    return false
-                end,
                 parent = function()
                     return { -- /my_projects/
                         filename = 'my_projects',
@@ -627,12 +583,9 @@ describe('Utils Tests', function()
                                 end,
                             }
                         end,
-                        is_root = function()
-                            return false
-                        end,
                         parent = function() -- /
                             return {
-                                filename = '', -- or some representation of root
+                                filename = '/', -- or some representation of root
                                 absolute = function()
                                     return '/'
                                 end,
@@ -646,9 +599,6 @@ describe('Utils Tests', function()
                                         end,
                                     }
                                 end,
-                                is_root = function()
-                                    return true
-                                end, -- Actual root
                                 parent = function()
                                     return nil
                                 end, -- Stop recursion
@@ -674,9 +624,6 @@ describe('Utils Tests', function()
                             return self:absolute() .. name
                         end,
                     }
-                end,
-                is_root = function()
-                    return false
                 end,
             }
 
@@ -757,13 +704,10 @@ describe('Utils Tests', function()
                 local expected_file = 'actual_file.txt'
 
                 local root_dir_mock = {
-                    filename = '', -- Or perhaps "/", Plenary behavior might vary. Assume "" for now.
+                    filename = '/',
                     absolute = function()
                         return '/'
                     end,
-                    is_root = function()
-                        return true
-                    end, -- This is key for the _root_ logic
                     parent = function()
                         return nil
                     end, -- Root's parent is nil
@@ -850,9 +794,6 @@ describe('Utils Tests', function()
                 absolute = function()
                     return ''
                 end, -- Should not matter if filename is nil
-                is_root = function()
-                    return false
-                end,
                 parent = function()
                     return nil
                 end,

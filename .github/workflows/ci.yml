@@ -9,10 +9,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
       - name: Stylua
         uses: JohnnyMorganz/stylua-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT }}
           version: latest
           args: .
       - name: Create tarball of linted workspace
@@ -87,8 +89,6 @@ jobs:
     name: pandoc to vimdoc
     if: ${{ github.ref == 'refs/heads/master' }}
     permissions:
-      # Give the default GITHUB_TOKEN write permission to commit and push the
-      # added or changed files to the repository.
       contents: write
     steps:
       - uses: actions/checkout@v4
@@ -297,8 +297,8 @@ jobs:
           git status
         shell: bash
 
-      - name: Commit consolidated changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Commit coverage report
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: 'chore(ci): auto-generated changes from CI [skip ci]'
           token: ${{ secrets.PAT }} # Use PAT for commit/push
