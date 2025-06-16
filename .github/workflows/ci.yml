@@ -20,7 +20,7 @@ jobs:
       - name: Auto Commit
         uses: stefanzweifel/git-auto-commit-action@v6
         with:
-          commit_message: 'style: auto format Lua code'
+          commit_message: 'style: auto format Lua code [skip ci]'
 
 
   test:
@@ -96,7 +96,7 @@ jobs:
           treesitter: true
       - uses: stefanzweifel/git-auto-commit-action@v6
         with:
-          commit_message: 'chore(doc): auto generate docs'
+          commit_message: 'chore(doc): auto generate docs [skip ci]'
 
   coverage:
     needs: test
