@@ -15,14 +15,29 @@ local function select_hours_internal(opts, callback, current_selection_state)
                 notify('Invalid number of hours provided.', 'warn', { title = 'TimeTracking' })
                 return
             end
-            callback(n, current_selection_state.weekday, current_selection_state.project, current_selection_state.file)
+            callback(
+                n,
+                current_selection_state.weekday,
+                current_selection_state.project,
+                current_selection_state.file
+            )
         end)
     else
-        callback(0, current_selection_state.weekday, current_selection_state.project, current_selection_state.file)
+        callback(
+            0,
+            current_selection_state.weekday,
+            current_selection_state.project,
+            current_selection_state.file
+        )
     end
 end
 
-local function get_weekday_selection_internal(opts, callback, current_selection_state, selections_list)
+local function get_weekday_selection_internal(
+    opts,
+    callback,
+    current_selection_state,
+    selections_list
+)
     if opts.weekday then
         if pcall(require, 'telescope') and require('maorun.time.weekday_select') then
             local telescopeSelect = require('maorun.time.weekday_select')
@@ -51,7 +66,11 @@ local function get_weekday_selection_internal(opts, callback, current_selection_
     else
         current_selection_state.weekday = nil
         if opts.hours then
-            notify("Weekday selection was skipped, but it's required for this operation.", 'warn', { title = 'TimeTracking' })
+            notify(
+                "Weekday selection was skipped, but it's required for this operation.",
+                'warn',
+                { title = 'TimeTracking' }
+            )
             return
         else
             callback(0, nil, current_selection_state.project, current_selection_state.file)
