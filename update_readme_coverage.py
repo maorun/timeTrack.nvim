@@ -87,46 +87,50 @@ def extract_summary_from_report(report_content):
 
 
 def update_readme(readme_content, summary_table):
-    if not readme_content or not summary_table:
-        # It might be better to raise an error or handle this more explicitly
-        # if called with None, but for now, align with original script's implicit behavior.
+    if not readme_content: # summary_table can be empty, but readme_content must exist
+        print("Error: README content is empty.", file=sys.stderr)
+        return None
+    if summary_table is None: # Check specifically for None for summary_table
+        print("Error: Summary table content is None.", file=sys.stderr)
         return None
 
-    # This is the specific line we are looking for in README.md
     target_line_to_find = "The latest summary is:"
 
-    # This is the new content that will replace the target_line_to_find
-    # The f-string will correctly handle newlines within the block.
-    replacement_block = f"""The latest summary is:
+    # Ensure summary_table is a string and doesn't have excessive whitespace issues for formatting
+    summary_table_str = str(summary_table).strip()
+
+    # This is the new content that will replace the target section
+    replacement_block = f"""{target_line_to_find}
 
 ```markdown
-{summary_table}
-```"""
+{summary_table_str}
+```""" # Tripled double-quotes for f-string
 
-    lines = readme_content.splitlines()
-    new_readme_lines = []
-    found_target = False
+    # Regex to find the target line, the "```markdown" line, its content, and the closing "```"
+    # It should match from the target line up to and including the closing ``` of the code block.
+    # Using re.escape on target_line_to_find for safety if it ever contains special regex characters.
+    # The pattern looks for:
+    # 1. The target_line_to_find (anchored to the start of a line in multiline mode).
+    # 2. Followed by optional whitespace, then a newline (Windows or Unix).
+    # 3. Then "```markdown" literally.
+    # 4. Then any characters (including newlines, non-greedily) until...
+    # 5. The closing "```" (anchored to the start of a line in multiline mode for robustness).
+    regex_pattern = re.compile(
+        rf"^{re.escape(target_line_to_find)}(?:\s*?\r?\n```markdown[\s\S]*?^```)+",
+        re.MULTILINE
+    )
 
-    for line in lines:
-        # Compare stripped versions to handle potential leading/trailing whitespace issues
-        if not found_target and line.strip() == target_line_to_find.strip():
-            new_readme_lines.append(replacement_block)
-            found_target = True
-        else:
-            new_readme_lines.append(line)
+    updated_content, num_replacements = regex_pattern.subn(replacement_block, readme_content, count=1)
 
-    if not found_target:
-        # Use the original target_line_to_find for the error message for clarity
-        print(f"Error: Target line not found in README.md:\n'{target_line_to_find}'", file=sys.stderr)
+    if num_replacements == 0:
+        print(f"Error: Target pattern not found in README.md for replacement. The script expected to find a line '{target_line_to_find}' followed by a markdown code block starting with '```markdown' and ending with '```'. Please ensure this structure exists in the README.", file=sys.stderr)
         return None
 
-    # Join the lines back. Add a single trailing newline if not already present.
-    # Most text files, including Markdown, should end with a newline.
-    updated_readme_content = "\n".join(new_readme_lines)
-    if not updated_readme_content.endswith("\n"):
-        updated_readme_content += "\n"
+    # Ensure the updated content ends with a newline, similar to the original script
+    if not updated_content.endswith("\n"):
+        updated_content += "\n"
 
-    return updated_readme_content
+    return updated_content
 
 def write_file_content(filepath, content):
     """Writes content to a file.

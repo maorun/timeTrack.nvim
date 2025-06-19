@@ -190,17 +190,3 @@ File                                                                         Hit
 -------------------------------------------------------------------------------------------------
 Total                                                                        462  107    81.20%
 ```
-
-```markdown
-File                                                                         Hits Missed Coverage
--------------------------------------------------------------------------------------------------
-/home/runner/nvim-nightly/share/nvim/runtime/lua/vim/ui.lua                  6    80     6.98%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/autocmds.lua 16   28     36.36%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/config.lua   17   0      100.00%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/core.lua     315  19     94.31%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/init.lua     34   32     51.52%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/ui.lua       31   24     56.36%
-/home/runner/work/timeTrack.nvim/timeTrack.nvim/lua/maorun/time/utils.lua    15   35     30.00%
--------------------------------------------------------------------------------------------------
-Total                                                                        434  218    66.56%
-```
