@@ -63,6 +63,26 @@ function M.setup_autocmds()
         end,
     })
 
+    vim.api.nvim_create_autocmd('FocusLost', {
+        group = timeGroup,
+        desc = 'Stop Timetracking when Neovim loses focus',
+        callback = function()
+            local current_buf = vim.api.nvim_get_current_buf()
+            local bufname = vim.api.nvim_buf_get_name(current_buf)
+            -- Similar check for empty or special buffers
+            if bufname == '' or vim.bo[current_buf].buftype ~= '' then
+                return
+            end
+
+            local info = utils.get_project_and_file_info(current_buf)
+            if info then
+                core.TimeStop({ project = info.project, file = info.file })
+            else
+                core.TimeStop()
+            end
+        end,
+    })
+
     vim.api.nvim_create_autocmd('BufLeave', {
         group = timeGroup,
         desc = 'Stop Timetracking for the buffer being left',
