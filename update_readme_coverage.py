@@ -93,7 +93,7 @@ def update_readme(readme_content, summary_table):
         return None
 
     # This is the specific line we are looking for in README.md
-    target_line_to_find = "The latest report is committed to the repository and can be viewed here: [luacov.report.out](luacov.report.out)."
+    target_line_to_find = "The latest summary is:"
 
     # This is the new content that will replace the target_line_to_find
     # The f-string will correctly handle newlines within the block.
