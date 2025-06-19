@@ -3,40 +3,116 @@ local config_module = require('maorun.time.config') -- For weekdayNumberMap
 
 local M = {}
 
+local function notify(msg, level, opts)
+    vim.notify(msg, level, opts)
+end
+
+local function select_hours_internal(opts, callback, current_selection_state)
+    if opts.hours then
+        vim.ui.input({ prompt = 'How many hours? ' }, function(input)
+            local n = tonumber(input)
+            if n == nil or input == nil or input == '' then
+                notify('Invalid number of hours provided.', 'warn', { title = 'TimeTracking' })
+                return
+            end
+            callback(
+                n,
+                current_selection_state.weekday,
+                current_selection_state.project,
+                current_selection_state.file
+            )
+        end)
+    else
+        callback(
+            0,
+            current_selection_state.weekday,
+            current_selection_state.project,
+            current_selection_state.file
+        )
+    end
+end
+
+local function get_weekday_selection_internal(
+    opts,
+    callback,
+    current_selection_state,
+    selections_list
+)
+    if opts.weekday then
+        if pcall(require, 'telescope') and require('maorun.time.weekday_select') then
+            local telescopeSelect = require('maorun.time.weekday_select')
+            telescopeSelect({
+                prompt_title = 'Which day?',
+                list = selections_list,
+                action = function(selected_weekday)
+                    if selected_weekday then
+                        current_selection_state.weekday = selected_weekday
+                        select_hours_internal(opts, callback, current_selection_state)
+                    else
+                        notify('No weekday selected.', 'info', { title = 'TimeTracking' })
+                    end
+                end,
+            })
+        else
+            vim.ui.select(selections_list, { prompt = 'Which day? ' }, function(selected_weekday)
+                if selected_weekday then
+                    current_selection_state.weekday = selected_weekday
+                    select_hours_internal(opts, callback, current_selection_state)
+                else
+                    notify('No weekday selected.', 'info', { title = 'TimeTracking' })
+                end
+            end)
+        end
+    else
+        current_selection_state.weekday = nil
+        if opts.hours then
+            notify(
+                "Weekday selection was skipped, but it's required for this operation.",
+                'warn',
+                { title = 'TimeTracking' }
+            )
+            return
+        else
+            callback(0, nil, current_selection_state.project, current_selection_state.file)
+        end
+    end
+end
+
+local function get_file_input_internal(opts, callback, current_selection_state, selections_list)
+    if opts.file then
+        vim.ui.input({ prompt = 'File name? (default: default_file) ' }, function(input)
+            current_selection_state.file = (input and input ~= '') and input or 'default_file'
+            get_weekday_selection_internal(opts, callback, current_selection_state, selections_list)
+        end)
+    else
+        current_selection_state.file = 'default_file'
+        get_weekday_selection_internal(opts, callback, current_selection_state, selections_list)
+    end
+end
+
+local function get_project_input_internal(opts, callback, current_selection_state, selections_list)
+    if opts.project then
+        vim.ui.input({ prompt = 'Project name? (default: default_project) ' }, function(input)
+            current_selection_state.project = (input and input ~= '') and input or 'default_project'
+            get_file_input_internal(opts, callback, current_selection_state, selections_list)
+        end)
+    else
+        current_selection_state.project = 'default_project'
+        get_file_input_internal(opts, callback, current_selection_state, selections_list)
+    end
+end
+
 ---@param opts { hours?: boolean, weekday?: boolean, project?: boolean, file?: boolean }
 ---@param callback fun(hours:number, weekday: string, project:string, file:string) the function to call
 function M.select(opts, callback)
+    local current_selection_state = {}
+
     opts = vim.tbl_deep_extend('force', {
         hours = true,
         weekday = true,
         project = true,
         file = true,
     }, opts or {})
-
-    local selected_project = 'default_project'
-    local selected_file = 'default_file'
-
-    local function get_file_input()
-        if opts.file then
-            vim.ui.input({ prompt = 'File name? (default: default_file) ' }, function(input)
-                selected_file = (input and input ~= '') and input or 'default_file'
-                get_weekday_selection()
-            end)
-        else
-            get_weekday_selection()
-        end
-    end
-
-    local function get_project_input()
-        if opts.project then
-            vim.ui.input({ prompt = 'Project name? (default: default_project) ' }, function(input)
-                selected_project = (input and input ~= '') and input or 'default_project'
-                get_file_input()
-            end)
-        else
-            get_file_input()
-        end
-    end
 
     local selections = {}
     local selectionNumbers = {}
@@ -56,77 +132,7 @@ function M.select(opts, callback)
         end
     end
 
-    ---@param weekday_param string
-    local function selectHours(weekday_param)
-        if opts.hours then
-            vim.ui.input({
-                prompt = 'How many hours? ',
-            }, function(input)
-                local n = tonumber(input)
-                if n == nil or input == nil or input == '' then
-                    notify('Invalid number of hours provided.', 'warn', { title = 'TimeTracking' })
-                    return
-                end
-                callback(n, weekday_param, selected_project, selected_file)
-            end)
-        else
-            callback(0, weekday_param, selected_project, selected_file) -- Assuming 0 hours if not prompted
-        end
-    end
-
-    local function get_weekday_selection()
-        if opts.weekday then
-            if pcall(require, 'telescope') and require('maorun.time.weekday_select') then
-                local telescopeSelect = require('maorun.time.weekday_select')
-                telescopeSelect({
-                    prompt_title = 'Which day?',
-                    list = selections, -- Use the sorted selections
-                    action = function(selected_weekday)
-                        if selected_weekday then -- Ensure a selection was made
-                            selectHours(selected_weekday)
-                        else
-                            notify('No weekday selected.', 'info', { title = 'TimeTracking' })
-                        end
-                    end,
-                })
-            else
-                vim.ui.select(selections, { -- Use the sorted selections
-                    prompt = 'Which day? ',
-                }, function(selected_weekday)
-                    if selected_weekday then -- Ensure a selection was made
-                        selectHours(selected_weekday)
-                    else
-                        notify('No weekday selected.', 'info', { title = 'TimeTracking' })
-                    end
-                end)
-            end
-        else
-            -- This case needs careful handling. If weekday is false, what should happen?
-            -- The original code didn't seem to have a clear path if opts.weekday was false
-            -- and callback requires a weekday.
-            -- For now, let's assume if opts.weekday is false, the operation is not time-specific
-            -- and we call back with a nil weekday, or a sensible default.
-            -- However, the callback signature expects a weekday string.
-            -- Option 1: Error or notify that weekday is required.
-            -- Option 2: Use a default (e.g., current day).
-            -- Option 3: Modify callback or have different select functions.
-            -- Given current callback, let's notify and not proceed if weekday is essential but skipped.
-            if opts.hours then -- If hours are also expected, it's likely a time entry operation.
-                notify(
-                    "Weekday selection was skipped, but it's required for this operation.",
-                    'warn',
-                    { title = 'TimeTracking' }
-                )
-                return
-            else
-                -- If only project/file are relevant and weekday/hours are not.
-                -- This path is not used by current Time.add/subtract/set.
-                callback(0, nil, selected_project, selected_file)
-            end
-        end
-    end
-
-    get_project_input()
+    get_project_input_internal(opts, callback, current_selection_state, selections)
 end
 
 return M
