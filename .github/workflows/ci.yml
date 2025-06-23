@@ -306,7 +306,7 @@ jobs:
         run: python ./update_readme_coverage.py
 
       - name: Commit updated README.md
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: 'docs(readme): update coverage summary [skip ci]'
           file_pattern: README.md
