@@ -5,7 +5,7 @@ local utils = require('maorun.time.utils')
 
 local M = {}
 
-local lock_file_path = vim.fn.stdpath('run') .. "/maorun_time.lock"
+local lock_file_path = vim.fn.stdpath('run') .. '/maorun_time.lock'
 local current_pid = vim.fn.getpid()
 
 function M.acquire_instance_lock()
@@ -22,9 +22,9 @@ function M.acquire_instance_lock()
         return false -- Locked by another instance
     else
         -- Attempt to create and write PID
-        local ok, err = lock_p:write(tostring(current_pid), "w")
+        local ok, err = lock_p:write(tostring(current_pid), 'w')
         if not ok then
-            vim.notify("Failed to write lock file: " .. err, vim.log.levels.ERROR)
+            vim.notify('Failed to write lock file: ' .. err, vim.log.levels.ERROR)
             return false
         end
         -- print("Acquired lock for PID: " .. current_pid)
@@ -36,7 +36,7 @@ function M.release_instance_lock()
     local lock_p = Path:new(lock_file_path)
     if lock_p:exists() then
         local owner_pid_str = lock_p:read()
-        if owner_pid_str == nil or owner_pid_str == "" then
+        if owner_pid_str == nil or owner_pid_str == '' then
             -- Lock file is empty or unreadable, can attempt to remove or just report
             -- For safety, if we can't confirm ownership, don't delete.
             -- However, if it's empty, it's likely corrupted. Let's try removing if current PID was supposed to own it.
@@ -47,9 +47,11 @@ function M.release_instance_lock()
         end
         local owner_pid = tonumber(owner_pid_str)
         if owner_pid == current_pid then
-            local ok, err = pcall(function() lock_p:rm() end)
+            local ok, err = pcall(function()
+                lock_p:rm()
+            end)
             if not ok then
-                vim.notify("Failed to remove lock file: " .. err, vim.log.levels.ERROR)
+                vim.notify('Failed to remove lock file: ' .. err, vim.log.levels.ERROR)
             end
             -- print("Released lock for PID: " .. current_pid)
         else
@@ -62,7 +64,7 @@ function M.has_instance_lock()
     local lock_p = Path:new(lock_file_path)
     if lock_p:exists() then
         local owner_pid_str = lock_p:read()
-        if owner_pid_str == nil or owner_pid_str == "" then
+        if owner_pid_str == nil or owner_pid_str == '' then
             return false -- Unreadable or empty lock file
         end
         local owner_pid = tonumber(owner_pid_str)
