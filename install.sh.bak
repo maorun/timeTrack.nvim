@@ -31,7 +31,7 @@ else
        # Try package managers first
        if command -v apt-get &> /dev/null; then
            echo "Attempting installation via apt-get..."
-           sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y dialog && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y neovim
+           sudo apt-get update && sudo apt-get install -y neovim
        elif command -v yum &> /dev/null; then
            echo "Attempting installation via yum..."
            sudo yum install -y neovim
@@ -80,7 +80,7 @@ then
     if [[ "${CURRENT_OS}" == "linux" ]]; then
         echo "Luarocks not found. Attempting to install..."
         if command -v apt-get &> /dev/null; then
-            sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y dialog && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y luarocks
+            sudo apt-get update && sudo apt-get install -y luarocks
         elif command -v yum &> /dev/null; then
             sudo yum install -y luarocks
             # Add a note about potential package name variations for yum
@@ -123,7 +123,7 @@ echo "Installing stylua from GitHub release..."
 # Ensure curl and unzip are installed
 if command -v apt-get &> /dev/null; then
     sudo apt-get update
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y dialog && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl unzip
+    sudo apt-get install -y curl unzip
 elif command -v yum &> /dev/null; then
     sudo yum install -y curl unzip
 else
