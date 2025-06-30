@@ -104,7 +104,10 @@ describe('maorun.time.ui.select', function()
         assert.table_contains(prompts, 'Project name? (default: default_project) ')
         assert.table_contains(prompts, 'File name? (default: default_file) ')
         assert.table_contains(prompts, 'How many hours? ')
-        assert.is_true(helper.weekday_select_mock:was_called_flag() or helper.select_mock:was_called_flag(), "Either custom weekday select or vim.ui.select for weekday should be called")
+        assert.is_true(
+            helper.weekday_select_mock:was_called_flag() or helper.select_mock:was_called_flag(),
+            'Either custom weekday select or vim.ui.select for weekday should be called'
+        )
 
         if helper.weekday_select_mock:was_called_flag() then
             assert.are_equal(
@@ -112,7 +115,7 @@ describe('maorun.time.ui.select', function()
                 helper.weekday_select_mock:get_show_called_with_options().prompt_title
             )
         elseif helper.select_mock:was_called_flag() then
-             assert.are_equal(
+            assert.are_equal(
                 'Which day? ', -- This is the prompt from direct vim.ui.select
                 helper.select_mock:get_prompt()
             )

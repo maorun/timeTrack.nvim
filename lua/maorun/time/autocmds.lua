@@ -98,9 +98,9 @@ function M.setup_autocmds()
                 -- For now, let's assume the last active buffer's info is what we want, or default.
                 -- The current TimeStop defaults project/file if not provided, which is fine.
                 if info and info.project and info.file then
-                     core.TimeStop({ project = info.project, file = info.file })
+                    core.TimeStop({ project = info.project, file = info.file })
                 else
-                     core.TimeStop() -- Stop with default/last known if any
+                    core.TimeStop() -- Stop with default/last known if any
                 end
             else
                 -- vim.notify("VimLeavePre: No lock, not stopping tracking.", vim.log.levels.INFO)
