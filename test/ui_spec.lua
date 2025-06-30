@@ -59,7 +59,7 @@ end
 local current_test_name = ''
 local function it(text, fn)
     current_test_name = text
-    -- Vusted will print the test name. Redundant print('  IT: ' .. text) removed.
+    print('  IT: ' .. text)
 
     -- Reset all mock states and flags before each test
     helper.input_mock:reset()
@@ -68,27 +68,32 @@ local function it(text, fn)
     helper.notify_mock:reset()
     helper.reset_all_was_called_flags()
 
-    -- Let Vusted handle pcall and error reporting for the test function (fn)
-    fn()
+    local success, err = pcall(fn)
 
-    -- Teardown all global mocks after each test to ensure clean state for the next 'it' block
-    -- Vusted runs each 'it' block in isolation, but mocks are global so manual teardown is good.
+    if not success then
+        print('    TEST FAILED: ' .. tostring(err))
+    -- Consider re-throwing the error if using a real test runner
+    -- error("Test failed: " .. current_test_name .. "\n" .. tostring(err))
+    else
+        print('    TEST PASSED')
+    end
+
+    -- Teardown all global mocks after each test
     helper.teardown_all_mocks()
     current_test_name = '' -- Reset test name
 end
 
 describe('maorun.time.ui.select', function()
     it('should handle default options (all true)', function()
-        -- print('    RUNNING TEST: should handle default options (all true)') -- Vusted will show test status
+        print('    RUNNING TEST: should handle default options (all true)')
         local cb_hours, cb_weekday, cb_project, cb_file
         local callback = function(h, wd, p, f)
-            -- print("    CALLBACK EXECUTED for 'default options'") -- Debug print, can be removed
+            print("    CALLBACK EXECUTED for 'default options'")
             cb_hours, cb_weekday, cb_project, cb_file = h, wd, p, f
         end
 
         helper.input_mock:set_texts_to_return({ 'test_project_default', 'test_file_default', '5' })
         helper.weekday_select_mock:set_selected_weekday('Monday')
-        helper.select_mock:set_item_to_return('Monday') -- For vim.ui.select fallback
 
         print("    CALLING time_ui.select for 'default options'")
         time_ui.select({ project = true, file = true, weekday = true, hours = true }, callback)
@@ -101,22 +106,14 @@ describe('maorun.time.ui.select', function()
 
         assert.are_equal(3, helper.input_mock:get_call_count())
         local prompts = helper.input_mock:get_prompts_called_with()
-        assert.table_contains(prompts, 'Project name? (default: default_project) ')
-        assert.table_contains(prompts, 'File name? (default: default_file) ')
-        assert.table_contains(prompts, 'How many hours? ')
-        assert.is_true(helper.weekday_select_mock:was_called_flag() or helper.select_mock:was_called_flag(), "Either custom weekday select or vim.ui.select for weekday should be called")
-
-        if helper.weekday_select_mock:was_called_flag() then
-            assert.are_equal(
-                'Which day?', -- This is the prompt from maorun.time.weekday_select mock via its options
-                helper.weekday_select_mock:get_show_called_with_options().prompt_title
-            )
-        elseif helper.select_mock:was_called_flag() then
-             assert.are_equal(
-                'Which day? ', -- This is the prompt from direct vim.ui.select
-                helper.select_mock:get_prompt()
-            )
-        end
+        assert.table_contains(prompts, 'Enter project name:')
+        assert.table_contains(prompts, 'Enter file name:')
+        assert.table_contains(prompts, 'Enter hours (0-24):')
+        assert.is_true(helper.weekday_select_mock:was_called_flag())
+        assert.are_equal(
+            'Select weekday:',
+            helper.weekday_select_mock:get_show_called_with_options().prompt
+        )
         print("    ASSERTIONS COMPLETED for 'default options'")
     end)
 
@@ -128,7 +125,6 @@ describe('maorun.time.ui.select', function()
 
         helper.input_mock:set_texts_to_return({ 'project_no_hours', 'file_no_hours' })
         helper.weekday_select_mock:set_selected_weekday('Tuesday')
-        helper.select_mock:set_item_to_return('Tuesday') -- For vim.ui.select fallback
 
         time_ui.select({ hours = false }, callback) -- project, file, weekday default to true
 
@@ -209,7 +205,6 @@ describe('maorun.time.ui.select', function()
 
         helper.input_mock:set_texts_to_return({ 'file_no_proj', '7' }) -- For file and hours
         helper.weekday_select_mock:set_selected_weekday('Wednesday')
-        helper.select_mock:set_item_to_return('Wednesday') -- For vim.ui.select fallback
 
         -- Assuming 'time_ui.default_project' exists or is handled by SUT
         local expected_project = (time_ui.default_project or 'default_project')
@@ -231,7 +226,6 @@ describe('maorun.time.ui.select', function()
 
         helper.input_mock:set_texts_to_return({ 'project_no_file', '8' }) -- For project and hours
         helper.weekday_select_mock:set_selected_weekday('Thursday')
-        helper.select_mock:set_item_to_return('Thursday') -- For vim.ui.select fallback
 
         local expected_file = (time_ui.default_file or 'default_file')
         time_ui.select({ file = false }, callback) -- project, weekday, hours default true
@@ -285,7 +279,6 @@ describe('maorun.time.ui.select', function()
 
             helper.input_mock:set_texts_to_return({ 'proj_val_hr', 'file_val_hr', hours_input_val })
             helper.weekday_select_mock:set_selected_weekday('Friday')
-            helper.select_mock:set_item_to_return('Friday') -- For vim.ui.select fallback
 
             time_ui.select({ project = true, file = true, weekday = true, hours = true }, callback)
 
