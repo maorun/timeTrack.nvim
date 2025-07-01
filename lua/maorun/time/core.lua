@@ -501,39 +501,26 @@ function M.subtractTime(opts)
     return config_module.obj
 end
 
-function M.setIllDay(weekday_param, project, file) -- Added project and file params
+function M.setIllDay(weekday_param)
+    M.clearDay(weekday_param)
     M.addTime({
         time = utils.calculateAverage(),
         weekday = weekday_param,
-        clearDay = 'yes', -- This implies clearing should happen before adding.
-        project = project,
-        file = file,
     })
     return config_module.obj
 end
 
-function M.clearDay(weekday_param, project, file)
-    project = project or 'default_project'
-    file = file or 'default_file'
+function M.clearDay(weekday_param)
+    local project = 'default_project'
+    local file = 'default_file'
     local year_str = os.date('%Y')
     local week_str = os.date('%W')
 
-    -- New structure: year -> week -> weekday -> project -> file
-    if
-        config_module.obj.content['data'][year_str]
-        and config_module.obj.content['data'][year_str][week_str]
-        and config_module.obj.content['data'][year_str][week_str][weekday_param]
-        and config_module.obj.content['data'][year_str][week_str][weekday_param][project]
-        and config_module.obj.content['data'][year_str][week_str][weekday_param][project][file]
-    then
-        local file_data_for_day =
-            config_module.obj.content['data'][year_str][week_str][weekday_param][project][file]
-        if file_data_for_day.items then
-            file_data_for_day.items = {} -- Clear items by assigning an empty table
-        end
-        -- Optionally reset summary for the day as well
-        -- file_data_for_day.summary = {}
-    end
+    local file_data_for_day = config_module.obj.content['data'][year_str][week_str]
+    file_data_for_day[weekday_param] = {}
+    file_data_for_day[weekday_param][project] = {}
+    file_data_for_day[weekday_param][project][file] = {}
+    file_data_for_day[weekday_param][project][file].items = {} -- Clear items by assigning an empty table
     M.calculate({ year = year_str, weeknumber = week_str })
     utils.save()
 end
@@ -544,7 +531,7 @@ function M.setTime(opts)
     local project = opts.project or 'default_project'
     local file = opts.file or 'default_file'
 
-    M.clearDay(opts.weekday, project, file)
+    M.clearDay(opts.weekday)
     M.addTime({
         time = opts.time,
         weekday = opts.weekday,

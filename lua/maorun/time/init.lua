@@ -53,12 +53,12 @@ function M.setup(user_config)
             if not weekday then
                 -- TODO: Maybe prompt for weekday if not provided, or use current day?
                 -- For now, let's make it clear it needs parameters.
-                print('Error: Time.clearDay requires weekday, project, and file parameters.')
+                print('Error: Time.clearDay requires weekday.')
                 -- Example of how to prompt if desired:
                 -- ui.select({hours=false}, function(_, wd, pr, fl) core.clearDay(wd, pr, fl) end)
                 return
             end
-            core.clearDay(weekday, project, file)
+            core.clearDay(weekday)
         end,
         TimePause = core.TimePause,
         TimeResume = core.TimeResume,
@@ -89,24 +89,22 @@ function M.setup(user_config)
             )
         end,
         setTime = core.setTime,
-        setIllDay = function(weekday, project, file) -- Matching core.setIllDay signature change
-            -- Similar to clearDay, this needs parameters.
-            -- If weekday is nil, we might prompt for it.
+        setIllDay = function(weekday) -- Matching core.setIllDay signature change
             if not weekday then
-                ui.select({ hours = false, project = true, file = true }, function(_, wd, pr, fl)
-                    core.setIllDay(wd, pr, fl)
+                ui.select({ hours = false, project = false, file = false }, function(_, wd)
+                    core.setIllDay(wd)
                 end)
             else
-                core.setIllDay(weekday, project, file) -- Pass through if provided
+                core.setIllDay(weekday) -- Pass through if provided
             end
         end,
-        setHoliday = function(weekday, project, file) -- Alias for setIllDay
+        setHoliday = function(weekday) -- Alias for setIllDay
             if not weekday then
-                ui.select({ hours = false, project = true, file = true }, function(_, wd, pr, fl)
-                    core.setIllDay(wd, pr, fl)
+                ui.select({ hours = false, project = false, file = false }, function(_, wd)
+                    core.setIllDay(wd)
                 end)
             else
-                core.setIllDay(weekday, project, file) -- Pass through if provided
+                core.setIllDay(weekday) -- Pass through if provided
             end
         end,
         calculate = function(opts)
