@@ -5,74 +5,6 @@ local utils = require('maorun.time.utils')
 
 local M = {}
 
-local lock_file_path = vim.fn.stdpath('run') .. '/maorun_time.lock'
-local current_pid = vim.fn.getpid()
-
-function M.acquire_instance_lock()
-    local lock_p = Path:new(lock_file_path)
-    if lock_p:exists() then
-        local owner_pid_str = lock_p:read()
-        local owner_pid = tonumber(owner_pid_str)
-        if owner_pid == current_pid then
-            return true -- Already own the lock
-        end
-        -- Basic check: if PID file exists, assume it's locked by another live instance.
-        -- More advanced: check if owner_pid is running. For now, simple check.
-        -- print("Lock file exists, owned by PID: " .. owner_pid_str)
-        return false -- Locked by another instance
-    else
-        -- Attempt to create and write PID
-        local ok, err = lock_p:write(tostring(current_pid), 'w')
-        if not ok then
-            vim.notify('Failed to write lock file: ' .. err, vim.log.levels.ERROR)
-            return false
-        end
-        -- print("Acquired lock for PID: " .. current_pid)
-        return true -- Lock acquired
-    end
-end
-
-function M.release_instance_lock()
-    local lock_p = Path:new(lock_file_path)
-    if lock_p:exists() then
-        local owner_pid_str = lock_p:read()
-        if owner_pid_str == nil or owner_pid_str == '' then
-            -- Lock file is empty or unreadable, can attempt to remove or just report
-            -- For safety, if we can't confirm ownership, don't delete.
-            -- However, if it's empty, it's likely corrupted. Let's try removing if current PID was supposed to own it.
-            -- This case should ideally not happen with proper acquire logic.
-            -- For now, let's be strict: only delete if PID matches.
-            -- os.remove(lock_file_path) -- Or lock_p:rm()
-            return
-        end
-        local owner_pid = tonumber(owner_pid_str)
-        if owner_pid == current_pid then
-            local ok, err = pcall(function()
-                lock_p:rm()
-            end)
-            if not ok then
-                vim.notify('Failed to remove lock file: ' .. err, vim.log.levels.ERROR)
-            end
-            -- print("Released lock for PID: " .. current_pid)
-        else
-            -- print("Did not release lock, owned by PID: " .. owner_pid_str)
-        end
-    end
-end
-
-function M.has_instance_lock()
-    local lock_p = Path:new(lock_file_path)
-    if lock_p:exists() then
-        local owner_pid_str = lock_p:read()
-        if owner_pid_str == nil or owner_pid_str == '' then
-            return false -- Unreadable or empty lock file
-        end
-        local owner_pid = tonumber(owner_pid_str)
-        return owner_pid == current_pid
-    end
-    return false
-end
-
 function M.init(user_config)
     config_module.config =
         vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
@@ -612,9 +544,5 @@ end
 function M.get_config()
     return config_module.obj
 end
-
-M.acquire_instance_lock = M.acquire_instance_lock
-M.release_instance_lock = M.release_instance_lock
-M.has_instance_lock = M.has_instance_lock
 
 return M
