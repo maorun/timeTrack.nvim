@@ -199,7 +199,7 @@ jobs:
           ref: ${{ github.head_ref || github.ref }} # Checkout the appropriate branch/PR head
 
       - name: Download formatted code
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: formatted-code-archive
           path: temp_lint
@@ -225,7 +225,7 @@ jobs:
         shell: bash
 
       - name: Download documentation
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: documentation-archive
           path: temp_docs
@@ -255,7 +255,7 @@ jobs:
         shell: bash
 
       - name: Download coverage files
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: coverage-files
           path: temp_coverage
