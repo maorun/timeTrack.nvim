@@ -32,6 +32,16 @@ M.weekdayNumberMap = {
     Saturday = 6,
 }
 
+M.engNameToWday = {
+    Sunday = 1,
+    Monday = 2,
+    Tuesday = 3,
+    Wednesday = 4,
+    Thursday = 5,
+    Friday = 6,
+    Saturday = 7,
+}
+
 M.obj = {
     path = nil,
     content = {}, -- Initialize content as an empty table

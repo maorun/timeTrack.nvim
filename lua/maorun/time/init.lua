@@ -107,6 +107,15 @@ function M.setup(user_config)
                 core.setIllDay(weekday) -- Pass through if provided
             end
         end,
+        edit = function()
+            ui.editTimeEntryDialog(function() end)
+        end,
+        addManual = function()
+            ui.addManualTimeEntryDialog(function() end)
+        end,
+        listEntries = function(opts)
+            return core.listTimeEntries(opts or {})
+        end,
         calculate = function(opts)
             -- The core.calculate function doesn't save automatically.
             -- The original init.lua's calculate did save.
@@ -136,6 +145,16 @@ M.subtractTime = core.subtractTime
 M.setTime = core.setTime
 M.clearDay = core.clearDay
 M.isPaused = core.isPaused
+M.listTimeEntries = core.listTimeEntries
+M.editTimeEntry = core.editTimeEntry
+M.deleteTimeEntry = core.deleteTimeEntry
+M.addManualTimeEntry = core.addManualTimeEntry
+M.editTimeEntryDialog = function()
+    ui.editTimeEntryDialog(function() end)
+end
+M.addManualTimeEntryDialog = function()
+    ui.addManualTimeEntryDialog(function() end)
+end
 M.calculate = function(opts) -- Match the public Time.calculate behavior
     -- core.init({
     --     path = config_module.obj.path,

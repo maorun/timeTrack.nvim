@@ -541,6 +541,203 @@ function M.setTime(opts)
     })
 end
 
+---@param opts { year?: string, weeknumber?: string, weekday?: string, project?: string, file?: string }
+---@return table List of time entries with their indices and metadata
+function M.listTimeEntries(opts)
+    opts = opts or {}
+
+    local year_str = opts.year or os.date('%Y')
+    local week_str = opts.weeknumber or os.date('%W')
+    local weekday = opts.weekday
+    local project = opts.project or 'default_project'
+    local file = opts.file or 'default_file'
+
+    local entries = {}
+
+    -- If no specific weekday provided, get all entries for the week
+    if weekday then
+        local weekdays_to_check = { weekday }
+        for _, wd in ipairs(weekdays_to_check) do
+            local entries_for_day = M._getEntriesForDay(year_str, week_str, wd, project, file)
+            for i, entry in ipairs(entries_for_day) do
+                table.insert(entries, {
+                    index = i,
+                    year = year_str,
+                    week = week_str,
+                    weekday = wd,
+                    project = project,
+                    file = file,
+                    entry = entry,
+                })
+            end
+        end
+    else
+        -- Get all entries for all weekdays in the week
+        local weekdays =
+            { 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' }
+        for _, wd in ipairs(weekdays) do
+            local entries_for_day = M._getEntriesForDay(year_str, week_str, wd, project, file)
+            for i, entry in ipairs(entries_for_day) do
+                table.insert(entries, {
+                    index = i,
+                    year = year_str,
+                    week = week_str,
+                    weekday = wd,
+                    project = project,
+                    file = file,
+                    entry = entry,
+                })
+            end
+        end
+    end
+
+    return entries
+end
+
+---@param year_str string
+---@param week_str string
+---@param weekday string
+---@param project string
+---@param file string
+---@return table List of time entries for the specified day/project/file
+function M._getEntriesForDay(year_str, week_str, weekday, project, file)
+    if
+        not config_module.obj.content['data']
+        or not config_module.obj.content['data'][year_str]
+        or not config_module.obj.content['data'][year_str][week_str]
+        or not config_module.obj.content['data'][year_str][week_str][weekday]
+        or not config_module.obj.content['data'][year_str][week_str][weekday][project]
+        or not config_module.obj.content['data'][year_str][week_str][weekday][project][file]
+    then
+        return {}
+    end
+
+    local file_data = config_module.obj.content['data'][year_str][week_str][weekday][project][file]
+    return file_data.items or {}
+end
+
+---@param opts { year: string, week: string, weekday: string, project: string, file: string, index: number, startTime?: number, endTime?: number, diffInHours?: number }
+function M.editTimeEntry(opts)
+    if
+        not opts.year
+        or not opts.week
+        or not opts.weekday
+        or not opts.project
+        or not opts.file
+        or not opts.index
+    then
+        error('editTimeEntry requires year, week, weekday, project, file, and index parameters')
+    end
+
+    -- Access the data directly to modify it
+    if
+        not config_module.obj.content['data']
+        or not config_module.obj.content['data'][opts.year]
+        or not config_module.obj.content['data'][opts.year][opts.week]
+        or not config_module.obj.content['data'][opts.year][opts.week][opts.weekday]
+        or not config_module.obj.content['data'][opts.year][opts.week][opts.weekday][opts.project]
+        or not config_module.obj.content['data'][opts.year][opts.week][opts.weekday][opts.project][opts.file]
+    then
+        error('No entries found for the specified day/project/file')
+    end
+
+    local file_data =
+        config_module.obj.content['data'][opts.year][opts.week][opts.weekday][opts.project][opts.file]
+    if not file_data.items or opts.index < 1 or opts.index > #file_data.items then
+        error('Invalid entry index: ' .. opts.index)
+    end
+
+    local entry = file_data.items[opts.index]
+
+    -- Update startTime if provided
+    if opts.startTime then
+        entry.startTime = opts.startTime
+        local timeReadableStart = os.date('*t', opts.startTime)
+        entry.startReadable =
+            string.format('%02d:%02d', timeReadableStart.hour, timeReadableStart.min)
+    end
+
+    -- Update endTime if provided
+    if opts.endTime then
+        entry.endTime = opts.endTime
+        local timeReadableEnd = os.date('*t', opts.endTime)
+        entry.endReadable = string.format('%02d:%02d', timeReadableEnd.hour, timeReadableEnd.min)
+    end
+
+    -- Recalculate diffInHours if we have both start and end times, unless diffInHours was explicitly provided
+    if opts.diffInHours then
+        -- Allow manual setting of diffInHours (useful for corrections)
+        entry.diffInHours = opts.diffInHours
+    elseif entry.startTime and entry.endTime then
+        entry.diffInHours = os.difftime(entry.endTime, entry.startTime) / 60 / 60
+    end
+
+    -- Recalculate summaries and save
+    M.calculate({ year = opts.year, weeknumber = opts.week })
+    utils.save()
+end
+
+---@param opts { year: string, week: string, weekday: string, project: string, file: string, index: number }
+function M.deleteTimeEntry(opts)
+    if
+        not opts.year
+        or not opts.week
+        or not opts.weekday
+        or not opts.project
+        or not opts.file
+        or not opts.index
+    then
+        error('deleteTimeEntry requires year, week, weekday, project, file, and index parameters')
+    end
+
+    if
+        not config_module.obj.content['data']
+        or not config_module.obj.content['data'][opts.year]
+        or not config_module.obj.content['data'][opts.year][opts.week]
+        or not config_module.obj.content['data'][opts.year][opts.week][opts.weekday]
+        or not config_module.obj.content['data'][opts.year][opts.week][opts.weekday][opts.project]
+        or not config_module.obj.content['data'][opts.year][opts.week][opts.weekday][opts.project][opts.file]
+    then
+        error('No entries found for the specified day/project/file')
+    end
+
+    local file_data =
+        config_module.obj.content['data'][opts.year][opts.week][opts.weekday][opts.project][opts.file]
+    if not file_data.items or opts.index < 1 or opts.index > #file_data.items then
+        error('Invalid entry index: ' .. opts.index)
+    end
+
+    -- Remove the entry at the specified index
+    table.remove(file_data.items, opts.index)
+
+    -- Recalculate summaries and save
+    M.calculate({ year = opts.year, weeknumber = opts.week })
+    utils.save()
+end
+
+---@param opts { startTime: number, endTime: number, weekday?: string, project?: string, file?: string }
+function M.addManualTimeEntry(opts)
+    if not opts.startTime or not opts.endTime then
+        error('addManualTimeEntry requires startTime and endTime parameters')
+    end
+
+    if opts.startTime >= opts.endTime then
+        error('startTime must be before endTime')
+    end
+
+    local weekday = opts.weekday
+    local project = opts.project or 'default_project'
+    local file = opts.file or 'default_file'
+
+    if weekday == nil then
+        local current_wday_numeric = os.date('*t', opts.startTime).wday
+        weekday = config_module.wdayToEngName[current_wday_numeric]
+    end
+
+    -- Use the existing saveTime function which handles the data structure creation
+    M.saveTime(opts.startTime, opts.endTime, weekday, nil, project, file, false)
+end
+
 function M.get_config()
     return config_module.obj
 end
