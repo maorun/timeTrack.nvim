@@ -36,6 +36,81 @@ require('maorun.time').setup({
 })
 ```
 
+## Time Export
+
+The plugin supports exporting time tracking data in CSV and Markdown formats for weekly or monthly periods. This is useful for billing, reporting, or personal analysis.
+
+### Export Formats
+
+#### CSV Format
+Export time entries as comma-separated values:
+
+```lua
+-- Export current week as CSV
+local csv_data = require('maorun.time').exportTimeData({
+    format = 'csv',
+    range = 'week',
+    year = '2023',
+    week = '11'
+})
+
+-- Or using the global Time object
+local csv_data = Time.export({
+    format = 'csv',
+    range = 'week'  -- defaults to current week
+})
+```
+
+#### Markdown Format
+Export with summary statistics and formatted tables:
+
+```lua
+-- Export current month as Markdown
+local md_data = require('maorun.time').exportTimeData({
+    format = 'markdown',
+    range = 'month',
+    year = '2023',
+    month = '3'
+})
+```
+
+### Export Parameters
+
+- `format`: `'csv'` or `'markdown'` (default: `'csv'`)
+- `range`: `'week'` or `'month'` (default: `'week'`)
+- `year`: Year as string (default: current year)
+- `week`: Week number as string (required for weekly exports, default: current week)
+- `month`: Month number as string (required for monthly exports, default: current month)
+
+### Example Output
+
+**CSV format:**
+```csv
+Date,Weekday,Project,File,Start Time,End Time,Duration (Hours)
+2023-03-13,Monday,WorkProject,main.lua,10:00,12:00,2.00
+2023-03-13,Monday,PersonalProject,learning.md,14:00,16:00,2.00
+```
+
+**Markdown format:**
+```markdown
+# Time Tracking Export - Week 11
+
+## Summary
+
+**Total Time:** 4.00 hours
+
+**Time by Project:**
+- WorkProject: 2.00 hours
+- PersonalProject: 2.00 hours
+
+## Detailed Entries
+
+| Date | Weekday | Project | File | Start | End | Duration |
+|------|---------|---------|------|-------|-----|----------|
+| 2023-03-13 | Monday | WorkProject | main.lua | 10:00 | 12:00 | 2.00 h |
+| 2023-03-13 | Monday | PersonalProject | learning.md | 14:00 | 16:00 | 2.00 h |
+```
+
 ## Data Storage Format
 The data is stored in a JSON file. The default path is `~/.local/share/nvim/maorun-time.json` (or equivalent `vim.fn.stdpath('data') .. '/maorun-time.json'`).
 

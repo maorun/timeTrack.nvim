@@ -750,4 +750,220 @@ function M.get_config()
     return config_module.obj
 end
 
+-- Export time tracking data in CSV or Markdown format
+function M.exportTimeData(opts)
+    opts = vim.tbl_deep_extend('keep', opts or {}, {
+        format = 'csv', -- 'csv' or 'markdown'
+        range = 'week', -- 'week' or 'month'
+        year = os.date('%Y'),
+        week = os.date('%W'), -- For week range
+        month = os.date('%m'), -- For month range (1-12)
+    })
+
+    local format = string.lower(opts.format)
+    local range = string.lower(opts.range)
+
+    if format ~= 'csv' and format ~= 'markdown' then
+        error('Invalid format. Supported formats: csv, markdown')
+    end
+
+    if range ~= 'week' and range ~= 'month' then
+        error('Invalid range. Supported ranges: week, month')
+    end
+
+    local year_str = tostring(opts.year)
+    local data = config_module.obj.content.data
+
+    if not data or not data[year_str] then
+        return format == 'csv'
+                and 'Date,Weekday,Project,File,Start Time,End Time,Duration (Hours)\n'
+            or '# No Data Available\n\nNo time tracking data found for the specified period.\n'
+    end
+
+    local entries = {}
+
+    if range == 'week' then
+        local week_str = string.format('%02d', tonumber(opts.week))
+        if data[year_str][week_str] then
+            local week_data = data[year_str][week_str]
+            for weekday, weekday_data in pairs(week_data) do
+                if weekday ~= 'summary' then
+                    M._extractEntriesFromWeekday(entries, weekday_data, weekday, year_str, week_str)
+                end
+            end
+        end
+    else -- month
+        local month_num = tonumber(opts.month)
+        for week_str, week_data in pairs(data[year_str]) do
+            if tonumber(week_str) then -- Skip non-numeric keys like summary
+                for weekday, weekday_data in pairs(week_data) do
+                    if weekday ~= 'summary' then
+                        -- Extract entries for this weekday but filter by month
+                        M._extractEntriesFromWeekdayByMonth(
+                            entries,
+                            weekday_data,
+                            weekday,
+                            year_str,
+                            week_str,
+                            month_num
+                        )
+                    end
+                end
+            end
+        end
+    end
+
+    -- Sort entries by date/time
+    table.sort(entries, function(a, b)
+        return a.startTime < b.startTime
+    end)
+
+    if format == 'csv' then
+        return M._formatAsCSV(entries)
+    else
+        return M._formatAsMarkdown(entries, opts)
+    end
+end
+
+-- Helper function to extract entries from a weekday's data
+function M._extractEntriesFromWeekday(entries, weekday_data, weekday, year_str, week_str)
+    for project, project_data in pairs(weekday_data) do
+        if type(project_data) == 'table' then
+            for file, file_data in pairs(project_data) do
+                if type(file_data) == 'table' and file_data.items then
+                    for _, item in ipairs(file_data.items) do
+                        table.insert(entries, {
+                            date = item.startTime and os.date('%Y-%m-%d', item.startTime) or 'N/A',
+                            weekday = weekday,
+                            project = project,
+                            file = file,
+                            startTime = item.startTime or 0,
+                            startReadable = item.startReadable or 'N/A',
+                            endReadable = item.endReadable or 'N/A',
+                            diffInHours = item.diffInHours or 0,
+                        })
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Helper function to extract entries from a weekday's data filtered by month
+function M._extractEntriesFromWeekdayByMonth(
+    entries,
+    weekday_data,
+    weekday,
+    year_str,
+    week_str,
+    target_month
+)
+    for project, project_data in pairs(weekday_data) do
+        if type(project_data) == 'table' then
+            for file, file_data in pairs(project_data) do
+                if type(file_data) == 'table' and file_data.items then
+                    for _, item in ipairs(file_data.items) do
+                        if item.startTime then
+                            local item_month = tonumber(os.date('%m', item.startTime))
+                            if item_month == target_month then
+                                table.insert(entries, {
+                                    date = item.startTime and os.date('%Y-%m-%d', item.startTime)
+                                        or 'N/A',
+                                    weekday = weekday,
+                                    project = project,
+                                    file = file,
+                                    startTime = item.startTime or 0,
+                                    startReadable = item.startReadable or 'N/A',
+                                    endReadable = item.endReadable or 'N/A',
+                                    diffInHours = item.diffInHours or 0,
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Format entries as CSV
+function M._formatAsCSV(entries)
+    local lines = { 'Date,Weekday,Project,File,Start Time,End Time,Duration (Hours)' }
+
+    for _, entry in ipairs(entries) do
+        local line = string.format(
+            '%s,%s,%s,%s,%s,%s,%.2f',
+            entry.date,
+            entry.weekday,
+            entry.project,
+            entry.file,
+            entry.startReadable,
+            entry.endReadable,
+            entry.diffInHours
+        )
+        table.insert(lines, line)
+    end
+
+    return table.concat(lines, '\n') .. '\n'
+end
+
+-- Format entries as Markdown
+function M._formatAsMarkdown(entries, opts)
+    local lines = {}
+
+    -- Title
+    local title = string.format(
+        '# Time Tracking Export - %s %s',
+        opts.range == 'week' and 'Week' or 'Month',
+        opts.range == 'week' and opts.week or opts.month
+    )
+    table.insert(lines, title)
+    table.insert(lines, '')
+
+    if #entries == 0 then
+        table.insert(lines, 'No time tracking data found for the specified period.')
+        return table.concat(lines, '\n') .. '\n'
+    end
+
+    -- Summary statistics
+    local total_hours = 0
+    local projects = {}
+    for _, entry in ipairs(entries) do
+        total_hours = total_hours + entry.diffInHours
+        projects[entry.project] = (projects[entry.project] or 0) + entry.diffInHours
+    end
+
+    table.insert(lines, '## Summary')
+    table.insert(lines, '')
+    table.insert(lines, string.format('**Total Time:** %.2f hours', total_hours))
+    table.insert(lines, '')
+    table.insert(lines, '**Time by Project:**')
+    for project, hours in pairs(projects) do
+        table.insert(lines, string.format('- %s: %.2f hours', project, hours))
+    end
+    table.insert(lines, '')
+
+    -- Detailed entries table
+    table.insert(lines, '## Detailed Entries')
+    table.insert(lines, '')
+    table.insert(lines, '| Date | Weekday | Project | File | Start | End | Duration |')
+    table.insert(lines, '|------|---------|---------|------|-------|-----|----------|')
+
+    for _, entry in ipairs(entries) do
+        local row = string.format(
+            '| %s | %s | %s | %s | %s | %s | %.2f h |',
+            entry.date,
+            entry.weekday,
+            entry.project,
+            entry.file,
+            entry.startReadable,
+            entry.endReadable,
+            entry.diffInHours
+        )
+        table.insert(lines, row)
+    end
+
+    return table.concat(lines, '\n') .. '\n'
+end
+
 return M
