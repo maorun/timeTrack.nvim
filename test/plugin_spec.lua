@@ -17,7 +17,7 @@ local wdayToEngName = {
 }
 
 before_each(function()
-    tempPath = os.tmpname()
+    tempPath = vim.fn.tempname()
 end)
 after_each(function()
     os.remove(tempPath)
