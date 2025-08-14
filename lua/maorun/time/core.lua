@@ -40,11 +40,11 @@ function M.init(user_config)
     local year_str = os.date('%Y')
     local week_str = os.date('%W')
     -- Get current weekday name
-    local current_wday_numeric = os.date('*t', os.time()).wday -- No longer needed here
-    local weekday_name = config_module.wdayToEngName[current_wday_numeric] -- No longer needed here
+    local current_wday_numeric = os.date('*t', os.time()).wday
+    local weekday_name = config_module.wdayToEngName[current_wday_numeric]
 
-    local project_name = 'default_project' -- No longer needed here
-    local file_name = 'default_file' -- No longer needed here
+    local project_name = 'default_project'
+    local file_name = 'default_file'
 
     -- Initialize year if not exists
     if config_module.obj.content['data'][year_str] == nil then
