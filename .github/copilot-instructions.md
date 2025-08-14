@@ -14,7 +14,7 @@ Run the following commands to set up the complete development environment:
 # Navigate to project root
 cd /path/to/timeTrack.nvim
 
-# Run setup script - NEVER CANCEL: Takes 10-15 minutes. Set timeout to 30+ minutes.
+# Run setup script - NEVER CANCEL: Takes ~1 minute. Set timeout to 10+ minutes.
 ./install.sh
 ```
 
@@ -44,18 +44,18 @@ Run the test suite using vusted:
 # Set up environment first
 eval "$(luarocks path)"
 
-# Run tests - Takes ~0.3 seconds normally. Set timeout to 5+ minutes for safety.
+# Run tests - Takes ~3 seconds normally. Set timeout to 5+ minutes for safety.
 vusted ./test
 ```
 
-Expected output: 64 tests passing (some UI tests may fail but core functionality passes).
+Expected output: 92 tests passing (some UI tests may fail but core functionality passes).
 
 ### Code Formatting and Linting
 
 Check code formatting with stylua:
 
 ```bash
-# Check formatting - Takes ~0.2 seconds
+# Check formatting - Takes ~0.3 seconds
 stylua --check .
 
 # Auto-format code 
@@ -92,6 +92,36 @@ Since this is a Neovim plugin that requires a complete Neovim environment with d
 
 **Note**: The automated test suite provides comprehensive validation of plugin functionality without requiring a full Neovim setup.
 
+#### Manual Testing with Neovim (Optional)
+
+When you need to test the plugin in a real Neovim environment:
+
+```bash
+# 1. Create a minimal test file
+echo 'print("Hello from timeTrack.nvim test")' > /tmp/test_file.lua
+
+# 2. Start Neovim with the plugin
+nvim -c "set rtp+=/path/to/timeTrack.nvim" -c "lua require('maorun.time').setup()" /tmp/test_file.lua
+
+# 3. In Neovim, test basic functionality:
+# :lua Time.TimeStart()  -- Start tracking
+# :lua Time.TimeStop()   -- Stop tracking  
+# :lua Time.add()        -- Interactive time addition
+# :q                     -- Exit
+
+# 4. Verify data file creation
+ls -la ~/.local/share/nvim/maorun-time.json
+
+# 5. Check data content (should contain JSON)
+cat ~/.local/share/nvim/maorun-time.json | head -20
+```
+
+**Expected results**:
+- No error messages during plugin setup
+- TimeStart/TimeStop commands execute without errors
+- JSON file is created with valid time tracking data
+- Data structure matches the format described in README.md
+
 #### Functional Testing Workflow
 
 When making changes to plugin functionality, always validate using this sequence:
@@ -102,12 +132,31 @@ eval "$(luarocks path)"
 vusted ./test
 
 # 2. Look for specific test results
-# - Expected: "# Success: 64" (or current test count)
+# - Expected: "# Success: 92" (or current test count)
 # - Some UI tests may fail without interactive environment
 # - Core functionality tests should all pass
 
 # 3. Check for new test failures after your changes
 # If tests fail that previously passed, investigate immediately
+```
+
+#### Understanding Test Output
+
+The test suite includes several categories of tests:
+- **Core functionality**: Time calculation, data storage, configuration (should always pass)
+- **UI tests**: May show failures like "No weekday selected" - this is expected in headless environment
+- **Integration tests**: Test complete workflows and edge cases
+
+Common test output patterns:
+```
+ok 1 - addTime should add time to a specific weekday
+...
+Cloning plenary.nvim dependency...   # First run only, dependencies auto-cloned
+...
+No weekday selected.                 # Expected UI test limitation
+TEST FAILED: ... expected 'test_project_default', got nil  # UI test failures are normal
+...
+# Success: 92                        # Final success count
 ```
 
 ## Development Workflow
@@ -174,11 +223,33 @@ nvim --version
 luarocks list --local
 ```
 
+## Common Files Reference
+
+Key files you'll frequently work with:
+
+```
+.github/copilot-instructions.md  # This file - development instructions
+README.md                        # Project documentation and usage examples
+install.sh                       # Development environment setup script
+.stylua.toml                    # Code formatting configuration
+.luacov                         # Test coverage configuration
+lua/maorun/time/
+├── init.lua                    # Main plugin entry point
+├── core.lua                    # Core time tracking logic
+├── config.lua                  # Configuration handling
+├── utils.lua                   # Utility functions
+├── ui.lua                      # User interface components
+├── autocmds.lua                # Neovim autocommands
+└── weekday_select.lua          # Weekday selection helpers
+test/                           # Test files using vusted framework
+doc/timeTrack.nvim.txt          # Generated help documentation
+```
+
 ## Timing and Timeouts
 
-- **Install script**: 10-15 minutes - NEVER CANCEL. Set timeout to 30+ minutes.
-- **Test suite**: ~0.3 seconds normally - Set timeout to 5+ minutes for safety.
-- **Stylua check**: ~0.2 seconds - Set timeout to 2+ minutes for safety.
+- **Install script**: ~1 minute - NEVER CANCEL. Set timeout to 10+ minutes for safety.
+- **Test suite**: ~3 seconds normally - Set timeout to 5+ minutes for safety.
+- **Stylua check**: ~0.3 seconds - Set timeout to 2+ minutes for safety.
 
 **CRITICAL**: DO NOT cancel long-running operations. The install script especially may appear to hang during package installation but is working correctly. Always wait for completion.
 
@@ -220,7 +291,7 @@ eval "$(luarocks path)"
 # 1. Make your changes
 # 2. Run tests (NEVER CANCEL - wait for completion)
 vusted ./test
-# Expected output: "# Success: 64" (or current test count)
+# Expected output: "# Success: 92" (or current test count)
 
 # 3. Check formatting 
 stylua --check .
@@ -236,6 +307,6 @@ vusted ./test
 ```
 
 **Success criteria**: 
-- All tests pass (64+ successful tests)
+- All tests pass (92+ successful tests)
 - No formatting violations
 - No new test failures introduced
