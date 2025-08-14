@@ -180,11 +180,12 @@ describe('Utils Tests', function()
             -- Act: Call the save function
             utils.save()
 
-            -- Assert: Verify Path.new and write were called correctly
-            assert.are.same(
-                test_path,
-                path_mock_ctrl.new_was_called_with,
-                'Path.new should be called with the configured path.'
+            -- Assert: Verify that Path.new was called with either the main path or temp path
+            -- (since we now use atomic writes with temporary files)
+            local called_path = path_mock_ctrl.new_was_called_with
+            assert.is_true(
+                called_path == test_path or called_path == test_path .. '.tmp',
+                'Path.new should be called with the configured path or its temporary file.'
             )
             assert.are.same(
                 expected_json_content,

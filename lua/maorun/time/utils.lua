@@ -8,13 +8,13 @@ function M.save()
     local path_obj = Path:new(file_path)
     local temp_path = file_path .. '.tmp'
     local temp_obj = Path:new(temp_path)
-    
+
     -- Use atomic write pattern to prevent file corruption during concurrent access
     -- 1. Write to temporary file
     -- 2. Rename temporary file to target file (atomic operation on most filesystems)
-    
+
     temp_obj:write(vim.fn.json_encode(config_module.obj.content), 'w')
-    
+
     -- Atomic rename (this is the key to preventing corruption)
     if temp_obj:exists() then
         -- Use os.rename for atomic operation
@@ -36,21 +36,21 @@ end
 function M.load_and_merge()
     local file_path = config_module.obj.path
     local path_obj = Path:new(file_path)
-    
+
     if not path_obj:exists() then
         return {}
     end
-    
+
     local file_data = path_obj:read()
     if not file_data or file_data == '' then
         return {}
     end
-    
+
     local success, content = pcall(vim.json.decode, file_data)
     if not success or type(content) ~= 'table' then
         return {}
     end
-    
+
     return content
 end
 
