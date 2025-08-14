@@ -4,6 +4,36 @@ local config_module = require('maorun.time.config') -- Adjusted path
 local M = {}
 
 function M.save()
+    local file_path = config_module.obj.path
+    local path_obj = Path:new(file_path)
+    local temp_path = file_path .. '.tmp'
+    local temp_obj = Path:new(temp_path)
+
+    -- Use atomic write pattern to prevent file corruption during concurrent access
+    -- 1. Write to temporary file
+    -- 2. Rename temporary file to target file (atomic operation on most filesystems)
+
+    temp_obj:write(vim.fn.json_encode(config_module.obj.content), 'w')
+
+    -- Atomic rename (this is the key to preventing corruption)
+    if temp_obj:exists() then
+        -- Use os.rename for atomic operation
+        local success = os.rename(temp_path, file_path)
+        if not success then
+            -- Fallback: if rename fails, try direct write and remove temp
+            path_obj:write(vim.fn.json_encode(config_module.obj.content), 'w')
+            if temp_obj:exists() then
+                temp_obj:rm()
+            end
+        end
+    else
+        -- Fallback to direct write if temp file creation failed
+        path_obj:write(vim.fn.json_encode(config_module.obj.content), 'w')
+    end
+end
+
+-- Backup of the original save function for testing purposes
+function M.save_without_merge()
     Path:new(config_module.obj.path):write(vim.fn.json_encode(config_module.obj.content), 'w')
 end
 
