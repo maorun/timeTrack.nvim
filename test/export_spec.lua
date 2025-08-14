@@ -282,6 +282,60 @@ describe('Time Export Functionality', function()
                 'Entries should be sorted chronologically'
             )
         end)
+
+        it('should properly escape CSV fields containing special characters', function()
+            -- Mock time
+            local mock_time = 1678704000
+            os_module.time = function()
+                return mock_time
+            end
+            os_module.date = function(format, time_val)
+                time_val = time_val or mock_time
+                return original_os_date(format, time_val)
+            end
+
+            maorunTime.setup({ path = tempPath })
+
+            -- Add entries with special characters that need CSV escaping
+            maorunTime.addManualTimeEntry({
+                startTime = mock_time,
+                endTime = mock_time + 3600,
+                weekday = 'Monday',
+                project = 'Project, with comma',
+                file = 'file"with"quotes.lua',
+            })
+
+            maorunTime.addManualTimeEntry({
+                startTime = mock_time + 3600,
+                endTime = mock_time + 7200,
+                weekday = 'Monday',
+                project = 'Project with\nnewline',
+                file = 'normal_file.lua',
+            })
+
+            local csv_export = maorunTime.exportTimeData({
+                format = 'csv',
+                range = 'week',
+                year = '2023',
+                week = '11',
+            })
+
+            -- Check that fields with commas are properly quoted
+            assert.is_not_nil(csv_export:find('"Project, with comma"'))
+
+            -- Check that fields with quotes have escaped quotes and are quoted
+            assert.is_not_nil(csv_export:find('"file""with""quotes%.lua"'))
+
+            -- Check that fields with newlines are properly quoted
+            assert.is_not_nil(csv_export:find('"Project with\nnewline"'))
+
+            -- Verify that special characters don't break CSV structure
+            -- The output should be valid CSV format regardless of content
+            assert.is_true(csv_export:len() > 0)
+            assert.is_not_nil(
+                csv_export:find('Date,Weekday,Project,File,Start Time,End Time,Duration %(Hours%)')
+            )
+        end)
     end)
 
     describe('Global Time.export function', function()

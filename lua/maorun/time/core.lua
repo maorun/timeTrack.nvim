@@ -886,20 +886,36 @@ function M._extractEntriesFromWeekdayByMonth(
     end
 end
 
+-- Escape a field for CSV format
+local function escapeCSVField(field)
+    -- Convert to string if not already
+    local str = tostring(field)
+
+    -- Check if the field contains comma, quote, or newline
+    if str:find('[,"\n\r]') then
+        -- Escape internal quotes by doubling them
+        str = str:gsub('"', '""')
+        -- Wrap the field in quotes
+        return '"' .. str .. '"'
+    end
+
+    return str
+end
+
 -- Format entries as CSV
 function M._formatAsCSV(entries)
     local lines = { 'Date,Weekday,Project,File,Start Time,End Time,Duration (Hours)' }
 
     for _, entry in ipairs(entries) do
         local line = string.format(
-            '%s,%s,%s,%s,%s,%s,%.2f',
-            entry.date,
-            entry.weekday,
-            entry.project,
-            entry.file,
-            entry.startReadable,
-            entry.endReadable,
-            entry.diffInHours
+            '%s,%s,%s,%s,%s,%s,%s',
+            escapeCSVField(entry.date),
+            escapeCSVField(entry.weekday),
+            escapeCSVField(entry.project),
+            escapeCSVField(entry.file),
+            escapeCSVField(entry.startReadable),
+            escapeCSVField(entry.endReadable),
+            escapeCSVField(string.format('%.2f', entry.diffInHours))
         )
         table.insert(lines, line)
     end
