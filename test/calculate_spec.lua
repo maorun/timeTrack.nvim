@@ -12,7 +12,7 @@ local original_os_date = os.date
 local original_os_time = os.time
 
 before_each(function()
-    tempPath = os.tmpname()
+    tempPath = vim.fn.tempname()
     -- Mock os.time and os.date for setup if needed, or rely on test-specific mocks
 end)
 after_each(function()

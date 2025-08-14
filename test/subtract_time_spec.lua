@@ -23,7 +23,7 @@ local wdayToEngName = {
 }
 
 before_each(function()
-    tempPath = os.tmpname()
+    tempPath = vim.fn.tempname()
     -- Default setup, tests can override if specific hoursPerWeekday are needed
     maorunTime.setup({ path = tempPath })
 end)

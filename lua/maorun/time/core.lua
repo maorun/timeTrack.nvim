@@ -305,7 +305,14 @@ function M.TimeStop(opts)
     utils.save()
 end
 
-function M.saveTime(startTime, endTime, weekday, _clearDay, project, file, isSubtraction) -- _clearDay param might be unused now
+---@param startTime number Unix timestamp for start time
+---@param endTime number Unix timestamp for end time
+---@param weekday string Weekday name (e.g., 'Monday')
+---@param clearDay boolean|nil Whether to clear day data (deprecated, not used)
+---@param project string Project name
+---@param file string File name
+---@param isSubtraction boolean Whether this is a time subtraction operation
+function M.saveTime(startTime, endTime, weekday, clearDay, project, file, isSubtraction)
     project = project or 'default_project'
     file = file or 'default_file'
     isSubtraction = isSubtraction or false
@@ -734,8 +741,9 @@ function M.addManualTimeEntry(opts)
         weekday = config_module.wdayToEngName[current_wday_numeric]
     end
 
-    -- Use the existing saveTime function which handles the data structure creation
-    M.saveTime(opts.startTime, opts.endTime, weekday, nil, project, file, false)
+    -- Call saveTime with explicit parameters for manual entries
+    -- clearDay parameter is not needed for manual entries, so we pass false instead of nil
+    M.saveTime(opts.startTime, opts.endTime, weekday, false, project, file, false)
 end
 
 function M.get_config()
