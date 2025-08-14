@@ -11,8 +11,8 @@ describe('Concurrent JSON File Access', function()
     local utils_module
 
     before_each(function()
-        -- Clean up any test files first
-        test_json_path = '/tmp/test_concurrency_' .. os.time() .. '.json'
+        -- Use cross-platform temporary file approach
+        test_json_path = vim.fn.tempname() .. '_concurrency_test.json'
         local test_file = Path:new(test_json_path)
         if test_file:exists() then
             test_file:rm()

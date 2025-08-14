@@ -32,28 +32,6 @@ function M.save()
     end
 end
 
--- Safe loading with merge capability for handling concurrent instances
-function M.load_and_merge()
-    local file_path = config_module.obj.path
-    local path_obj = Path:new(file_path)
-
-    if not path_obj:exists() then
-        return {}
-    end
-
-    local file_data = path_obj:read()
-    if not file_data or file_data == '' then
-        return {}
-    end
-
-    local success, content = pcall(vim.json.decode, file_data)
-    if not success or type(content) ~= 'table' then
-        return {}
-    end
-
-    return content
-end
-
 -- Backup of the original save function for testing purposes
 function M.save_without_merge()
     Path:new(config_module.obj.path):write(vim.fn.json_encode(config_module.obj.content), 'w')
