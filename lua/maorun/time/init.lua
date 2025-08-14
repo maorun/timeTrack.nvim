@@ -129,6 +129,9 @@ function M.setup(user_config)
             utils.save() -- Assuming utils.save uses the shared config_module.obj
             return config_module.obj -- Return the data object
         end,
+        export = function(opts)
+            return core.exportTimeData(opts or {})
+        end,
     }
     return config_obj -- Return the config_obj obtained from core.init
 end
@@ -164,6 +167,7 @@ M.calculate = function(opts) -- Match the public Time.calculate behavior
     utils.save()
     return config_module.obj
 end
+M.exportTimeData = core.exportTimeData -- Expose the export function
 M.weekdays = config_module.weekdayNumberMap -- Expose weekday map
 M.get_config = core.get_config -- Expose the get_config function
 
