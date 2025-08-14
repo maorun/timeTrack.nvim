@@ -3,6 +3,7 @@ helper.plenary_dep()
 helper.notify_dep()
 
 local maorunTime = require('maorun.time')
+local core = require('maorun.time.core') -- Add direct access to core module
 local os = require('os')
 local Path = require('plenary.path') -- Added for file manipulation
 local tempPath
@@ -883,6 +884,89 @@ describe('setIllDay', function()
                 targetCustomWeekday,
                 actual_value_custom
             )
+        )
+    end)
+
+    it('should find last week with overtime data when previous weeks are missing', function()
+        -- Test the core issue: when there are gaps (e.g., vacation weeks),
+        -- the system should use the last week with data, not assume 0
+        local mock_time = 1678886400 -- Wednesday, March 15, 2023 12:00:00 PM GMT
+        os.time = function()
+            return mock_time
+        end
+        os.date = function(format, time_val)
+            time_val = time_val or mock_time
+            return original_os_date(format, time_val)
+        end
+
+        maorunTime.setup({ path = tempPath })
+        local initialContentJson = Path:new(tempPath):read()
+        initialContentJson = initialContentJson == '' and '{}' or initialContentJson
+        local initialContent = vim.json.decode(initialContentJson)
+
+        -- We're in week 11 of 2023 (March 15, 2023)
+        local currentYear = '2023'
+        local currentWeek = '11'
+        local lastDataWeek = '08' -- Week 8 had data, but weeks 9 and 10 were vacation/empty
+        local lastDataOvertime = 12.5
+
+        -- Setup test data
+        local fileData = vim.deepcopy(initialContent)
+        fileData.data = fileData.data or {}
+        fileData.data[currentYear] = fileData.data[currentYear] or {}
+
+        -- Set up week 8 with overtime data (this is the "last entry" we want to use)
+        fileData.data[currentYear][lastDataWeek] = {
+            summary = { overhour = lastDataOvertime },
+        }
+
+        -- Weeks 9 and 10 are intentionally empty (vacation weeks)
+        -- fileData.data[currentYear]['09'] = nil  -- explicitly not set
+        -- fileData.data[currentYear]['10'] = nil  -- explicitly not set
+
+        -- Set up current week (11) structure
+        fileData.data[currentYear][currentWeek] = {
+            Monday = {
+                default_project = {
+                    default_file = {
+                        items = {},
+                        summary = {},
+                    },
+                },
+            },
+        }
+
+        fileData.paused = initialContent.paused or false
+        Path:new(tempPath):write(vim.fn.json_encode(fileData), 'w')
+
+        -- Re-initialize to load the test data
+        maorunTime.setup({ path = tempPath })
+
+        -- Test the core functionality: verify that _findLastWeekWithOvertime finds week 8
+        local foundOvertime = core._findLastWeekWithOvertime(currentYear, currentWeek)
+        assert.are.same(
+            lastDataOvertime,
+            foundOvertime,
+            'Should find week 8 overtime (12.5) instead of returning 0 for missing weeks 9-10'
+        )
+
+        -- Add some time to current week to trigger calculation
+        maorunTime.addTime({ time = 6, weekday = 'Monday' })
+
+        -- Calculate current week - this should find week 8's overtime (12.5)
+        -- and use it as the starting point
+        local data = maorunTime.calculate({ year = currentYear, weeknumber = currentWeek })
+
+        -- Verify the calculation used week 8's overtime as the starting point
+        -- Monday: 6 hours logged, 8 expected = -2 overhour
+        -- Wednesday: 0 hours logged (auto-initialized by setup), 8 expected = -8 overhour
+        -- Starting with 12.5 from week 8, current week total should be 12.5 + (-2) + (-8) = 2.5
+        local expectedTotal = lastDataOvertime + (6 - 8) + (0 - 8) -- 12.5 + (-2) + (-8) = 2.5
+
+        assert.are.same(
+            expectedTotal,
+            data.content.data[currentYear][currentWeek].summary.overhour,
+            'Should use week 8 overtime (12.5) as starting point, with Monday (-2) and auto-init Wednesday (-8)'
         )
     end)
 end)

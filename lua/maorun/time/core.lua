@@ -76,6 +76,33 @@ function M.init(user_config)
     return config_module.obj
 end
 
+---@param year_str string The year to search in
+---@param current_week_str string The current week number as string
+---@return number The overhour value from the last week with data, or 0 if none found
+function M._findLastWeekWithOvertime(year_str, current_week_str)
+    local current_week_num = tonumber(current_week_str)
+    if not current_week_num or not config_module.obj.content['data'][year_str] then
+        return 0
+    end
+
+    -- Search backwards through weeks (limit search to avoid infinite loops)
+    for week_offset = 1, 53 do -- Maximum 53 weeks in a year
+        local check_week_num = current_week_num - week_offset
+        if check_week_num < 1 then
+            break -- Don't search into previous year for now
+        end
+
+        local check_week_str = string.format('%02d', check_week_num)
+        local week_data = config_module.obj.content['data'][year_str][check_week_str]
+
+        if week_data and week_data.summary and week_data.summary.overhour ~= nil then
+            return week_data.summary.overhour
+        end
+    end
+
+    return 0
+end
+
 function M.calculate(opts)
     opts = vim.tbl_deep_extend('keep', opts or {}, {
         year = os.date('%Y'),
@@ -98,19 +125,9 @@ function M.calculate(opts)
         current_week_data.summary = {}
     end
 
-    local prevWeekOverhour = 0
-    -- Previous week overhour calculation (remains unchanged)
-    if config_module.obj.content['data'][year_str] then
-        local prev_week_number_str = string.format('%02d', tonumber(week_str) - 1)
-        if config_module.obj.content['data'][year_str][prev_week_number_str] then
-            local prev_week_data = config_module.obj.content['data'][year_str][prev_week_number_str]
-            if prev_week_data and prev_week_data.summary and prev_week_data.summary.overhour then
-                prevWeekOverhour = prev_week_data.summary.overhour
-            end
-        end
-    end
+    local prevWeekOverhour = M._findLastWeekWithOvertime(year_str, week_str)
 
-    current_week_data.summary.overhour = prevWeekOverhour -- Initialize with previous week's overhour
+    current_week_data.summary.overhour = prevWeekOverhour -- Initialize with last week's overhour
 
     for weekday_name, weekday_data in pairs(current_week_data) do
         if weekday_name ~= 'summary' then -- Assuming 'summary' is not a valid weekday name
