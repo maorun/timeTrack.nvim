@@ -50,6 +50,13 @@ M.obj = {
 M.defaults = {
     path = vim.fn.stdpath('data') .. os_sep .. 'maorun-time.json',
     hoursPerWeekday = M.defaultHoursPerWeekday,
+    notifications = {
+        dailyGoal = {
+            enabled = true,
+            oncePerDay = true,
+            recurringMinutes = 30,
+        },
+    },
 }
 
 -- This 'config' table will be populated by the init function later

@@ -172,10 +172,108 @@ function M.calculate(opts)
                 or 0
             weekday_data.summary.overhour = total_hours_for_weekday - expected_hours_for_weekday
 
+            -- Check if daily goal notification should be shown
+            M.checkDailyGoalNotification(
+                year_str,
+                week_str,
+                weekday_name,
+                total_hours_for_weekday,
+                expected_hours_for_weekday
+            )
+
             -- Add this weekday's overhour to the total week's overhour
             current_week_data.summary.overhour = current_week_data.summary.overhour
                 + weekday_data.summary.overhour
         end
+    end
+end
+
+-- State tracking for notifications to prevent spam
+local notification_state = {
+    lastDailyGoalNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
+    lastRecurringNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
+}
+
+---Check if daily goal notification should be shown and display it if needed
+---@param year_str string
+---@param week_str string
+---@param weekday_name string
+---@param total_hours number
+---@param expected_hours number
+function M.checkDailyGoalNotification(year_str, week_str, weekday_name, total_hours, expected_hours)
+    -- Check if notifications are enabled
+    if
+        not config_module.config.notifications
+        or not config_module.config.notifications.dailyGoal
+        or not config_module.config.notifications.dailyGoal.enabled
+    then
+        return
+    end
+
+    -- Only notify for days with expected hours > 0 (working days)
+    if expected_hours <= 0 then
+        return
+    end
+
+    -- Check if goal is reached or exceeded
+    if total_hours < expected_hours then
+        return
+    end
+
+    local notification_config = config_module.config.notifications.dailyGoal
+    local state_key = year_str .. '-' .. week_str .. '-' .. weekday_name
+    local current_time = os.time()
+
+    -- Determine if we should notify
+    local should_notify = false
+    local notification_type = 'reached'
+
+    if total_hours >= expected_hours then
+        if total_hours > expected_hours then
+            notification_type = 'exceeded'
+        end
+
+        if notification_config.oncePerDay then
+            -- Check if we haven't notified for this day yet
+            if not notification_state.lastDailyGoalNotification[state_key] then
+                should_notify = true
+                notification_state.lastDailyGoalNotification[state_key] = current_time
+            end
+        else
+            -- Recurring notifications - check if enough time has passed
+            local last_notification = notification_state.lastRecurringNotification[state_key] or 0
+            local minutes_passed = (current_time - last_notification) / 60
+
+            if minutes_passed >= notification_config.recurringMinutes then
+                should_notify = true
+                notification_state.lastRecurringNotification[state_key] = current_time
+            end
+        end
+    end
+
+    if should_notify then
+        local message
+        local overhour = total_hours - expected_hours
+
+        if notification_type == 'exceeded' then
+            message = string.format(
+                'Daily goal exceeded! %s: %.1fh worked (%.1fh goal, +%.1fh over)',
+                weekday_name,
+                total_hours,
+                expected_hours,
+                overhour
+            )
+        else
+            message = string.format(
+                'Daily goal reached! %s: %.1fh worked (%.1fh goal)',
+                weekday_name,
+                total_hours,
+                expected_hours
+            )
+        end
+
+        -- Use vim.notify instead for easier testing
+        vim.notify(message, vim.log.levels.INFO, { title = 'TimeTracking - Daily Goal' })
     end
 end
 
