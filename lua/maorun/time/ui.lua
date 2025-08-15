@@ -501,4 +501,385 @@ function M.addManualTimeEntryDialog(callback)
     end)
 end
 
+---Show weekly overview in a floating window
+---@param opts? { year?: string, week?: string, project?: string, file?: string, display_mode?: string }
+function M.showWeeklyOverview(opts)
+    opts = opts or {}
+    local display_mode = opts.display_mode or 'floating'
+
+    -- Get weekly summary data
+    local summary = core.getWeeklySummary(opts)
+
+    -- Format the content
+    local content = M._formatWeeklySummaryContent(summary, opts)
+
+    if display_mode == 'floating' then
+        M._showFloatingWindow(
+            content,
+            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year
+        )
+    elseif display_mode == 'buffer' then
+        M._showInBuffer(content, 'Weekly Overview')
+    elseif display_mode == 'quickfix' then
+        M._showInQuickfix(content)
+    else
+        -- Default to floating window
+        M._showFloatingWindow(
+            content,
+            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year
+        )
+    end
+end
+
+---Format weekly summary data into displayable content
+---@param summary table The weekly summary data
+---@param opts table Display options
+---@return table Array of content lines
+function M._formatWeeklySummaryContent(summary, opts)
+    local content = {}
+
+    -- Header
+    table.insert(
+        content,
+        string.format(
+            '═══ Wöchentliche Übersicht - KW %s/%s ═══',
+            summary.week,
+            summary.year
+        )
+    )
+    table.insert(content, '')
+
+    -- Filter info if applied
+    if opts.project or opts.file then
+        local filter_info = 'Filter: '
+        if opts.project then
+            filter_info = filter_info .. 'Projekt: ' .. opts.project
+        end
+        if opts.file then
+            if opts.project then
+                filter_info = filter_info .. ', '
+            end
+            filter_info = filter_info .. 'Datei: ' .. opts.file
+        end
+        table.insert(content, filter_info)
+        table.insert(content, '')
+    end
+
+    -- Daily breakdown
+    table.insert(
+        content,
+        '┌─ Tägliche Übersicht ─────────────────────────────────────┐'
+    )
+    table.insert(
+        content,
+        '│ Tag        │ Gearbeitet │ Soll │ Überstunden │ Status   │'
+    )
+    table.insert(
+        content,
+        '├────────────┼────────────┼──────┼─────────────┼──────────┤'
+    )
+
+    local weekday_names_de = {
+        Monday = 'Montag',
+        Tuesday = 'Dienstag',
+        Wednesday = 'Mittwoch',
+        Thursday = 'Donnerstag',
+        Friday = 'Freitag',
+        Saturday = 'Samstag',
+        Sunday = 'Sonntag',
+    }
+
+    local weekday_order =
+        { 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' }
+
+    for _, weekday in ipairs(weekday_order) do
+        local day_data = summary.weekdays[weekday]
+        local day_name_de = weekday_names_de[weekday] or weekday
+        local status = ''
+
+        if day_data.workedHours == 0 then
+            status = '⚪ Frei'
+        elseif day_data.overtime > 0 then
+            status = '🟢 Über'
+        elseif day_data.overtime == 0 then
+            status = '🟡 Ziel'
+        else
+            status = '🔴 Unter'
+        end
+
+        table.insert(
+            content,
+            string.format(
+                '│ %-10s │ %8.2fh │ %4.0fh │ %9.2fh │ %-8s │',
+                day_name_de,
+                day_data.workedHours,
+                day_data.expectedHours,
+                day_data.overtime,
+                status
+            )
+        )
+    end
+
+    table.insert(
+        content,
+        '└────────────┴────────────┴──────┴─────────────┴──────────┘'
+    )
+    table.insert(content, '')
+
+    -- Weekly totals
+    table.insert(
+        content,
+        '┌─ Wochenzusammenfassung ──────────────────────────────────┐'
+    )
+    table.insert(
+        content,
+        string.format(
+            '│ Gesamtarbeitszeit: %8.2f Stunden                    │',
+            summary.totals.totalHours
+        )
+    )
+    table.insert(
+        content,
+        string.format(
+            '│ Soll-Arbeitszeit:  %8.2f Stunden                    │',
+            summary.totals.expectedHours
+        )
+    )
+
+    local overtime_sign = summary.totals.totalOvertime >= 0 and '+' or ''
+    table.insert(
+        content,
+        string.format(
+            '│ Überstunden:       %s%7.2f Stunden                    │',
+            overtime_sign,
+            summary.totals.totalOvertime
+        )
+    )
+    table.insert(
+        content,
+        '└──────────────────────────────────────────────────────────┘'
+    )
+
+    -- Project breakdown if not filtered and there are projects
+    if not opts.project and not opts.file then
+        local has_projects = false
+        local project_summary = {}
+
+        -- Collect project data across all days
+        for _, day_data in pairs(summary.weekdays) do
+            for project_name, project_info in pairs(day_data.projects) do
+                if not project_summary[project_name] then
+                    project_summary[project_name] = 0
+                end
+                project_summary[project_name] = project_summary[project_name] + project_info.hours
+                has_projects = true
+            end
+        end
+
+        if has_projects then
+            table.insert(content, '')
+            table.insert(
+                content,
+                '┌─ Projekte ───────────────────────────────────────────────┐'
+            )
+
+            -- Sort projects by hours worked
+            local sorted_projects = {}
+            for project_name, hours in pairs(project_summary) do
+                table.insert(sorted_projects, { name = project_name, hours = hours })
+            end
+            table.sort(sorted_projects, function(a, b)
+                return a.hours > b.hours
+            end)
+
+            for _, project in ipairs(sorted_projects) do
+                local percentage = summary.totals.totalHours > 0
+                        and (project.hours / summary.totals.totalHours * 100)
+                    or 0
+                table.insert(
+                    content,
+                    string.format(
+                        '│ %-40s %8.2fh (%4.1f%%) │',
+                        project.name,
+                        project.hours,
+                        percentage
+                    )
+                )
+            end
+
+            table.insert(
+                content,
+                '└──────────────────────────────────────────────────────────┘'
+            )
+        end
+    end
+
+    table.insert(content, '')
+    table.insert(content, 'Drücke q zum Schließen, f für Filter-Optionen')
+
+    return content
+end
+
+---Show content in a floating window
+---@param content table Array of content lines
+---@param title string Window title
+function M._showFloatingWindow(content, title)
+    -- Calculate window size
+    local max_width = 0
+    for _, line in ipairs(content) do
+        max_width = math.max(max_width, vim.fn.strdisplaywidth(line))
+    end
+
+    local width = math.min(max_width + 4, vim.o.columns - 10)
+    local height = math.min(#content + 2, vim.o.lines - 10)
+
+    -- Calculate position (centered)
+    local row = math.floor((vim.o.lines - height) / 2)
+    local col = math.floor((vim.o.columns - width) / 2)
+
+    -- Create buffer
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+
+    -- Create window
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = 'editor',
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = 'minimal',
+        border = 'rounded',
+        title = title,
+        title_pos = 'center',
+    })
+
+    -- Set key mappings for the floating window
+    local function close_window()
+        if vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_close(win, true)
+        end
+    end
+
+    -- Key mappings
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'q', '', {
+        noremap = true,
+        silent = true,
+        callback = close_window,
+    })
+
+    vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', '', {
+        noremap = true,
+        silent = true,
+        callback = close_window,
+    })
+
+    -- Filter options mapping
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'f', '', {
+        noremap = true,
+        silent = true,
+        callback = function()
+            close_window()
+            M._showFilterDialog()
+        end,
+    })
+
+    -- Set window options
+    vim.api.nvim_win_set_option(win, 'wrap', false)
+    vim.api.nvim_win_set_option(win, 'cursorline', true)
+end
+
+---Show content in a new buffer
+---@param content table Array of content lines
+---@param title string Buffer title
+function M._showInBuffer(content, title)
+    -- Create new buffer
+    vim.cmd('new')
+    local buf = vim.api.nvim_get_current_buf()
+
+    -- Set buffer content and options
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+    vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
+    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+    vim.api.nvim_buf_set_option(buf, 'swapfile', false)
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    vim.api.nvim_buf_set_name(buf, title)
+end
+
+---Show content in quickfix window
+---@param content table Array of content lines
+function M._showInQuickfix(content)
+    local qf_list = {}
+    for i, line in ipairs(content) do
+        table.insert(qf_list, {
+            text = line,
+            lnum = i,
+            col = 1,
+        })
+    end
+
+    vim.fn.setqflist(qf_list)
+    vim.cmd('copen')
+end
+
+---Show dialog for filtering options
+function M._showFilterDialog()
+    local options = {
+        'Alle Projekte anzeigen',
+        'Nach Projekt filtern',
+        'Nach Datei filtern',
+        'Nach Projekt und Datei filtern',
+        'Andere Woche anzeigen',
+    }
+
+    vim.ui.select(options, {
+        prompt = 'Filter-Optionen: ',
+    }, function(choice)
+        if not choice then
+            return
+        end
+
+        if choice == 'Alle Projekte anzeigen' then
+            M.showWeeklyOverview({})
+        elseif choice == 'Nach Projekt filtern' then
+            vim.ui.input({ prompt = 'Projektname: ' }, function(project)
+                if project and project ~= '' then
+                    M.showWeeklyOverview({ project = project })
+                end
+            end)
+        elseif choice == 'Nach Datei filtern' then
+            vim.ui.input({ prompt = 'Dateiname: ' }, function(file)
+                if file and file ~= '' then
+                    M.showWeeklyOverview({ file = file })
+                end
+            end)
+        elseif choice == 'Nach Projekt und Datei filtern' then
+            vim.ui.input({ prompt = 'Projektname: ' }, function(project)
+                if project and project ~= '' then
+                    vim.ui.input({ prompt = 'Dateiname: ' }, function(file)
+                        if file and file ~= '' then
+                            M.showWeeklyOverview({ project = project, file = file })
+                        end
+                    end)
+                end
+            end)
+        elseif choice == 'Andere Woche anzeigen' then
+            vim.ui.input({ prompt = 'Jahr (YYYY): ' }, function(year)
+                if year and year ~= '' then
+                    vim.ui.input({ prompt = 'Woche (1-52): ' }, function(week)
+                        if week and week ~= '' then
+                            M.showWeeklyOverview({
+                                year = year,
+                                week = string.format('%02d', tonumber(week) or 1),
+                            })
+                        end
+                    end)
+                end
+            end)
+        end
+    end)
+end
+
 return M

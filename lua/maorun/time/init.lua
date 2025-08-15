@@ -132,6 +132,9 @@ function M.setup(user_config)
         export = function(opts)
             return core.exportTimeData(opts or {})
         end,
+        weeklyOverview = function(opts)
+            ui.showWeeklyOverview(opts or {})
+        end,
     }
     return config_obj -- Return the config_obj obtained from core.init
 end
@@ -168,6 +171,10 @@ M.calculate = function(opts) -- Match the public Time.calculate behavior
     return config_module.obj
 end
 M.exportTimeData = core.exportTimeData -- Expose the export function
+M.getWeeklySummary = core.getWeeklySummary -- Expose the weekly summary function
+M.showWeeklyOverview = function(opts)
+    ui.showWeeklyOverview(opts or {})
+end
 M.weekdays = config_module.weekdayNumberMap -- Expose weekday map
 M.get_config = core.get_config -- Expose the get_config function
 
