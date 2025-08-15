@@ -32,9 +32,63 @@ require('maorun.time').setup({
     -- every weekday is 8 hours on default. If you wish to reduce it: set it here
     hoursPerWeekday = {
         Monday = 6,
-    }
+    },
+    -- Configure daily goal notifications
+    notifications = {
+        dailyGoal = {
+            enabled = true,        -- Enable/disable daily goal notifications
+            oncePerDay = true,     -- If true, notify only once when goal is reached
+            recurringMinutes = 30, -- If oncePerDay is false, notify every X minutes after exceeding goal
+        },
+    },
 })
 ```
+
+## Daily Goal Notifications
+
+The plugin can show notifications when you reach or exceed your daily time goals. This feature integrates with `nvim-notify` for beautiful popup notifications.
+
+### Configuration Options
+
+- **`notifications.dailyGoal.enabled`** (boolean, default: `true`): Enable or disable daily goal notifications
+- **`notifications.dailyGoal.oncePerDay`** (boolean, default: `true`): 
+  - If `true`: Show notification only once when the daily goal is first reached
+  - If `false`: Show recurring notifications based on `recurringMinutes`
+- **`notifications.dailyGoal.recurringMinutes`** (number, default: `30`): When `oncePerDay` is false, show notifications every X minutes after exceeding the goal
+
+### Notification Types
+
+- **Goal Reached**: Shows when you complete your daily time goal (e.g., "Daily goal reached! Monday: 8.0h worked (8.0h goal)")
+- **Goal Exceeded**: Shows when you work more than your daily goal (e.g., "Daily goal exceeded! Monday: 9.5h worked (8.0h goal, +1.5h over)")
+
+### Examples
+
+```lua
+-- Minimal setup - notifications enabled by default
+require('maorun.time').setup({})
+
+-- Disable notifications
+require('maorun.time').setup({
+    notifications = {
+        dailyGoal = {
+            enabled = false,
+        },
+    },
+})
+
+-- Recurring notifications every 15 minutes
+require('maorun.time').setup({
+    notifications = {
+        dailyGoal = {
+            enabled = true,
+            oncePerDay = false,
+            recurringMinutes = 15,
+        },
+    },
+})
+```
+
+**Note**: Notifications are only shown for weekdays with expected hours > 0 (working days).
 
 ## Time Export
 
