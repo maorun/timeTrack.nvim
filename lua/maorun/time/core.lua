@@ -1185,4 +1185,143 @@ function M._formatAsMarkdown(entries, opts)
     return table.concat(lines, '\n') .. '\n'
 end
 
+---Get weekly summary data with optional filtering
+---@param opts? { year?: string, week?: string, project?: string, file?: string }
+---@return table Weekly summary data with daily breakdowns and totals
+function M.getWeeklySummary(opts)
+    opts = opts or {}
+
+    -- Get current week if not specified
+    local current_time = os.time()
+    local year_str = opts.year or os.date('%Y', current_time)
+    local week_str = opts.week or os.date('%W', current_time)
+
+    -- Initialize summary structure
+    local summary = {
+        year = year_str,
+        week = week_str,
+        weekdays = {},
+        totals = {
+            totalHours = 0,
+            totalOvertime = 0,
+            expectedHours = 0,
+        },
+    }
+
+    -- Define weekday order for consistent display
+    local weekday_order =
+        { 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' }
+
+    -- Check if data exists for this week
+    if
+        not config_module.obj.content.data
+        or not config_module.obj.content.data[year_str]
+        or not config_module.obj.content.data[year_str][week_str]
+    then
+        -- Return empty summary with configured expected hours
+        for _, weekday in ipairs(weekday_order) do
+            local expected = config_module.obj.content.hoursPerWeekday[weekday] or 0
+            summary.weekdays[weekday] = {
+                workedHours = 0,
+                expectedHours = expected,
+                overtime = -expected,
+                projects = {},
+            }
+            summary.totals.expectedHours = summary.totals.expectedHours + expected
+            summary.totals.totalOvertime = summary.totals.totalOvertime - expected
+        end
+        return summary
+    end
+
+    local week_data = config_module.obj.content.data[year_str][week_str]
+
+    -- Process each weekday
+    for _, weekday in ipairs(weekday_order) do
+        local expected_hours = config_module.obj.content.hoursPerWeekday[weekday] or 0
+        local weekday_info = {
+            workedHours = 0,
+            expectedHours = expected_hours,
+            overtime = 0,
+            projects = {},
+        }
+
+        -- Add to total expected hours
+        summary.totals.expectedHours = summary.totals.expectedHours + expected_hours
+
+        if week_data[weekday] then
+            -- Calculate worked hours and collect project data
+            local weekday_data = week_data[weekday]
+            if weekday_data.summary then
+                weekday_info.workedHours = weekday_data.summary.diffInHours or 0
+                weekday_info.overtime = weekday_data.summary.overhour
+                    or (weekday_info.workedHours - expected_hours)
+            else
+                -- If weekday data exists but no summary, calculate manually
+                local total_hours = 0
+                for project_name, project_data in pairs(weekday_data) do
+                    if project_name ~= 'summary' and type(project_data) == 'table' then
+                        for file_name, file_data in pairs(project_data) do
+                            if type(file_data) == 'table' and file_data.items then
+                                for _, item in ipairs(file_data.items) do
+                                    total_hours = total_hours + (item.diffInHours or 0)
+                                end
+                            end
+                        end
+                    end
+                end
+                weekday_info.workedHours = total_hours
+                weekday_info.overtime = total_hours - expected_hours
+            end
+
+            -- Collect project/file data if filtering is needed or for detailed view
+            for project_name, project_data in pairs(weekday_data) do
+                if project_name ~= 'summary' and type(project_data) == 'table' then
+                    -- Apply project filter if specified
+                    if not opts.project or project_name == opts.project then
+                        local project_hours = 0
+                        local files = {}
+
+                        for file_name, file_data in pairs(project_data) do
+                            if type(file_data) == 'table' and file_data.summary then
+                                -- Apply file filter if specified
+                                if not opts.file or file_name == opts.file then
+                                    local file_hours = file_data.summary.diffInHours or 0
+                                    project_hours = project_hours + file_hours
+                                    files[file_name] = file_hours
+                                end
+                            end
+                        end
+
+                        if project_hours > 0 then
+                            weekday_info.projects[project_name] = {
+                                hours = project_hours,
+                                files = files,
+                            }
+                        end
+                    end
+                end
+            end
+
+            -- If filtering is applied, recalculate worked hours from filtered data
+            if opts.project or opts.file then
+                local filtered_hours = 0
+                for _, project_info in pairs(weekday_info.projects) do
+                    filtered_hours = filtered_hours + project_info.hours
+                end
+                weekday_info.workedHours = filtered_hours
+                weekday_info.overtime = filtered_hours - expected_hours
+            end
+        else
+            -- No data for this weekday
+            weekday_info.overtime = -expected_hours
+        end
+
+        summary.weekdays[weekday] = weekday_info
+        summary.totals.totalHours = summary.totals.totalHours + weekday_info.workedHours
+        summary.totals.totalOvertime = summary.totals.totalOvertime + weekday_info.overtime
+    end
+
+    return summary
+end
+
 return M
