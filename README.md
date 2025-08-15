@@ -90,6 +90,130 @@ require('maorun.time').setup({
 
 **Note**: Notifications are only shown for weekdays with expected hours > 0 (working days).
 
+## Weekly Overview (Wöchentliche Übersicht)
+
+The plugin provides a comprehensive weekly overview command that displays a compressed summary of your time tracking data. This feature shows worked hours per day, overtime calculation, and weekly totals in an easy-to-read format.
+
+### Basic Usage
+
+```lua
+-- Show current week overview in floating window
+Time.weeklyOverview()
+
+-- Or using the module directly
+require('maorun.time').showWeeklyOverview()
+```
+
+### Display Options
+
+The weekly overview supports multiple display modes:
+
+```lua
+-- Floating window (default)
+Time.weeklyOverview({ display_mode = 'floating' })
+
+-- New buffer
+Time.weeklyOverview({ display_mode = 'buffer' })
+
+-- Quickfix list
+Time.weeklyOverview({ display_mode = 'quickfix' })
+```
+
+### Filtering Options
+
+Filter the overview by project, file, or both:
+
+```lua
+-- Filter by specific project
+Time.weeklyOverview({ project = 'MyProject' })
+
+-- Filter by specific file
+Time.weeklyOverview({ file = 'main.lua' })
+
+-- Filter by both project and file
+Time.weeklyOverview({ 
+    project = 'MyProject', 
+    file = 'main.lua' 
+})
+```
+
+### Different Time Periods
+
+View data for specific weeks or years:
+
+```lua
+-- Specific week and year
+Time.weeklyOverview({ 
+    year = '2023', 
+    week = '10' 
+})
+
+-- Current year, different week
+Time.weeklyOverview({ week = '45' })
+```
+
+### Interactive Features
+
+When using the floating window (default), you can:
+
+- Press `q` or `Esc` to close the window
+- Press `f` to open filter options dialog
+- Navigate through the display with arrow keys
+
+### Sample Output
+
+```
+═══ Wöchentliche Übersicht - KW 11/2023 ═══
+
+┌─ Tägliche Übersicht ─────────────────────────────────────┐
+│ Tag        │ Gearbeitet │ Soll │ Überstunden │ Status   │
+├────────────┼────────────┼──────┼─────────────┼──────────┤
+│ Montag     │     8.00h │   8h │      0.00h │ 🟡 Ziel  │
+│ Dienstag   │     9.00h │   8h │     +1.00h │ 🟢 Über  │
+│ Mittwoch   │     7.00h │   8h │     -1.00h │ 🔴 Unter │
+│ Donnerstag │     0.00h │   8h │     -8.00h │ ⚪ Frei   │
+│ Freitag    │     6.00h │   8h │     -2.00h │ 🔴 Unter │
+│ Samstag    │     0.00h │   0h │      0.00h │ ⚪ Frei   │
+│ Sonntag    │     0.00h │   0h │      0.00h │ ⚪ Frei   │
+└────────────┴────────────┴──────┴─────────────┴──────────┘
+
+┌─ Wochenzusammenfassung ──────────────────────────────────┐
+│ Gesamtarbeitszeit:    30.00 Stunden                     │
+│ Soll-Arbeitszeit:     40.00 Stunden                     │
+│ Überstunden:         -10.00 Stunden                     │
+└──────────────────────────────────────────────────────────┘
+
+┌─ Projekte ───────────────────────────────────────────────┐
+│ WorkProject                              20.00h (66.7%) │
+│ PersonalProject                          10.00h (33.3%) │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Status Indicators
+
+- 🟢 **Über**: Overtime hours worked (above expected)
+- 🟡 **Ziel**: Goal achieved (exactly expected hours)
+- 🔴 **Unter**: Under target (below expected hours) 
+- ⚪ **Frei**: No work logged (typically weekends or days off)
+
+### Getting Raw Data
+
+For programmatic access to the summary data:
+
+```lua
+-- Get structured summary data
+local summary = require('maorun.time').getWeeklySummary({
+    year = '2023',
+    week = '11',
+    project = 'MyProject'  -- optional filter
+})
+
+-- Access the data
+print(summary.totals.totalHours)     -- Total hours worked
+print(summary.totals.totalOvertime) -- Total overtime
+print(summary.weekdays.Monday.workedHours) -- Monday's hours
+```
+
 ## Time Export
 
 The plugin supports exporting time tracking data in CSV and Markdown formats for weekly or monthly periods. This is useful for billing, reporting, or personal analysis.
