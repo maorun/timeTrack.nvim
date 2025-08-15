@@ -5,12 +5,103 @@ local utils = require('maorun.time.utils')
 
 local M = {}
 
+-- State tracking for notifications to prevent spam
+local notification_state = {
+    lastDailyGoalNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
+    lastRecurringNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
+}
+
+---Validate configuration options to prevent issues
+---@param config table The configuration to validate
+function M._validateConfig(config)
+    if config.notifications and config.notifications.dailyGoal then
+        local dailyGoal = config.notifications.dailyGoal
+
+        -- Validate recurringMinutes is a positive number with reasonable minimum
+        if dailyGoal.recurringMinutes ~= nil then
+            if type(dailyGoal.recurringMinutes) ~= 'number' or dailyGoal.recurringMinutes < 1 then
+                vim.notify(
+                    'Warning: recurringMinutes must be >= 1. Setting to default value of 30.',
+                    vim.log.levels.WARN,
+                    { title = 'TimeTracking - Config' }
+                )
+                dailyGoal.recurringMinutes = 30
+            end
+        end
+    end
+end
+
+---Clean up old notification state entries to prevent memory leaks
+---@param max_age_days number Maximum age in days for entries to keep (default: 30)
+function M._cleanupNotificationState(max_age_days)
+    max_age_days = max_age_days or 30
+    local current_time = os.time()
+    local max_age_seconds = max_age_days * 24 * 60 * 60
+
+    -- Clean up lastDailyGoalNotification entries
+    for state_key, timestamp in pairs(notification_state.lastDailyGoalNotification) do
+        if current_time - timestamp > max_age_seconds then
+            notification_state.lastDailyGoalNotification[state_key] = nil
+        end
+    end
+
+    -- Clean up lastRecurringNotification entries
+    for state_key, timestamp in pairs(notification_state.lastRecurringNotification) do
+        if current_time - timestamp > max_age_seconds then
+            notification_state.lastRecurringNotification[state_key] = nil
+        end
+    end
+end
+
+---Check if we should reset notification state when switching between modes
+---@param notification_config table The current notification configuration
+---@param state_key string The state key for the current day
+function M._handleModeSwitch(notification_config, state_key)
+    -- If we're switching to oncePerDay mode and have recurring state, clear it
+    if
+        notification_config.oncePerDay and notification_state.lastRecurringNotification[state_key]
+    then
+        -- Check if recurring notification was recent enough that we should respect it
+        local recurring_time = notification_state.lastRecurringNotification[state_key]
+        local current_time = os.time()
+        local time_since_last = (current_time - recurring_time) / 60
+
+        -- If the last recurring notification was less than the configured interval ago,
+        -- we should treat it as if we already notified for oncePerDay
+        if time_since_last < notification_config.recurringMinutes then
+            notification_state.lastDailyGoalNotification[state_key] = recurring_time
+        end
+
+        -- Clear the recurring state since we're in oncePerDay mode now
+        notification_state.lastRecurringNotification[state_key] = nil
+    end
+
+    -- If we're switching to recurring mode and have oncePerDay state, use it as the base
+    if
+        not notification_config.oncePerDay
+        and notification_state.lastDailyGoalNotification[state_key]
+    then
+        -- Use the oncePerDay timestamp as the starting point for recurring notifications
+        notification_state.lastRecurringNotification[state_key] =
+            notification_state.lastDailyGoalNotification[state_key]
+
+        -- Clear the oncePerDay state since we're in recurring mode now
+        notification_state.lastDailyGoalNotification[state_key] = nil
+    end
+end
+
 function M.init(user_config)
     config_module.config =
         vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
     if user_config and user_config.hoursPerWeekday ~= nil then
         config_module.config.hoursPerWeekday = user_config.hoursPerWeekday
     end
+
+    -- Validate notification configuration
+    M._validateConfig(config_module.config)
+
+    -- Clean up old notification state entries to prevent memory leaks
+    M._cleanupNotificationState()
     config_module.obj.path = config_module.config.path
     local p = Path:new(config_module.obj.path)
     if not p:exists() then
@@ -188,12 +279,6 @@ function M.calculate(opts)
     end
 end
 
--- State tracking for notifications to prevent spam
-local notification_state = {
-    lastDailyGoalNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
-    lastRecurringNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
-}
-
 ---Check if daily goal notification should be shown and display it if needed
 ---@param year_str string
 ---@param week_str string
@@ -223,6 +308,9 @@ function M.checkDailyGoalNotification(year_str, week_str, weekday_name, total_ho
     local notification_config = config_module.config.notifications.dailyGoal
     local state_key = year_str .. '-' .. week_str .. '-' .. weekday_name
     local current_time = os.time()
+
+    -- Handle mode switching to prevent unexpected notification behavior
+    M._handleModeSwitch(notification_config, state_key)
 
     -- Determine if we should notify
     local should_notify = false
