@@ -1324,4 +1324,308 @@ function M.getWeeklySummary(opts)
     return summary
 end
 
+-- Zeit-Validierung & Korrekturmodus (Time Validation & Correction Mode)
+
+---Detect overlapping time entries within the same day/project/file
+---@param year_str string
+---@param week_str string
+---@param weekday string
+---@param project string
+---@param file string
+---@return table List of overlapping entry pairs
+function M._detectOverlappingEntriesForDayProjectFile(year_str, week_str, weekday, project, file)
+    local entries = M._getEntriesForDay(year_str, week_str, weekday, project, file)
+    local overlaps = {}
+
+    for i = 1, #entries do
+        for j = i + 1, #entries do
+            local entry1 = entries[i]
+            local entry2 = entries[j]
+
+            -- Check if entries overlap (one starts before the other ends)
+            if entry1.startTime and entry1.endTime and entry2.startTime and entry2.endTime then
+                -- Check for overlap, but exclude exact duplicates (they are handled separately)
+                local is_duplicate = (
+                    entry1.startTime == entry2.startTime and entry1.endTime == entry2.endTime
+                )
+                local overlapping = (
+                    entry1.startTime < entry2.endTime and entry2.startTime < entry1.endTime
+                )
+                if overlapping and not is_duplicate then
+                    table.insert(overlaps, {
+                        entry1 = { index = i, data = entry1 },
+                        entry2 = { index = j, data = entry2 },
+                        year = year_str,
+                        week = week_str,
+                        weekday = weekday,
+                        project = project,
+                        file = file,
+                        type = 'overlap',
+                    })
+                end
+            end
+        end
+    end
+
+    return overlaps
+end
+
+---Detect duplicate time entries (same start/end times)
+---@param year_str string
+---@param week_str string
+---@param weekday string
+---@param project string
+---@param file string
+---@return table List of duplicate entry pairs
+function M._detectDuplicateEntriesForDayProjectFile(year_str, week_str, weekday, project, file)
+    local entries = M._getEntriesForDay(year_str, week_str, weekday, project, file)
+    local duplicates = {}
+
+    for i = 1, #entries do
+        for j = i + 1, #entries do
+            local entry1 = entries[i]
+            local entry2 = entries[j]
+
+            -- Check if entries are duplicates (same start and end times)
+            if entry1.startTime and entry1.endTime and entry2.startTime and entry2.endTime then
+                local is_duplicate = (
+                    entry1.startTime == entry2.startTime and entry1.endTime == entry2.endTime
+                )
+                if is_duplicate then
+                    table.insert(duplicates, {
+                        entry1 = { index = i, data = entry1 },
+                        entry2 = { index = j, data = entry2 },
+                        year = year_str,
+                        week = week_str,
+                        weekday = weekday,
+                        project = project,
+                        file = file,
+                        type = 'duplicate',
+                    })
+                end
+            end
+        end
+    end
+
+    return duplicates
+end
+
+---Detect erroneous time entries (invalid durations, timestamps, etc.)
+---@param year_str string
+---@param week_str string
+---@param weekday string
+---@param project string
+---@param file string
+---@return table List of erroneous entries
+function M._detectErroneousEntriesForDayProjectFile(year_str, week_str, weekday, project, file)
+    local entries = M._getEntriesForDay(year_str, week_str, weekday, project, file)
+    local errors = {}
+
+    for i, entry in ipairs(entries) do
+        local issues = {}
+
+        -- Check for missing timestamps
+        if not entry.startTime or not entry.endTime then
+            table.insert(issues, 'Fehlende Zeitstempel (Missing timestamps)')
+        else
+            -- Check for invalid time order
+            if entry.startTime >= entry.endTime then
+                table.insert(issues, 'Startzeit nach Endzeit (Start time after end time)')
+            end
+
+            -- Check for unrealistic durations (more than 24 hours)
+            local duration_hours = (entry.endTime - entry.startTime) / 3600
+            if duration_hours > 24 then
+                table.insert(
+                    issues,
+                    string.format(
+                        'Unrealistische Dauer: %.1f Stunden (Unrealistic duration: %.1f hours)',
+                        duration_hours,
+                        duration_hours
+                    )
+                )
+            end
+
+            -- Check for negative durations
+            if duration_hours < 0 then
+                table.insert(issues, 'Negative Dauer (Negative duration)')
+            end
+        end
+
+        -- Check for missing or invalid diffInHours
+        if entry.diffInHours then
+            if entry.diffInHours < 0 then
+                table.insert(issues, 'Negative diffInHours')
+            elseif entry.diffInHours > 24 then
+                table.insert(
+                    issues,
+                    string.format('Unrealistische diffInHours: %.2f', entry.diffInHours)
+                )
+            end
+
+            -- Check consistency between timestamps and diffInHours
+            if entry.startTime and entry.endTime then
+                local calculated_hours = (entry.endTime - entry.startTime) / 3600
+                local diff_threshold = 0.1 -- 6 minutes tolerance
+                if math.abs(calculated_hours - entry.diffInHours) > diff_threshold then
+                    table.insert(
+                        issues,
+                        string.format(
+                            'Inkonsistente Zeitberechnung: %.2fh vs %.2fh (Inconsistent time calculation)',
+                            calculated_hours,
+                            entry.diffInHours
+                        )
+                    )
+                end
+            end
+        end
+
+        -- If any issues found, add to errors list
+        if #issues > 0 then
+            table.insert(errors, {
+                index = i,
+                data = entry,
+                year = year_str,
+                week = week_str,
+                weekday = weekday,
+                project = project,
+                file = file,
+                type = 'error',
+                issues = issues,
+            })
+        end
+    end
+
+    return errors
+end
+
+---Validate time data for a specific time range
+---@param opts { year?: string, week?: string, weekday?: string, project?: string, file?: string }
+---@return table Validation results with overlaps, duplicates, and errors
+function M.validateTimeData(opts)
+    opts = opts or {}
+    local year_str = opts.year or os.date('%Y')
+    local week_str = opts.week or os.date('%W')
+
+    local validation_results = {
+        overlaps = {},
+        duplicates = {},
+        errors = {},
+        summary = {
+            total_overlaps = 0,
+            total_duplicates = 0,
+            total_errors = 0,
+            scanned_entries = 0,
+        },
+    }
+
+    -- If no data exists, return empty results
+    if
+        not config_module.obj.content.data
+        or not config_module.obj.content.data[year_str]
+        or not config_module.obj.content.data[year_str][week_str]
+    then
+        return validation_results
+    end
+
+    local week_data = config_module.obj.content.data[year_str][week_str]
+
+    -- Determine which weekdays to check
+    local weekdays_to_check = {}
+    if opts.weekday then
+        table.insert(weekdays_to_check, opts.weekday)
+    else
+        weekdays_to_check =
+            { 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' }
+    end
+
+    -- Iterate through weekdays
+    for _, weekday in ipairs(weekdays_to_check) do
+        if week_data[weekday] and type(week_data[weekday]) == 'table' then
+            -- Determine which projects to check
+            local projects_to_check = {}
+            if opts.project then
+                table.insert(projects_to_check, opts.project)
+            else
+                for project, _ in pairs(week_data[weekday]) do
+                    if project ~= 'summary' then
+                        table.insert(projects_to_check, project)
+                    end
+                end
+            end
+
+            -- Iterate through projects
+            for _, project in ipairs(projects_to_check) do
+                if week_data[weekday][project] and type(week_data[weekday][project]) == 'table' then
+                    -- Determine which files to check
+                    local files_to_check = {}
+                    if opts.file then
+                        table.insert(files_to_check, opts.file)
+                    else
+                        for file, _ in pairs(week_data[weekday][project]) do
+                            table.insert(files_to_check, file)
+                        end
+                    end
+
+                    -- Iterate through files
+                    for _, file in ipairs(files_to_check) do
+                        if
+                            week_data[weekday][project][file]
+                            and week_data[weekday][project][file].items
+                        then
+                            local entries = week_data[weekday][project][file].items
+                            validation_results.summary.scanned_entries = validation_results.summary.scanned_entries
+                                + #entries
+
+                            -- Check for overlaps
+                            local overlaps = M._detectOverlappingEntriesForDayProjectFile(
+                                year_str,
+                                week_str,
+                                weekday,
+                                project,
+                                file
+                            )
+                            for _, overlap in ipairs(overlaps) do
+                                table.insert(validation_results.overlaps, overlap)
+                                validation_results.summary.total_overlaps = validation_results.summary.total_overlaps
+                                    + 1
+                            end
+
+                            -- Check for duplicates
+                            local duplicates = M._detectDuplicateEntriesForDayProjectFile(
+                                year_str,
+                                week_str,
+                                weekday,
+                                project,
+                                file
+                            )
+                            for _, duplicate in ipairs(duplicates) do
+                                table.insert(validation_results.duplicates, duplicate)
+                                validation_results.summary.total_duplicates = validation_results.summary.total_duplicates
+                                    + 1
+                            end
+
+                            -- Check for errors
+                            local errors = M._detectErroneousEntriesForDayProjectFile(
+                                year_str,
+                                week_str,
+                                weekday,
+                                project,
+                                file
+                            )
+                            for _, error in ipairs(errors) do
+                                table.insert(validation_results.errors, error)
+                                validation_results.summary.total_errors = validation_results.summary.total_errors
+                                    + 1
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return validation_results
+end
+
 return M
