@@ -93,8 +93,72 @@ end
 function M.init(user_config)
     config_module.config =
         vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
+
+    -- Handle work model presets
+    if user_config and user_config.workModel then
+        local preset_config = config_module.applyWorkModelPreset(user_config.workModel)
+        if preset_config then
+            -- Apply preset values as defaults, but allow user overrides
+            if not user_config.hoursPerWeekday then
+                config_module.config.hoursPerWeekday = preset_config.hoursPerWeekday
+            end
+            if not user_config.coreWorkingHours then
+                config_module.config.coreWorkingHours = preset_config.coreWorkingHours
+            end
+            config_module.config.workModel = preset_config.workModel
+        else
+            vim.notify(
+                string.format(
+                    'Warning: Unknown work model preset "%s". Using default configuration.',
+                    user_config.workModel
+                ),
+                vim.log.levels.WARN,
+                { title = 'TimeTracking - Config' }
+            )
+        end
+    end
+
+    -- Manual hoursPerWeekday override (merge with preset if exists, otherwise replace completely)
     if user_config and user_config.hoursPerWeekday ~= nil then
-        config_module.config.hoursPerWeekday = user_config.hoursPerWeekday
+        if user_config.workModel then
+            -- When using a work model, merge the manual override with the preset
+            config_module.config.hoursPerWeekday = vim.tbl_deep_extend(
+                'force',
+                config_module.config.hoursPerWeekday or config_module.defaultHoursPerWeekday,
+                user_config.hoursPerWeekday
+            )
+        else
+            -- When not using a work model, use the original behavior (complete replacement)
+            config_module.config.hoursPerWeekday = user_config.hoursPerWeekday
+        end
+    end
+
+    -- Manual coreWorkingHours override (merge with preset if exists, otherwise replace completely)
+    if user_config and user_config.coreWorkingHours ~= nil then
+        local valid, error_msg =
+            config_module.validateCoreWorkingHours(user_config.coreWorkingHours)
+        if valid then
+            if user_config.workModel then
+                -- When using a work model, merge the manual override with the preset
+                config_module.config.coreWorkingHours = vim.tbl_deep_extend(
+                    'force',
+                    config_module.config.coreWorkingHours or config_module.defaultCoreWorkingHours,
+                    user_config.coreWorkingHours
+                )
+            else
+                -- When not using a work model, use complete replacement
+                config_module.config.coreWorkingHours = user_config.coreWorkingHours
+            end
+        else
+            vim.notify(
+                string.format(
+                    'Warning: Invalid coreWorkingHours configuration: %s. Using defaults.',
+                    error_msg
+                ),
+                vim.log.levels.WARN,
+                { title = 'TimeTracking - Config' }
+            )
+        end
     end
 
     -- Validate notification configuration
@@ -117,6 +181,14 @@ function M.init(user_config)
     -- Ensure hoursPerWeekday is initialized if not present (e.g. new file)
     if config_module.obj.content['hoursPerWeekday'] == nil then
         config_module.obj.content['hoursPerWeekday'] = config_module.config.hoursPerWeekday
+    end
+    -- Ensure coreWorkingHours is initialized if not present
+    if config_module.obj.content['coreWorkingHours'] == nil then
+        config_module.obj.content['coreWorkingHours'] = config_module.config.coreWorkingHours
+    end
+    -- Ensure workModel is initialized if not present
+    if config_module.obj.content['workModel'] == nil then
+        config_module.obj.content['workModel'] = config_module.config.workModel
     end
     -- Ensure paused flag is initialized
     if config_module.obj.content['paused'] == nil then
@@ -365,6 +437,105 @@ function M.checkDailyGoalNotification(year_str, week_str, weekday_name, total_ho
     end
 end
 
+---Check core hours compliance for a time entry and show notification if needed
+---@param start_time number Start timestamp
+---@param end_time number End timestamp
+---@param weekday_name string
+function M.checkCoreHoursCompliance(start_time, end_time, weekday_name)
+    -- Check if core hours compliance notifications are enabled
+    if
+        not config_module.config.notifications
+        or not config_module.config.notifications.coreHoursCompliance
+        or not config_module.config.notifications.coreHoursCompliance.enabled
+        or not config_module.config.notifications.coreHoursCompliance.warnOutsideCoreHours
+    then
+        return
+    end
+
+    local core_hours = config_module.config.coreWorkingHours
+        or config_module.obj.content.coreWorkingHours
+    if not core_hours or not core_hours[weekday_name] then
+        return -- No core hours defined for this weekday
+    end
+
+    -- Only notify if core hours were explicitly configured (not just defaults)
+    -- Check if the current core hours are different from defaults, indicating explicit configuration
+    local is_explicitly_configured = false
+    if config_module.obj.content.coreWorkingHours then
+        -- Core hours were saved to file, indicating user configuration
+        is_explicitly_configured = true
+    elseif config_module.config.workModel then
+        -- A work model preset was applied
+        is_explicitly_configured = true
+    else
+        -- Check if config differs from defaults
+        local default_core_hours = config_module.defaultCoreWorkingHours
+        if not default_core_hours or not default_core_hours[weekday_name] then
+            is_explicitly_configured = true
+        else
+            local current_core = core_hours[weekday_name]
+            local default_core = default_core_hours[weekday_name]
+            if
+                not current_core
+                or not default_core
+                or current_core.start ~= default_core.start
+                or current_core.finish ~= default_core.finish
+            then
+                is_explicitly_configured = true
+            end
+        end
+    end
+
+    if not is_explicitly_configured then
+        return -- Don't notify for default core hours
+    end
+
+    local core = core_hours[weekday_name]
+    if not core then
+        return -- No core hours for this weekday
+    end
+
+    -- Check if work time overlaps with core hours
+    local start_within_core = config_module.isWithinCoreHours(start_time, weekday_name, core_hours)
+    local end_within_core = config_module.isWithinCoreHours(end_time, weekday_name, core_hours)
+
+    -- Notification state tracking
+    local year_str = os.date('%Y', start_time)
+    local week_str = os.date('%W', start_time)
+    local state_key = 'core-hours-' .. year_str .. '-' .. week_str .. '-' .. weekday_name
+    local current_time = os.time()
+
+    local notification_config = config_module.config.notifications.coreHoursCompliance
+
+    -- Check if we should notify (only once per day if configured)
+    local should_notify = true
+    if notification_config.oncePerDay then
+        if notification_state.lastDailyGoalNotification[state_key] then
+            should_notify = false
+        else
+            notification_state.lastDailyGoalNotification[state_key] = current_time
+        end
+    end
+
+    if should_notify and (not start_within_core or not end_within_core) then
+        local start_time_str = os.date('%H:%M', start_time)
+        local end_time_str = os.date('%H:%M', end_time)
+        local core_start_str = string.format('%02d:%02d', core.start, (core.start % 1) * 60)
+        local core_end_str = string.format('%02d:%02d', core.finish, (core.finish % 1) * 60)
+
+        local message = string.format(
+            'Work time outside core hours! %s %s-%s (core: %s-%s)',
+            weekday_name,
+            start_time_str,
+            end_time_str,
+            core_start_str,
+            core_end_str
+        )
+
+        vim.notify(message, vim.log.levels.WARN, { title = 'TimeTracking - Core Hours' })
+    end
+end
+
 function M.TimePause()
     M.init({
         path = config_module.obj.path,
@@ -559,6 +730,12 @@ function M.saveTime(startTime, endTime, weekday, clearDay, project, file, isSubt
     end
 
     table.insert(file_data_for_day.items, item)
+
+    -- Check core hours compliance for this time entry (only for actual work, not subtractions)
+    if not isSubtraction then
+        M.checkCoreHoursCompliance(startTime, endTime, weekday)
+    end
+
     M.calculate({ year = year_str, weeknumber = week_str })
     utils.save()
 end
@@ -1626,6 +1803,79 @@ function M.validateTimeData(opts)
     end
 
     return validation_results
+end
+
+---Get available work model presets
+---@return table List of available preset names with descriptions
+function M.getAvailableWorkModels()
+    return config_module.getAvailableWorkModels()
+end
+
+---Apply a work model preset to current configuration
+---@param preset_name string Name of the preset (e.g., 'fourDayWeek', 'partTime')
+---@return boolean Success status
+function M.applyWorkModelPreset(preset_name)
+    local preset_config = config_module.applyWorkModelPreset(preset_name)
+    if not preset_config then
+        vim.notify(
+            string.format('Work model preset "%s" not found', preset_name),
+            vim.log.levels.ERROR,
+            { title = 'TimeTracking - Work Model' }
+        )
+        return false
+    end
+
+    -- Ensure we have a valid path before saving
+    if not config_module.obj.path then
+        vim.notify(
+            'Error: Configuration path not initialized. Call setup() first.',
+            vim.log.levels.ERROR,
+            { title = 'TimeTracking - Work Model' }
+        )
+        return false
+    end
+
+    -- Update current configuration
+    config_module.config.hoursPerWeekday = preset_config.hoursPerWeekday
+    config_module.config.coreWorkingHours = preset_config.coreWorkingHours
+    config_module.config.workModel = preset_config.workModel
+
+    -- Update stored content
+    config_module.obj.content.hoursPerWeekday = preset_config.hoursPerWeekday
+    config_module.obj.content.coreWorkingHours = preset_config.coreWorkingHours
+    config_module.obj.content.workModel = preset_config.workModel
+
+    utils.save()
+
+    vim.notify(
+        string.format('Applied work model: %s', config_module.workModelPresets[preset_name].name),
+        vim.log.levels.INFO,
+        { title = 'TimeTracking - Work Model' }
+    )
+
+    return true
+end
+
+---Get current work model configuration
+---@return table Current work model settings
+function M.getCurrentWorkModel()
+    return {
+        workModel = config_module.obj.content.workModel or config_module.config.workModel,
+        hoursPerWeekday = config_module.obj.content.hoursPerWeekday
+            or config_module.config.hoursPerWeekday,
+        coreWorkingHours = config_module.obj.content.coreWorkingHours
+            or config_module.config.coreWorkingHours,
+    }
+end
+
+---Check if a timestamp is within core working hours for a weekday
+---@param timestamp number Unix timestamp
+---@param weekday string Weekday name (e.g., 'Monday')
+---@return boolean True if within core hours, false otherwise
+function M.isWithinCoreHours(timestamp, weekday)
+    local core_hours = config_module.obj.content.coreWorkingHours
+        or config_module.config.coreWorkingHours
+    return config_module.isWithinCoreHours(timestamp, weekday, core_hours)
 end
 
 return M

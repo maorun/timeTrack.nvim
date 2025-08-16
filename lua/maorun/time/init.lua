@@ -141,6 +141,19 @@ function M.setup(user_config)
         validateAndCorrect = function(opts)
             ui.validateAndCorrect(opts or {}, function() end)
         end,
+        -- Work model functions
+        getAvailableWorkModels = function()
+            return core.getAvailableWorkModels()
+        end,
+        applyWorkModelPreset = function(preset_name)
+            return core.applyWorkModelPreset(preset_name)
+        end,
+        getCurrentWorkModel = function()
+            return core.getCurrentWorkModel()
+        end,
+        isWithinCoreHours = function(timestamp, weekday)
+            return core.isWithinCoreHours(timestamp, weekday)
+        end,
     }
     return config_obj -- Return the config_obj obtained from core.init
 end
@@ -188,5 +201,10 @@ M.validateAndCorrect = function(opts, callback)
     ui.validateAndCorrect(opts or {}, callback or function() end)
 end
 M.showValidationResults = ui.showValidationResults -- Expose validation UI
+-- Work model functions
+M.getAvailableWorkModels = core.getAvailableWorkModels
+M.applyWorkModelPreset = core.applyWorkModelPreset
+M.getCurrentWorkModel = core.getCurrentWorkModel
+M.isWithinCoreHours = core.isWithinCoreHours
 
 return M
