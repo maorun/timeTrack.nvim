@@ -135,6 +135,9 @@ function M.setup(user_config)
         weeklyOverview = function(opts)
             ui.showWeeklyOverview(opts or {})
         end,
+        validate = function(opts)
+            return core.validateTimeData(opts or {})
+        end,
     }
     return config_obj -- Return the config_obj obtained from core.init
 end
@@ -177,5 +180,6 @@ M.showWeeklyOverview = function(opts)
 end
 M.weekdays = config_module.weekdayNumberMap -- Expose weekday map
 M.get_config = core.get_config -- Expose the get_config function
+M.validateTimeData = core.validateTimeData -- Expose the validation function
 
 return M
