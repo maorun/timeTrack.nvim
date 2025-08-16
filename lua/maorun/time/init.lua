@@ -138,6 +138,9 @@ function M.setup(user_config)
         validate = function(opts)
             return core.validateTimeData(opts or {})
         end,
+        validateAndCorrect = function(opts)
+            ui.validateAndCorrect(opts or {}, function() end)
+        end,
     }
     return config_obj -- Return the config_obj obtained from core.init
 end
@@ -181,5 +184,9 @@ end
 M.weekdays = config_module.weekdayNumberMap -- Expose weekday map
 M.get_config = core.get_config -- Expose the get_config function
 M.validateTimeData = core.validateTimeData -- Expose the validation function
+M.validateAndCorrect = function(opts, callback)
+    ui.validateAndCorrect(opts or {}, callback or function() end)
+end
+M.showValidationResults = ui.showValidationResults -- Expose validation UI
 
 return M

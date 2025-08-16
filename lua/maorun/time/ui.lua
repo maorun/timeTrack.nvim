@@ -882,4 +882,459 @@ function M._showFilterDialog()
     end)
 end
 
+-- Zeit-Validierung & Korrekturmodus UI (Time Validation & Correction Mode UI)
+
+---Format validation results for display
+---@param validation_results table Results from validateTimeData
+---@return table Array of formatted content lines
+function M._formatValidationResults(validation_results)
+    local content = {}
+
+    -- Header
+    table.insert(content, '═══ Zeit-Validierung & Korrekturmodus ═══')
+    table.insert(content, '')
+
+    -- Summary
+    table.insert(content, 'Zusammenfassung (Summary):')
+    table.insert(
+        content,
+        string.format('  Geprüfte Einträge: %d', validation_results.summary.scanned_entries)
+    )
+    table.insert(
+        content,
+        string.format('  Überschneidungen: %d', validation_results.summary.total_overlaps)
+    )
+    table.insert(
+        content,
+        string.format('  Duplikate: %d', validation_results.summary.total_duplicates)
+    )
+    table.insert(
+        content,
+        string.format('  Fehlerhafte Einträge: %d', validation_results.summary.total_errors)
+    )
+    table.insert(content, '')
+
+    if
+        validation_results.summary.total_overlaps == 0
+        and validation_results.summary.total_duplicates == 0
+        and validation_results.summary.total_errors == 0
+    then
+        table.insert(content, '✅ Keine Probleme gefunden! (No issues found!)')
+        return content
+    end
+
+    -- Overlapping entries
+    if #validation_results.overlaps > 0 then
+        table.insert(content, '⚠️  Überschneidende Einträge (Overlapping Entries):')
+        for i, overlap in ipairs(validation_results.overlaps) do
+            table.insert(
+                content,
+                string.format(
+                    '  %d. %s - %s/%s:',
+                    i,
+                    overlap.weekday,
+                    overlap.project,
+                    overlap.file
+                )
+            )
+            table.insert(
+                content,
+                string.format(
+                    '     Eintrag 1: %s-%s (%.1fh)',
+                    overlap.entry1.data.startReadable or 'N/A',
+                    overlap.entry1.data.endReadable or 'N/A',
+                    overlap.entry1.data.diffInHours or 0
+                )
+            )
+            table.insert(
+                content,
+                string.format(
+                    '     Eintrag 2: %s-%s (%.1fh)',
+                    overlap.entry2.data.startReadable or 'N/A',
+                    overlap.entry2.data.endReadable or 'N/A',
+                    overlap.entry2.data.diffInHours or 0
+                )
+            )
+            table.insert(content, '')
+        end
+    end
+
+    -- Duplicate entries
+    if #validation_results.duplicates > 0 then
+        table.insert(content, '🔄 Doppelte Einträge (Duplicate Entries):')
+        for i, duplicate in ipairs(validation_results.duplicates) do
+            table.insert(
+                content,
+                string.format(
+                    '  %d. %s - %s/%s:',
+                    i,
+                    duplicate.weekday,
+                    duplicate.project,
+                    duplicate.file
+                )
+            )
+            table.insert(
+                content,
+                string.format(
+                    '     Zeitraum: %s-%s (%.1fh)',
+                    duplicate.entry1.data.startReadable or 'N/A',
+                    duplicate.entry1.data.endReadable or 'N/A',
+                    duplicate.entry1.data.diffInHours or 0
+                )
+            )
+            table.insert(content, '')
+        end
+    end
+
+    -- Erroneous entries
+    if #validation_results.errors > 0 then
+        table.insert(content, '❌ Fehlerhafte Einträge (Erroneous Entries):')
+        for i, error in ipairs(validation_results.errors) do
+            table.insert(
+                content,
+                string.format('  %d. %s - %s/%s:', i, error.weekday, error.project, error.file)
+            )
+            table.insert(
+                content,
+                string.format(
+                    '     Zeitraum: %s-%s (%.1fh)',
+                    error.data.startReadable or 'N/A',
+                    error.data.endReadable or 'N/A',
+                    error.data.diffInHours or 0
+                )
+            )
+            table.insert(content, '     Probleme:')
+            for _, issue in ipairs(error.issues) do
+                table.insert(content, string.format('       - %s', issue))
+            end
+            table.insert(content, '')
+        end
+    end
+
+    return content
+end
+
+---Show validation results in a floating window
+---@param validation_results table Results from validateTimeData
+function M.showValidationResults(validation_results)
+    local content = M._formatValidationResults(validation_results)
+    local title = string.format(
+        'Zeit-Validierung (%d Probleme)',
+        validation_results.summary.total_overlaps
+            + validation_results.summary.total_duplicates
+            + validation_results.summary.total_errors
+    )
+
+    M._showFloatingWindow(content, title)
+end
+
+---Select a validation action for a specific issue
+---@param issue_list table List of validation issues (overlaps, duplicates, or errors)
+---@param issue_type string Type of issue ('overlap', 'duplicate', 'error')
+---@param callback fun(action: string, issue: table) Called with selected action and issue
+function M.selectValidationAction(issue_list, issue_type, callback)
+    if #issue_list == 0 then
+        notify('Keine ' .. issue_type .. ' gefunden.', 'info', { title = 'Zeit-Validierung' })
+        callback(nil, nil)
+        return
+    end
+
+    -- Format issues for selection
+    local display_items = {}
+    for i, issue in ipairs(issue_list) do
+        local display_text
+        if issue_type == 'overlap' then
+            display_text = string.format(
+                '%s - %s/%s: Überschneidung zwischen %s-%s und %s-%s',
+                issue.weekday,
+                issue.project,
+                issue.file,
+                issue.entry1.data.startReadable or 'N/A',
+                issue.entry1.data.endReadable or 'N/A',
+                issue.entry2.data.startReadable or 'N/A',
+                issue.entry2.data.endReadable or 'N/A'
+            )
+        elseif issue_type == 'duplicate' then
+            display_text = string.format(
+                '%s - %s/%s: Doppelter Eintrag %s-%s',
+                issue.weekday,
+                issue.project,
+                issue.file,
+                issue.entry1.data.startReadable or 'N/A',
+                issue.entry1.data.endReadable or 'N/A'
+            )
+        else -- error
+            local issues_text = table.concat(issue.issues, ', ')
+            display_text = string.format(
+                '%s - %s/%s: %s',
+                issue.weekday,
+                issue.project,
+                issue.file,
+                issues_text
+            )
+        end
+
+        table.insert(display_items, {
+            text = display_text,
+            issue = issue,
+        })
+    end
+
+    -- Let user select an issue
+    vim.ui.select(display_items, {
+        prompt = 'Wähle einen ' .. issue_type .. ' zum Bearbeiten:',
+        format_item = function(item)
+            return item.text
+        end,
+    }, function(selected_item)
+        if not selected_item then
+            callback(nil, nil)
+            return
+        end
+
+        -- Show action options
+        local actions = {}
+        if issue_type == 'overlap' then
+            actions = {
+                { text = 'Ersten Eintrag löschen', action = 'delete_first' },
+                { text = 'Zweiten Eintrag löschen', action = 'delete_second' },
+                { text = 'Ersten Eintrag bearbeiten', action = 'edit_first' },
+                { text = 'Zweiten Eintrag bearbeiten', action = 'edit_second' },
+                { text = 'Ignorieren', action = 'ignore' },
+            }
+        elseif issue_type == 'duplicate' then
+            actions = {
+                { text = 'Ersten Eintrag löschen', action = 'delete_first' },
+                { text = 'Zweiten Eintrag löschen', action = 'delete_second' },
+                { text = 'Beide löschen', action = 'delete_both' },
+                { text = 'Ignorieren', action = 'ignore' },
+            }
+        else -- error
+            actions = {
+                { text = 'Eintrag bearbeiten', action = 'edit' },
+                { text = 'Eintrag löschen', action = 'delete' },
+                { text = 'Ignorieren', action = 'ignore' },
+            }
+        end
+
+        vim.ui.select(actions, {
+            prompt = 'Wähle eine Aktion:',
+            format_item = function(item)
+                return item.text
+            end,
+        }, function(selected_action)
+            if not selected_action then
+                callback(nil, nil)
+                return
+            end
+
+            callback(selected_action.action, selected_item.issue)
+        end)
+    end)
+end
+
+---Main validation and correction dialog
+---@param opts? { year?: string, week?: string, weekday?: string, project?: string, file?: string }
+---@param callback? fun() Called when validation is complete
+function M.validateAndCorrect(opts, callback)
+    opts = opts or {}
+    callback = callback or function() end
+
+    notify('Validiere Zeitdaten...', 'info', { title = 'Zeit-Validierung' })
+
+    -- Get validation results
+    local validation_results = core.validateTimeData(opts)
+
+    -- Show results
+    M.showValidationResults(validation_results)
+
+    -- If no issues, we're done
+    if
+        validation_results.summary.total_overlaps == 0
+        and validation_results.summary.total_duplicates == 0
+        and validation_results.summary.total_errors == 0
+    then
+        notify('✅ Keine Probleme gefunden!', 'info', { title = 'Zeit-Validierung' })
+        callback()
+        return
+    end
+
+    -- Ask user what to do
+    local correction_options = {}
+    if validation_results.summary.total_overlaps > 0 then
+        table.insert(correction_options, {
+            text = string.format(
+                'Überschneidungen korrigieren (%d)',
+                validation_results.summary.total_overlaps
+            ),
+            action = 'fix_overlaps',
+        })
+    end
+    if validation_results.summary.total_duplicates > 0 then
+        table.insert(correction_options, {
+            text = string.format(
+                'Duplikate korrigieren (%d)',
+                validation_results.summary.total_duplicates
+            ),
+            action = 'fix_duplicates',
+        })
+    end
+    if validation_results.summary.total_errors > 0 then
+        table.insert(correction_options, {
+            text = string.format(
+                'Fehler korrigieren (%d)',
+                validation_results.summary.total_errors
+            ),
+            action = 'fix_errors',
+        })
+    end
+    table.insert(correction_options, { text = 'Schließen', action = 'close' })
+
+    vim.ui.select(correction_options, {
+        prompt = 'Was möchten Sie korrigieren?',
+        format_item = function(item)
+            return item.text
+        end,
+    }, function(selected_option)
+        if not selected_option or selected_option.action == 'close' then
+            callback()
+            return
+        end
+
+        -- Handle the selected correction type
+        if selected_option.action == 'fix_overlaps' then
+            M.selectValidationAction(validation_results.overlaps, 'overlap', function(action, issue)
+                if action and issue then
+                    M._performValidationAction(action, issue, function()
+                        notify(
+                            'Überschneidung korrigiert.',
+                            'info',
+                            { title = 'Zeit-Validierung' }
+                        )
+                        -- Re-run validation after correction
+                        M.validateAndCorrect(opts, callback)
+                    end)
+                else
+                    callback()
+                end
+            end)
+        elseif selected_option.action == 'fix_duplicates' then
+            M.selectValidationAction(
+                validation_results.duplicates,
+                'duplicate',
+                function(action, issue)
+                    if action and issue then
+                        M._performValidationAction(action, issue, function()
+                            notify('Duplikat korrigiert.', 'info', { title = 'Zeit-Validierung' })
+                            -- Re-run validation after correction
+                            M.validateAndCorrect(opts, callback)
+                        end)
+                    else
+                        callback()
+                    end
+                end
+            )
+        elseif selected_option.action == 'fix_errors' then
+            M.selectValidationAction(validation_results.errors, 'error', function(action, issue)
+                if action and issue then
+                    M._performValidationAction(action, issue, function()
+                        notify('Fehler korrigiert.', 'info', { title = 'Zeit-Validierung' })
+                        -- Re-run validation after correction
+                        M.validateAndCorrect(opts, callback)
+                    end)
+                else
+                    callback()
+                end
+            end)
+        end
+    end)
+end
+
+---Perform a validation correction action
+---@param action string The action to perform
+---@param issue table The validation issue
+---@param callback fun() Called when action is complete
+function M._performValidationAction(action, issue, callback)
+    if action == 'delete_first' then
+        -- Delete first entry
+        core.deleteTimeEntry({
+            year = issue.year,
+            week = issue.week,
+            weekday = issue.weekday,
+            project = issue.project,
+            file = issue.file,
+            index = issue.entry1.index,
+        })
+        callback()
+    elseif action == 'delete_second' then
+        -- Delete second entry
+        core.deleteTimeEntry({
+            year = issue.year,
+            week = issue.week,
+            weekday = issue.weekday,
+            project = issue.project,
+            file = issue.file,
+            index = issue.entry2.index,
+        })
+        callback()
+    elseif action == 'delete_both' then
+        -- Delete both entries (delete higher index first to maintain indices)
+        local first_index = math.min(issue.entry1.index, issue.entry2.index)
+        local second_index = math.max(issue.entry1.index, issue.entry2.index)
+
+        core.deleteTimeEntry({
+            year = issue.year,
+            week = issue.week,
+            weekday = issue.weekday,
+            project = issue.project,
+            file = issue.file,
+            index = second_index,
+        })
+        core.deleteTimeEntry({
+            year = issue.year,
+            week = issue.week,
+            weekday = issue.weekday,
+            project = issue.project,
+            file = issue.file,
+            index = first_index,
+        })
+        callback()
+    elseif action == 'edit_first' or action == 'edit' then
+        -- Edit first entry (or the only entry for errors)
+        local entry_info = {
+            year = issue.year,
+            week = issue.week,
+            weekday = issue.weekday,
+            project = issue.project,
+            file = issue.file,
+            index = issue.entry1 and issue.entry1.index or issue.index,
+        }
+        M.editTimeEntryDialog(callback, entry_info)
+    elseif action == 'edit_second' then
+        -- Edit second entry
+        local entry_info = {
+            year = issue.year,
+            week = issue.week,
+            weekday = issue.weekday,
+            project = issue.project,
+            file = issue.file,
+            index = issue.entry2.index,
+        }
+        M.editTimeEntryDialog(callback, entry_info)
+    elseif action == 'delete' then
+        -- Delete the error entry
+        core.deleteTimeEntry({
+            year = issue.year,
+            week = issue.week,
+            weekday = issue.weekday,
+            project = issue.project,
+            file = issue.file,
+            index = issue.index,
+        })
+        callback()
+    else -- ignore
+        callback()
+    end
+end
+
 return M
