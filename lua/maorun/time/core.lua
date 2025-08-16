@@ -1344,10 +1344,14 @@ function M._detectOverlappingEntriesForDayProjectFile(year_str, week_str, weekda
 
             -- Check if entries overlap (one starts before the other ends)
             if entry1.startTime and entry1.endTime and entry2.startTime and entry2.endTime then
+                -- Check for overlap, but exclude exact duplicates (they are handled separately)
+                local is_duplicate = (
+                    entry1.startTime == entry2.startTime and entry1.endTime == entry2.endTime
+                )
                 local overlapping = (
                     entry1.startTime < entry2.endTime and entry2.startTime < entry1.endTime
                 )
-                if overlapping then
+                if overlapping and not is_duplicate then
                     table.insert(overlaps, {
                         entry1 = { index = i, data = entry1 },
                         entry2 = { index = j, data = entry2 },
