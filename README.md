@@ -29,19 +29,76 @@ use {
 
 ```lua
 require('maorun.time').setup({
-    -- every weekday is 8 hours on default. If you wish to reduce it: set it here
+    -- Use a predefined work model preset
+    workModel = 'fourDayWeek',  -- 'standard', 'fourDayWeek', 'partTime', or 'flexibleCore'
+    
+    -- OR manually configure hours per weekday
     hoursPerWeekday = {
         Monday = 6,
     },
-    -- Configure daily goal notifications
+    
+    -- Define core working hours (optional)
+    coreWorkingHours = {
+        Monday = { start = 10, finish = 16 },    -- 10 AM to 4 PM
+        Tuesday = { start = 9, finish = 17 },    -- 9 AM to 5 PM
+        -- ... other weekdays
+    },
+    
+    -- Configure notifications
     notifications = {
         dailyGoal = {
             enabled = true,        -- Enable/disable daily goal notifications
             oncePerDay = true,     -- If true, notify only once when goal is reached
             recurringMinutes = 30, -- If oncePerDay is false, notify every X minutes after exceeding goal
         },
+        coreHoursCompliance = {
+            enabled = true,        -- Enable/disable core hours notifications
+            warnOutsideCoreHours = true,  -- Warn when working outside core hours
+            oncePerDay = true,     -- Only warn once per day per weekday
+        },
     },
 })
+```
+
+## Work Model Presets
+
+The plugin supports predefined work models to quickly configure common working patterns:
+
+- **`standard`**: Traditional 40-hour week (Monday-Friday, 8h/day, 9 AM-5 PM core hours)
+- **`fourDayWeek`**: 4-day work week (Monday-Thursday, 8h/day, Friday off)
+- **`partTime`**: Part-time schedule (Monday-Friday, 4h/day, 10 AM-2 PM core hours)
+- **`flexibleCore`**: Flexible schedule with core hours (Monday-Friday, 8h/day, 10 AM-4 PM core hours)
+
+```lua
+-- Apply a work model preset
+require('maorun.time').setup({ workModel = 'fourDayWeek' })
+
+-- Or apply dynamically
+Time.applyWorkModelPreset('partTime')
+
+-- List available models
+local models = Time.getAvailableWorkModels()
+```
+
+## Core Working Hours
+
+Define specific time ranges when you're expected to be working. The plugin can notify you when time is tracked outside these core hours:
+
+```lua
+require('maorun.time').setup({
+    coreWorkingHours = {
+        Monday = { start = 10, finish = 16 },    -- 10 AM to 4 PM
+        Tuesday = { start = 9, finish = 17 },    -- 9 AM to 5 PM
+        Wednesday = nil,                         -- No core hours (flexible day)
+        -- ... configure other weekdays as needed
+    },
+    notifications = {
+        coreHoursCompliance = { enabled = true },
+    },
+})
+
+-- Check if a timestamp falls within core hours
+local is_core_time = Time.isWithinCoreHours(timestamp, 'Monday')
 ```
 
 ## Daily Goal Notifications
@@ -89,6 +146,46 @@ require('maorun.time').setup({
 ```
 
 **Note**: Notifications are only shown for weekdays with expected hours > 0 (working days).
+
+## Core Hours Compliance Notifications
+
+When core working hours are configured, the plugin can notify you when time is tracked outside these designated hours:
+
+### Configuration Options
+
+- **`notifications.coreHoursCompliance.enabled`** (boolean, default: `false`): Enable or disable core hours notifications
+- **`notifications.coreHoursCompliance.warnOutsideCoreHours`** (boolean, default: `true`): Show warnings when working outside core hours
+- **`notifications.coreHoursCompliance.oncePerDay`** (boolean, default: `true`): Only show one notification per day per weekday
+
+### Notification Examples
+
+- **Outside core hours**: "Work time outside core hours! Monday 07:00-09:00 (core: 09:00-17:00)"
+- **No notification**: When all work time falls within the defined core hours
+
+### Examples
+
+```lua
+-- Enable core hours notifications with custom hours
+require('maorun.time').setup({
+    coreWorkingHours = {
+        Monday = { start = 10, finish = 16 },  -- 10 AM - 4 PM core hours
+    },
+    notifications = {
+        coreHoursCompliance = {
+            enabled = true,
+            warnOutsideCoreHours = true,
+        },
+    },
+})
+
+-- Use a preset with core hours notifications
+require('maorun.time').setup({
+    workModel = 'flexibleCore',  -- Has 10 AM - 4 PM core hours
+    notifications = {
+        coreHoursCompliance = { enabled = true },
+    },
+})
+```
 
 ## Weekly Overview (Wöchentliche Übersicht)
 
