@@ -1,0 +1,33 @@
+#!/bin/bash
+# timetrack CLI wrapper script
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Set up lua path if luarocks is available
+if command -v luarocks >/dev/null 2>&1; then
+    eval "$(luarocks path)"
+fi
+
+# Check if lua is available
+if ! command -v lua >/dev/null 2>&1; then
+    echo "Error: lua is not installed. Please install lua to use the timetrack CLI."
+    exit 1
+fi
+
+# Check if dkjson is available
+lua -e "require('dkjson')" 2>/dev/null || {
+    echo "Warning: dkjson library not found. Attempting to install..."
+    if command -v luarocks >/dev/null 2>&1; then
+        luarocks install --local dkjson
+        eval "$(luarocks path)"
+    else
+        echo "Error: luarocks is required to install JSON library. Please install luarocks and dkjson."
+        echo "  Ubuntu/Debian: sudo apt install luarocks && luarocks install --local dkjson"
+        echo "  macOS: brew install luarocks && luarocks install --local dkjson"
+        exit 1
+    fi
+}
+
+# Run the timetrack CLI with all arguments
+exec lua "$SCRIPT_DIR/timetrack-simple.lua" "$@"

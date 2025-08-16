@@ -1,3 +1,6 @@
 luacov.*.out
 stylua
 stylua.zip
+
+# CLI backup files
+test/cli_spec.lua.bak
