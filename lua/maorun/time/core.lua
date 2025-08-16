@@ -7,8 +7,13 @@ local M = {}
 
 -- State tracking for notifications to prevent spam
 local notification_state = {
-    lastDailyGoalNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
-    lastRecurringNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
+    dailyGoal = {
+        lastNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
+        lastRecurringNotification = {}, -- key: "YYYY-WW-Weekday", value: timestamp
+    },
+    coreHours = {
+        lastNotification = {}, -- key: "core-hours-YYYY-WW-Weekday", value: timestamp
+    },
 }
 
 ---Validate configuration options to prevent issues
@@ -38,17 +43,24 @@ function M._cleanupNotificationState(max_age_days)
     local current_time = os.time()
     local max_age_seconds = max_age_days * 24 * 60 * 60
 
-    -- Clean up lastDailyGoalNotification entries
-    for state_key, timestamp in pairs(notification_state.lastDailyGoalNotification) do
+    -- Clean up daily goal notification entries
+    for state_key, timestamp in pairs(notification_state.dailyGoal.lastNotification) do
         if current_time - timestamp > max_age_seconds then
-            notification_state.lastDailyGoalNotification[state_key] = nil
+            notification_state.dailyGoal.lastNotification[state_key] = nil
         end
     end
 
-    -- Clean up lastRecurringNotification entries
-    for state_key, timestamp in pairs(notification_state.lastRecurringNotification) do
+    -- Clean up daily goal recurring notification entries
+    for state_key, timestamp in pairs(notification_state.dailyGoal.lastRecurringNotification) do
         if current_time - timestamp > max_age_seconds then
-            notification_state.lastRecurringNotification[state_key] = nil
+            notification_state.dailyGoal.lastRecurringNotification[state_key] = nil
+        end
+    end
+
+    -- Clean up core hours notification entries
+    for state_key, timestamp in pairs(notification_state.coreHours.lastNotification) do
+        if current_time - timestamp > max_age_seconds then
+            notification_state.coreHours.lastNotification[state_key] = nil
         end
     end
 end
@@ -59,43 +71,43 @@ end
 function M._handleModeSwitch(notification_config, state_key)
     -- If we're switching to oncePerDay mode and have recurring state, clear it
     if
-        notification_config.oncePerDay and notification_state.lastRecurringNotification[state_key]
+        notification_config.oncePerDay
+        and notification_state.dailyGoal.lastRecurringNotification[state_key]
     then
         -- Check if recurring notification was recent enough that we should respect it
-        local recurring_time = notification_state.lastRecurringNotification[state_key]
+        local recurring_time = notification_state.dailyGoal.lastRecurringNotification[state_key]
         local current_time = os.time()
         local time_since_last = (current_time - recurring_time) / 60
 
         -- If the last recurring notification was less than the configured interval ago,
         -- we should treat it as if we already notified for oncePerDay
         if time_since_last < notification_config.recurringMinutes then
-            notification_state.lastDailyGoalNotification[state_key] = recurring_time
+            notification_state.dailyGoal.lastNotification[state_key] = recurring_time
         end
 
         -- Clear the recurring state since we're in oncePerDay mode now
-        notification_state.lastRecurringNotification[state_key] = nil
+        notification_state.dailyGoal.lastRecurringNotification[state_key] = nil
     end
 
     -- If we're switching to recurring mode and have oncePerDay state, use it as the base
     if
         not notification_config.oncePerDay
-        and notification_state.lastDailyGoalNotification[state_key]
+        and notification_state.dailyGoal.lastNotification[state_key]
     then
         -- Use the oncePerDay timestamp as the starting point for recurring notifications
-        notification_state.lastRecurringNotification[state_key] =
-            notification_state.lastDailyGoalNotification[state_key]
+        notification_state.dailyGoal.lastRecurringNotification[state_key] =
+            notification_state.dailyGoal.lastNotification[state_key]
 
         -- Clear the oncePerDay state since we're in recurring mode now
-        notification_state.lastDailyGoalNotification[state_key] = nil
+        notification_state.dailyGoal.lastNotification[state_key] = nil
     end
 end
 
-function M.init(user_config)
-    config_module.config =
-        vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
-
+---Apply work model configuration from user config
+---@param user_config table User configuration
+function M._applyWorkModelConfiguration(user_config)
     -- Handle work model presets
-    if user_config and user_config.workModel then
+    if user_config.workModel then
         local preset_config = config_module.applyWorkModelPreset(user_config.workModel)
         if preset_config then
             -- Apply preset values as defaults, but allow user overrides
@@ -119,7 +131,7 @@ function M.init(user_config)
     end
 
     -- Manual hoursPerWeekday override (merge with preset if exists, otherwise replace completely)
-    if user_config and user_config.hoursPerWeekday ~= nil then
+    if user_config.hoursPerWeekday ~= nil then
         if user_config.workModel then
             -- When using a work model, merge the manual override with the preset
             config_module.config.hoursPerWeekday = vim.tbl_deep_extend(
@@ -134,7 +146,7 @@ function M.init(user_config)
     end
 
     -- Manual coreWorkingHours override (merge with preset if exists, otherwise replace completely)
-    if user_config and user_config.coreWorkingHours ~= nil then
+    if user_config.coreWorkingHours ~= nil then
         local valid, error_msg =
             config_module.validateCoreWorkingHours(user_config.coreWorkingHours)
         if valid then
@@ -159,6 +171,16 @@ function M.init(user_config)
                 { title = 'TimeTracking - Config' }
             )
         end
+    end
+end
+
+function M.init(user_config)
+    config_module.config =
+        vim.tbl_deep_extend('force', vim.deepcopy(config_module.defaults), user_config or {})
+
+    -- Apply work model configuration using extracted function
+    if user_config then
+        M._applyWorkModelConfiguration(user_config)
     end
 
     -- Validate notification configuration
@@ -395,18 +417,19 @@ function M.checkDailyGoalNotification(year_str, week_str, weekday_name, total_ho
 
         if notification_config.oncePerDay then
             -- Check if we haven't notified for this day yet
-            if not notification_state.lastDailyGoalNotification[state_key] then
+            if not notification_state.dailyGoal.lastNotification[state_key] then
                 should_notify = true
-                notification_state.lastDailyGoalNotification[state_key] = current_time
+                notification_state.dailyGoal.lastNotification[state_key] = current_time
             end
         else
             -- Recurring notifications - check if enough time has passed
-            local last_notification = notification_state.lastRecurringNotification[state_key] or 0
+            local last_notification = notification_state.dailyGoal.lastRecurringNotification[state_key]
+                or 0
             local minutes_passed = (current_time - last_notification) / 60
 
             if minutes_passed >= notification_config.recurringMinutes then
                 should_notify = true
-                notification_state.lastRecurringNotification[state_key] = current_time
+                notification_state.dailyGoal.lastRecurringNotification[state_key] = current_time
             end
         end
     end
@@ -510,10 +533,10 @@ function M.checkCoreHoursCompliance(start_time, end_time, weekday_name)
     -- Check if we should notify (only once per day if configured)
     local should_notify = true
     if notification_config.oncePerDay then
-        if notification_state.lastDailyGoalNotification[state_key] then
+        if notification_state.coreHours.lastNotification[state_key] then
             should_notify = false
         else
-            notification_state.lastDailyGoalNotification[state_key] = current_time
+            notification_state.coreHours.lastNotification[state_key] = current_time
         end
     end
 
