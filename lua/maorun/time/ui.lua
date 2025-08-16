@@ -1278,26 +1278,23 @@ function M._performValidationAction(action, issue, callback)
         })
         callback()
     elseif action == 'delete_both' then
-        -- Delete both entries (delete higher index first to maintain indices)
-        local first_index = math.min(issue.entry1.index, issue.entry2.index)
-        local second_index = math.max(issue.entry1.index, issue.entry2.index)
+        -- Delete both entries in descending index order to avoid index shifting issues
+        local indices = { issue.entry1.index, issue.entry2.index }
+        table.sort(indices, function(a, b)
+            return a > b
+        end) -- Sort descending
 
-        core.deleteTimeEntry({
-            year = issue.year,
-            week = issue.week,
-            weekday = issue.weekday,
-            project = issue.project,
-            file = issue.file,
-            index = second_index,
-        })
-        core.deleteTimeEntry({
-            year = issue.year,
-            week = issue.week,
-            weekday = issue.weekday,
-            project = issue.project,
-            file = issue.file,
-            index = first_index,
-        })
+        -- Delete from highest index to lowest to maintain index validity
+        for _, index in ipairs(indices) do
+            core.deleteTimeEntry({
+                year = issue.year,
+                week = issue.week,
+                weekday = issue.weekday,
+                project = issue.project,
+                file = issue.file,
+                index = index,
+            })
+        end
         callback()
     elseif action == 'edit_first' or action == 'edit' then
         -- Edit first entry (or the only entry for errors)
