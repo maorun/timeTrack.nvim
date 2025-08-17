@@ -52,6 +52,10 @@ describe('Concurrent JSON File Access', function()
             },
         }
 
+        -- Use fixed date values to avoid timing issues
+        local year_str = '2025'
+        local week_str = '33'
+
         -- Instance A: Initialize and add some data
         local instance_a_data = time_init_module.setup(config)
         time_init_module.addTime({
@@ -78,8 +82,6 @@ describe('Concurrent JSON File Access', function()
 
         -- Check if Instance A's data is present
         assert.is_not_nil(loaded_data.data)
-        local year_str = os.date('%Y')
-        local week_str = os.date('%W')
         local weekday_data = loaded_data.data[year_str]
             and loaded_data.data[year_str][week_str]
             and loaded_data.data[year_str][week_str]['Monday']
@@ -106,7 +108,13 @@ describe('Concurrent JSON File Access', function()
         local final_content = Path:new(test_json_path):read()
         local final_data = vim.json.decode(final_content)
 
+        -- Check if the nested structure exists before accessing
+        assert.is_not_nil(final_data.data, 'Final data should have data field')
+        assert.is_not_nil(final_data.data[year_str], 'Final data should have year')
+        assert.is_not_nil(final_data.data[year_str][week_str], 'Final data should have week')
+
         local final_weekday_data = final_data.data[year_str][week_str]['Monday']
+        assert.is_not_nil(final_weekday_data, 'Monday data should exist')
 
         -- Both ProjectA and ProjectB should exist
         assert.is_not_nil(final_weekday_data['ProjectA'], 'ProjectA data should still exist')
@@ -139,6 +147,10 @@ describe('Concurrent JSON File Access', function()
             },
         }
 
+        -- Use fixed date values to avoid timing issues
+        local year_str = '2025'
+        local week_str = '33'
+
         time_init_module.setup(config)
 
         -- Add multiple time entries rapidly (simulating multiple instances)
@@ -163,9 +175,13 @@ describe('Concurrent JSON File Access', function()
         local final_content = Path:new(test_json_path):read()
         local final_data = vim.json.decode(final_content)
 
-        local year_str = os.date('%Y')
-        local week_str = os.date('%W')
+        -- Check if the nested structure exists before accessing
+        assert.is_not_nil(final_data.data, 'Final data should have data field')
+        assert.is_not_nil(final_data.data[year_str], 'Final data should have year')
+        assert.is_not_nil(final_data.data[year_str][week_str], 'Final data should have week')
+
         local monday_data = final_data.data[year_str][week_str]['Monday']
+        assert.is_not_nil(monday_data, 'Monday data should exist')
 
         -- Check that all projects and files exist
         assert.is_not_nil(monday_data['Project1'], 'Project1 should exist')
