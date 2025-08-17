@@ -257,13 +257,14 @@ local function main(args)
             for _, entry in ipairs(entries) do
                 print(
                     string.format(
-                        '%s | %s/%s | %s | %s-%s',
+                        '%s | %s/%s | %s | %s-%s (%s)',
                         entry.weekday,
                         entry.project,
                         entry.file,
                         format_hours(entry.diffInHours or 0),
                         entry.startReadable,
-                        entry.endReadable
+                        entry.endReadable,
+                        format_hours((entry.endTime - entry.startTime) / 3600)
                     )
                 )
             end

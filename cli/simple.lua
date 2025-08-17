@@ -19,9 +19,40 @@ local function json_encode(obj)
             :gsub('\t', '\\t')
         return '"' .. escaped .. '"'
     elseif type(obj) == 'table' then
+        -- Efficient array detection: check if it's likely an array first
+        local array_len = #obj
+        if array_len > 0 and obj[1] ~= nil then
+            -- Verify it's actually an array by checking consecutive indices
+            local is_array = true
+            for i = 1, array_len do
+                if obj[i] == nil then
+                    is_array = false
+                    break
+                end
+            end
+
+            if is_array then
+                -- It's an array, encode as JSON array
+                local parts = {}
+                for i = 1, array_len do
+                    table.insert(parts, json_encode(obj[i]))
+                end
+                return '[' .. table.concat(parts, ',') .. ']'
+            end
+        end
+
+        -- It's an object, encode as JSON object with sorted keys
+        local keys = {}
+        for k in pairs(obj) do
+            table.insert(keys, k)
+        end
+        table.sort(keys, function(a, b)
+            return tostring(a) < tostring(b)
+        end)
+
         local parts = {}
-        for k, v in pairs(obj) do
-            table.insert(parts, json_encode(tostring(k)) .. ':' .. json_encode(v))
+        for _, k in ipairs(keys) do
+            table.insert(parts, json_encode(tostring(k)) .. ':' .. json_encode(obj[k]))
         end
         return '{' .. table.concat(parts, ',') .. '}'
     else
@@ -83,6 +114,12 @@ local function read_file(path)
 end
 
 local function write_file(path, content)
+    -- Create directory if it doesn't exist
+    local dir = path:match('(.-)[\\/][^\\/]*$')
+    if dir then
+        os.execute('mkdir -p "' .. dir .. '"')
+    end
+
     local file = io.open(path, 'w')
     if not file then
         error('Failed to open file for writing: ' .. path)

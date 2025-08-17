@@ -31,27 +31,44 @@ describe('CLI Integration', function()
             return _G.original_os_date(format, time)
         end
 
+        -- Mock environment variables to use test directory
+        _G.original_os_getenv = os.getenv
+        os.getenv = function(name)
+            if name == 'HOME' then
+                return '/tmp'
+            elseif name == 'XDG_DATA_HOME' then
+                return '/tmp'
+            else
+                return _G.original_os_getenv(name)
+            end
+        end
+
         -- Set up CLI module path
         package.path = './cli/?.lua;' .. package.path
 
         -- Remove any cached modules
         package.loaded['cli.simple'] = nil
 
+        -- Clean up test files
+        os.remove(test_data_file)
+        os.remove('/tmp/maorun-time.json') -- Real file used by CLI
+        os.remove('/tmp/nvim/maorun-time.json') -- Alternative path
+
         -- Load CLI module
         cli = require('cli.simple')
-
-        -- Clean up test file
-        os.remove(test_data_file)
     end)
 
     after_each(function()
         -- Restore original functions
         os.time = original_time
         os.date = _G.original_os_date
+        os.getenv = _G.original_os_getenv
 
         -- Clean up
         package.loaded['cli.simple'] = nil
         os.remove(test_data_file)
+        os.remove('/tmp/maorun-time.json') -- Real file used by CLI
+        os.remove('/tmp/nvim/maorun-time.json') -- Alternative path
     end)
 
     describe('CLI Basic Operations', function()

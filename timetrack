@@ -15,19 +15,23 @@ if ! command -v lua >/dev/null 2>&1; then
     exit 1
 fi
 
-# Check if dkjson is available
-lua -e "require('dkjson')" 2>/dev/null || {
-    echo "Warning: dkjson library not found. Attempting to install..."
+# Check if json or dkjson is available
+json_available=false
+lua -e "require('json')" 2>/dev/null && json_available=true
+lua -e "require('dkjson')" 2>/dev/null && json_available=true
+
+if [ "$json_available" = false ]; then
+    echo "Warning: JSON library not found. Attempting to install dkjson..."
     if command -v luarocks >/dev/null 2>&1; then
         luarocks install --local dkjson
         eval "$(luarocks path)"
     else
-        echo "Error: luarocks is required to install JSON library. Please install luarocks and dkjson."
+        echo "Error: luarocks is required to install JSON library. Please install luarocks and a JSON library."
         echo "  Ubuntu/Debian: sudo apt install luarocks && luarocks install --local dkjson"
         echo "  macOS: brew install luarocks && luarocks install --local dkjson"
         exit 1
     fi
-}
+fi
 
 # Run the timetrack CLI with all arguments
 exec lua "$SCRIPT_DIR/timetrack-simple.lua" "$@"
