@@ -5,102 +5,6 @@ Automatically starts on FocusGained, BufEnter and VimEnter.
 
 Stops automatically on VimLeave
 
-## CLI Integration
-
-timeTrack.nvim now includes a standalone CLI tool for accessing and managing time tracking data without starting Neovim. This enables quick reporting, data entry, and maintenance tasks from the command line.
-
-### Installation
-
-The CLI tool is included with the plugin and requires:
-- Lua interpreter
-- `dkjson` library for JSON handling
-
-To install the JSON library:
-```bash
-luarocks install --local dkjson
-```
-
-### Usage
-
-The CLI provides a convenient wrapper script that handles dependencies automatically:
-
-```bash
-# Make the wrapper executable (one-time setup)
-chmod +x timetrack
-
-# Use the CLI
-./timetrack <command> [options]
-```
-
-Alternatively, you can run the CLI directly with Lua:
-```bash
-lua timetrack-simple.lua <command> [options]
-```
-
-### Available Commands
-
-#### Status
-Show current time tracking status and weekly summary:
-```bash
-./timetrack status
-```
-
-#### Weekly Summary
-Display a formatted weekly time summary:
-```bash
-./timetrack summary              # Current week
-./timetrack summary 25 2024      # Week 25 of 2024
-```
-
-#### Add Time Entry
-Add manual time entries:
-```bash
-./timetrack add "ProjectName" "filename.lua" 2.5        # Add 2.5 hours for current day
-./timetrack add "ProjectName" "filename.lua" 2.5 Monday # Add 2.5 hours for Monday
-```
-
-#### List Entries
-List all time entries for a specific week:
-```bash
-./timetrack list              # Current week
-./timetrack list 25 2024      # Week 25 of 2024
-```
-
-#### Export Data
-Export time data in various formats:
-```bash
-./timetrack export csv           # Export current week as CSV
-./timetrack export markdown      # Export current week as Markdown table
-./timetrack export csv 25 2024   # Export specific week
-```
-
-#### Validate Data
-Check for data integrity issues:
-```bash
-./timetrack validate
-```
-
-### Examples
-
-```bash
-# Check current status
-./timetrack status
-
-# Add work on a project
-./timetrack add "WebApp" "frontend.js" 3.5
-
-# View this week's summary  
-./timetrack summary
-
-# Export last week's data
-./timetrack export csv 51 2024 > timesheet-week51.csv
-
-# Validate data for issues
-./timetrack validate
-```
-
-The CLI tool uses the same data file as the Neovim plugin (`~/.local/share/nvim/maorun-time.json`), so all data remains synchronized between the CLI and plugin usage.
-
 ## Installation
 eg:
 [packer.nvim](https://github.com/wbthomason/packer.nvim)
@@ -592,6 +496,102 @@ wk.register({
     },
 }, { prefix = "<leader>" })
 ```
+
+## CLI Integration
+
+timeTrack.nvim now includes a standalone CLI tool for accessing and managing time tracking data without starting Neovim. This enables quick reporting, data entry, and maintenance tasks from the command line.
+
+### Installation
+
+The CLI tool is included with the plugin and requires:
+- Lua interpreter
+- `dkjson` library for JSON handling
+
+To install the JSON library:
+```bash
+luarocks install --local dkjson
+```
+
+### Usage
+
+The CLI provides a convenient wrapper script that handles dependencies automatically:
+
+```bash
+# Make the wrapper executable (one-time setup)
+chmod +x timetrack
+
+# Use the CLI
+./timetrack <command> [options]
+```
+
+Alternatively, you can run the CLI directly with Lua:
+```bash
+lua timetrack-simple.lua <command> [options]
+```
+
+### Available Commands
+
+#### Status
+Show current time tracking status and weekly summary:
+```bash
+./timetrack status
+```
+
+#### Weekly Summary
+Display a formatted weekly time summary:
+```bash
+./timetrack summary              # Current week
+./timetrack summary 25 2024      # Week 25 of 2024
+```
+
+#### Add Time Entry
+Add manual time entries:
+```bash
+./timetrack add "ProjectName" "filename.lua" 2.5        # Add 2.5 hours for current day
+./timetrack add "ProjectName" "filename.lua" 2.5 Monday # Add 2.5 hours for Monday
+```
+
+#### List Entries
+List all time entries for a specific week:
+```bash
+./timetrack list              # Current week
+./timetrack list 25 2024      # Week 25 of 2024
+```
+
+#### Export Data
+Export time data in various formats:
+```bash
+./timetrack export csv           # Export current week as CSV
+./timetrack export markdown      # Export current week as Markdown table
+./timetrack export csv 25 2024   # Export specific week
+```
+
+#### Validate Data
+Check for data integrity issues:
+```bash
+./timetrack validate
+```
+
+### Examples
+
+```bash
+# Check current status
+./timetrack status
+
+# Add work on a project
+./timetrack add "WebApp" "frontend.js" 3.5
+
+# View this week's summary  
+./timetrack summary
+
+# Export last week's data
+./timetrack export csv 51 2024 > timesheet-week51.csv
+
+# Validate data for issues
+./timetrack validate
+```
+
+The CLI tool uses the same data file as the Neovim plugin (`~/.local/share/nvim/maorun-time.json`), so all data remains synchronized between the CLI and plugin usage.
 
 ## Development
 
