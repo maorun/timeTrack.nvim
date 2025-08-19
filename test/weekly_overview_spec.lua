@@ -434,7 +434,7 @@ describe('Weekly Overview Functionality', function()
             -- (In a real environment this would show the floating window)
             local summary = maorunTime.getWeeklySummary()
             local content = ui._formatWeeklySummaryContent(summary, { show_details = true })
-            
+
             -- Should return formatted content without error
             assert.is_table(content)
             assert.is_true(#content > 0)
