@@ -535,6 +535,60 @@ function M.showWeeklyOverview(opts)
     end
 end
 
+---Calculate optimal display width for names (projects or files)
+---@param names table Array of names to measure
+---@param min_width number Minimum width to ensure
+---@param max_width number Maximum width to allow
+---@param title string Optional title that must also fit
+---@return number Calculated optimal width
+local function calculateOptimalWidth(names, min_width, max_width, title)
+    local max_length = min_width
+    for _, name in ipairs(names) do
+        max_length = math.max(max_length, vim.fn.strdisplaywidth(name))
+    end
+
+    -- If we have a title, ensure we can accommodate it
+    if title then
+        local title_with_spaces = '─ ' .. title .. ' '
+        local title_length = vim.fn.strdisplaywidth(title_with_spaces)
+        local fixed_part_width = 18 -- ' %8.2fh (%4.1f%%) ' = 18 chars
+        local required_name_width = title_length - fixed_part_width
+        max_length = math.max(max_length, required_name_width)
+    end
+
+    return math.min(max_length, max_width)
+end
+
+---Generate border lines for dynamic width tables
+---@param width number Width of the name column
+---@param border_type string Type of border ('top', 'middle', 'bottom')
+---@param title string Optional title for top border
+---@return string Formatted border line
+local function generateBorderLine(width, border_type, title)
+    local fixed_part_width = 18 -- ' %8.2fh (%4.1f%%) ' = 18 chars
+    local total_content_width = width + fixed_part_width
+
+    if border_type == 'top' then
+        if title then
+            local title_with_spaces = '─ ' .. title .. ' '
+            local title_length = vim.fn.strdisplaywidth(title_with_spaces)
+            local remaining = total_content_width - title_length
+
+            if remaining >= 0 then
+                return '┌' .. title_with_spaces .. string.rep('─', remaining) .. '┐'
+            else
+                return '┌' .. string.rep('─', total_content_width) .. '┐'
+            end
+        else
+            return '┌' .. string.rep('─', total_content_width) .. '┐'
+        end
+    elseif border_type == 'middle' then
+        return '├' .. string.rep('─', total_content_width) .. '┤'
+    else -- bottom
+        return '└' .. string.rep('─', total_content_width) .. '┘'
+    end
+end
+
 ---Format weekly summary data into displayable content
 ---@param summary table The weekly summary data
 ---@param opts table Display options
@@ -682,10 +736,15 @@ function M._formatWeeklySummaryContent(summary, opts)
 
         if has_projects then
             table.insert(content, '')
-            table.insert(
-                content,
-                '┌─ Projekte ───────────────────────────────────────────────┐'
-            )
+
+            -- Calculate optimal width for project names first
+            local project_names = {}
+            for project_name, _ in pairs(project_summary) do
+                table.insert(project_names, project_name)
+            end
+            local project_width = calculateOptimalWidth(project_names, 20, 60, 'Projekte')
+
+            table.insert(content, generateBorderLine(project_width, 'top', 'Projekte'))
 
             -- Sort projects by hours worked
             local sorted_projects = {}
@@ -703,7 +762,7 @@ function M._formatWeeklySummaryContent(summary, opts)
                 table.insert(
                     content,
                     string.format(
-                        '│ %-40s %8.2fh (%4.1f%%) │',
+                        '│ %-' .. project_width .. 's %8.2fh (%4.1f%%) │',
                         project.name,
                         project.hours,
                         percentage
@@ -711,10 +770,7 @@ function M._formatWeeklySummaryContent(summary, opts)
                 )
             end
 
-            table.insert(
-                content,
-                '└──────────────────────────────────────────────────────────┘'
-            )
+            table.insert(content, generateBorderLine(project_width, 'bottom'))
         end
     end
 
@@ -767,23 +823,37 @@ function M._formatFileDetails(summary, opts)
 
     if #sorted_files == 0 then
         table.insert(content, '')
+        local empty_width = calculateOptimalWidth(
+            { 'Keine Dateien mit Arbeitszeit gefunden' },
+            40,
+            60,
+            'Datei-Details'
+        )
+        table.insert(content, generateBorderLine(empty_width, 'top', 'Datei-Details'))
         table.insert(
             content,
-            '┌─ Datei-Details ─────────────────────────────────────────┐'
+            string.format(
+                '│ %-' .. empty_width .. 's │',
+                'Keine Dateien mit Arbeitszeit gefunden'
+            )
         )
-        table.insert(content, '│ Keine Dateien mit Arbeitszeit gefunden                 │')
-        table.insert(
-            content,
-            '└─────────────────────────────────────────────────────────┘'
-        )
+        table.insert(content, generateBorderLine(empty_width, 'bottom'))
         return content
     end
+
+    -- Calculate optimal width for file paths
+    local file_paths = {}
+    for _, file_info in ipairs(sorted_files) do
+        table.insert(file_paths, file_info.project .. '/' .. file_info.file)
+    end
+    local file_width =
+        calculateOptimalWidth(file_paths, 20, 80, 'Datei-Details (nach Arbeitszeit sortiert)')
 
     -- Add file details section
     table.insert(content, '')
     table.insert(
         content,
-        '┌─ Datei-Details (nach Arbeitszeit sortiert) ────────────┐'
+        generateBorderLine(file_width, 'top', 'Datei-Details (nach Arbeitszeit sortiert)')
     )
 
     for i, file_info in ipairs(sorted_files) do
@@ -794,7 +864,7 @@ function M._formatFileDetails(summary, opts)
         table.insert(
             content,
             string.format(
-                '│ %-40s %8.2fh (%4.1f%%) │',
+                '│ %-' .. file_width .. 's %8.2fh (%4.1f%%) │',
                 file_info.project .. '/' .. file_info.file,
                 file_info.total_hours,
                 percentage
@@ -803,17 +873,11 @@ function M._formatFileDetails(summary, opts)
 
         -- Add a separator every 10 entries for better readability
         if i % 10 == 0 and i < #sorted_files then
-            table.insert(
-                content,
-                '├─────────────────────────────────────────────────────────┤'
-            )
+            table.insert(content, generateBorderLine(file_width, 'middle'))
         end
     end
 
-    table.insert(
-        content,
-        '└─────────────────────────────────────────────────────────┘'
-    )
+    table.insert(content, generateBorderLine(file_width, 'bottom'))
 
     return content
 end
