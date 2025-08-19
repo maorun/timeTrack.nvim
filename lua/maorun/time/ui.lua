@@ -502,7 +502,7 @@ function M.addManualTimeEntryDialog(callback)
 end
 
 ---Show weekly overview in a floating window
----@param opts? { year?: string, week?: string, project?: string, file?: string, display_mode?: string }
+---@param opts? { year?: string, week?: string, project?: string, file?: string, display_mode?: string, show_details?: boolean }
 function M.showWeeklyOverview(opts)
     opts = opts or {}
     local display_mode = opts.display_mode or 'floating'
@@ -514,9 +514,11 @@ function M.showWeeklyOverview(opts)
     local content = M._formatWeeklySummaryContent(summary, opts)
 
     if display_mode == 'floating' then
-        M._showFloatingWindow(
+        M._showFloatingWindowWithDetails(
             content,
-            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year
+            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year,
+            summary,
+            opts
         )
     elseif display_mode == 'buffer' then
         M._showInBuffer(content, 'Weekly Overview')
@@ -524,10 +526,66 @@ function M.showWeeklyOverview(opts)
         M._showInQuickfix(content)
     else
         -- Default to floating window
-        M._showFloatingWindow(
+        M._showFloatingWindowWithDetails(
             content,
-            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year
+            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year,
+            summary,
+            opts
         )
+    end
+end
+
+---Calculate optimal display width for names (projects or files)
+---@param names table Array of names to measure
+---@param min_width number Minimum width to ensure
+---@param max_width number Maximum width to allow
+---@param title string Optional title that must also fit
+---@return number Calculated optimal width
+local function calculateOptimalWidth(names, min_width, max_width, title)
+    local max_length = min_width
+    for _, name in ipairs(names) do
+        max_length = math.max(max_length, vim.fn.strdisplaywidth(name))
+    end
+
+    -- If we have a title, ensure we can accommodate it
+    if title then
+        local title_with_spaces = '─ ' .. title .. ' '
+        local title_length = vim.fn.strdisplaywidth(title_with_spaces)
+        local fixed_part_width = 18 -- ' %8.2fh (%4.1f%%) ' = 18 chars
+        local required_name_width = title_length - fixed_part_width
+        max_length = math.max(max_length, required_name_width)
+    end
+
+    return math.min(max_length, max_width)
+end
+
+---Generate border lines for dynamic width tables
+---@param width number Width of the name column
+---@param border_type string Type of border ('top', 'middle', 'bottom')
+---@param title string Optional title for top border
+---@return string Formatted border line
+local function generateBorderLine(width, border_type, title)
+    local fixed_part_width = 18 -- ' %8.2fh (%4.1f%%) ' = 18 chars
+    local total_content_width = width + fixed_part_width
+
+    if border_type == 'top' then
+        if title then
+            local title_with_spaces = '─ ' .. title .. ' '
+            local title_length = vim.fn.strdisplaywidth(title_with_spaces)
+            local remaining = total_content_width - title_length
+
+            if remaining >= 0 then
+                return '┌' .. title_with_spaces .. string.rep('─', remaining) .. '┐'
+            else
+                return '┌' .. string.rep('─', total_content_width) .. '┐'
+            end
+        else
+            return '┌' .. string.rep('─', total_content_width) .. '┐'
+        end
+    elseif border_type == 'middle' then
+        return '├' .. string.rep('─', total_content_width) .. '┤'
+    else -- bottom
+        return '└' .. string.rep('─', total_content_width) .. '┘'
     end
 end
 
@@ -678,10 +736,15 @@ function M._formatWeeklySummaryContent(summary, opts)
 
         if has_projects then
             table.insert(content, '')
-            table.insert(
-                content,
-                '┌─ Projekte ───────────────────────────────────────────────┐'
-            )
+
+            -- Calculate optimal width for project names first
+            local project_names = {}
+            for project_name, _ in pairs(project_summary) do
+                table.insert(project_names, project_name)
+            end
+            local project_width = calculateOptimalWidth(project_names, 20, 60, 'Projekte')
+
+            table.insert(content, generateBorderLine(project_width, 'top', 'Projekte'))
 
             -- Sort projects by hours worked
             local sorted_projects = {}
@@ -699,7 +762,7 @@ function M._formatWeeklySummaryContent(summary, opts)
                 table.insert(
                     content,
                     string.format(
-                        '│ %-40s %8.2fh (%4.1f%%) │',
+                        '│ %-' .. project_width .. 's %8.2fh (%4.1f%%) │',
                         project.name,
                         project.hours,
                         percentage
@@ -707,17 +770,220 @@ function M._formatWeeklySummaryContent(summary, opts)
                 )
             end
 
-            table.insert(
-                content,
-                '└──────────────────────────────────────────────────────────┘'
-            )
+            table.insert(content, generateBorderLine(project_width, 'bottom'))
         end
     end
 
     table.insert(content, '')
-    table.insert(content, 'Drücke q zum Schließen, f für Filter-Optionen')
+    table.insert(content, 'Drücke q zum Schließen, f für Filter-Optionen, d für Datei-Details')
 
     return content
+end
+
+---Format file details for the weekly summary
+---@param summary table The weekly summary data
+---@param opts table Display options
+---@return table Array of content lines for file details
+function M._formatFileDetails(summary, opts)
+    local content = {}
+
+    -- Collect all files across all days and projects
+    local all_files = {}
+
+    for weekday, day_data in pairs(summary.weekdays) do
+        for project_name, project_info in pairs(day_data.projects) do
+            for file_name, file_hours in pairs(project_info.files) do
+                if file_hours > 0 then
+                    local key = project_name .. '/' .. file_name
+                    if not all_files[key] then
+                        all_files[key] = {
+                            project = project_name,
+                            file = file_name,
+                            total_hours = 0,
+                            daily_breakdown = {},
+                        }
+                    end
+                    all_files[key].total_hours = all_files[key].total_hours + file_hours
+                    all_files[key].daily_breakdown[weekday] = file_hours
+                end
+            end
+        end
+    end
+
+    -- Convert to sorted array
+    local sorted_files = {}
+    for _, file_info in pairs(all_files) do
+        table.insert(sorted_files, file_info)
+    end
+
+    -- Sort by total hours (descending)
+    table.sort(sorted_files, function(a, b)
+        return a.total_hours > b.total_hours
+    end)
+
+    if #sorted_files == 0 then
+        table.insert(content, '')
+        local empty_width = calculateOptimalWidth(
+            { 'Keine Dateien mit Arbeitszeit gefunden' },
+            40,
+            60,
+            'Datei-Details'
+        )
+        table.insert(content, generateBorderLine(empty_width, 'top', 'Datei-Details'))
+        table.insert(
+            content,
+            string.format(
+                '│ %-' .. empty_width .. 's │',
+                'Keine Dateien mit Arbeitszeit gefunden'
+            )
+        )
+        table.insert(content, generateBorderLine(empty_width, 'bottom'))
+        return content
+    end
+
+    -- Calculate optimal width for file paths
+    local file_paths = {}
+    for _, file_info in ipairs(sorted_files) do
+        table.insert(file_paths, file_info.project .. '/' .. file_info.file)
+    end
+    local file_width =
+        calculateOptimalWidth(file_paths, 20, 80, 'Datei-Details (nach Arbeitszeit sortiert)')
+
+    -- Add file details section
+    table.insert(content, '')
+    table.insert(
+        content,
+        generateBorderLine(file_width, 'top', 'Datei-Details (nach Arbeitszeit sortiert)')
+    )
+
+    for i, file_info in ipairs(sorted_files) do
+        local percentage = summary.totals.totalHours > 0
+                and (file_info.total_hours / summary.totals.totalHours * 100)
+            or 0
+
+        table.insert(
+            content,
+            string.format(
+                '│ %-' .. file_width .. 's %8.2fh (%4.1f%%) │',
+                file_info.project .. '/' .. file_info.file,
+                file_info.total_hours,
+                percentage
+            )
+        )
+
+        -- Add a separator every 10 entries for better readability
+        if i % 10 == 0 and i < #sorted_files then
+            table.insert(content, generateBorderLine(file_width, 'middle'))
+        end
+    end
+
+    table.insert(content, generateBorderLine(file_width, 'bottom'))
+
+    return content
+end
+
+---Show content in a floating window with details support
+---@param content table Array of content lines
+---@param title string Window title
+---@param summary table Weekly summary data
+---@param opts table Display options
+function M._showFloatingWindowWithDetails(content, title, summary, opts)
+    -- Store the original content and generate details content
+    local original_content = content
+    local details_content = {}
+
+    -- Combine original content with details if show_details is true
+    if opts.show_details then
+        for _, line in ipairs(original_content) do
+            table.insert(details_content, line)
+        end
+        local file_details = M._formatFileDetails(summary, opts)
+        for _, line in ipairs(file_details) do
+            table.insert(details_content, line)
+        end
+        content = details_content
+    end
+
+    -- Calculate window size
+    local max_width = 0
+    for _, line in ipairs(content) do
+        max_width = math.max(max_width, vim.fn.strdisplaywidth(line))
+    end
+
+    local width = math.min(max_width + 4, vim.o.columns - 10)
+    local height = math.min(#content + 2, vim.o.lines - 10)
+
+    -- Calculate position (centered)
+    local row = math.floor((vim.o.lines - height) / 2)
+    local col = math.floor((vim.o.columns - width) / 2)
+
+    -- Create buffer
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+
+    -- Create window
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = 'editor',
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = 'minimal',
+        border = 'rounded',
+        title = title,
+        title_pos = 'center',
+    })
+
+    -- Set key mappings for the floating window
+    local function close_window()
+        if vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_close(win, true)
+        end
+    end
+
+    local function toggle_details()
+        close_window()
+        -- Toggle show_details flag
+        local new_opts = vim.deepcopy(opts)
+        new_opts.show_details = not opts.show_details
+        M.showWeeklyOverview(new_opts)
+    end
+
+    -- Key mappings
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'q', '', {
+        noremap = true,
+        silent = true,
+        callback = close_window,
+    })
+
+    vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', '', {
+        noremap = true,
+        silent = true,
+        callback = close_window,
+    })
+
+    -- Filter options mapping
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'f', '', {
+        noremap = true,
+        silent = true,
+        callback = function()
+            close_window()
+            M._showFilterDialog()
+        end,
+    })
+
+    -- Details toggle mapping
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'd', '', {
+        noremap = true,
+        silent = true,
+        callback = toggle_details,
+    })
+
+    -- Set window options
+    vim.api.nvim_win_set_option(win, 'wrap', false)
+    vim.api.nvim_win_set_option(win, 'cursorline', true)
 end
 
 ---Show content in a floating window
