@@ -502,7 +502,7 @@ function M.addManualTimeEntryDialog(callback)
 end
 
 ---Show weekly overview in a floating window
----@param opts? { year?: string, week?: string, project?: string, file?: string, display_mode?: string }
+---@param opts? { year?: string, week?: string, project?: string, file?: string, display_mode?: string, show_details?: boolean }
 function M.showWeeklyOverview(opts)
     opts = opts or {}
     local display_mode = opts.display_mode or 'floating'
@@ -514,9 +514,11 @@ function M.showWeeklyOverview(opts)
     local content = M._formatWeeklySummaryContent(summary, opts)
 
     if display_mode == 'floating' then
-        M._showFloatingWindow(
+        M._showFloatingWindowWithDetails(
             content,
-            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year
+            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year,
+            summary,
+            opts
         )
     elseif display_mode == 'buffer' then
         M._showInBuffer(content, 'Weekly Overview')
@@ -524,9 +526,11 @@ function M.showWeeklyOverview(opts)
         M._showInQuickfix(content)
     else
         -- Default to floating window
-        M._showFloatingWindow(
+        M._showFloatingWindowWithDetails(
             content,
-            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year
+            'Wöchentliche Übersicht - KW ' .. summary.week .. '/' .. summary.year,
+            summary,
+            opts
         )
     end
 end
@@ -715,9 +719,207 @@ function M._formatWeeklySummaryContent(summary, opts)
     end
 
     table.insert(content, '')
-    table.insert(content, 'Drücke q zum Schließen, f für Filter-Optionen')
+    table.insert(content, 'Drücke q zum Schließen, f für Filter-Optionen, d für Datei-Details')
 
     return content
+end
+
+---Format file details for the weekly summary
+---@param summary table The weekly summary data
+---@param opts table Display options
+---@return table Array of content lines for file details
+function M._formatFileDetails(summary, opts)
+    local content = {}
+
+    -- Collect all files across all days and projects
+    local all_files = {}
+
+    for weekday, day_data in pairs(summary.weekdays) do
+        for project_name, project_info in pairs(day_data.projects) do
+            for file_name, file_hours in pairs(project_info.files) do
+                if file_hours > 0 then
+                    local key = project_name .. '/' .. file_name
+                    if not all_files[key] then
+                        all_files[key] = {
+                            project = project_name,
+                            file = file_name,
+                            total_hours = 0,
+                            daily_breakdown = {},
+                        }
+                    end
+                    all_files[key].total_hours = all_files[key].total_hours + file_hours
+                    all_files[key].daily_breakdown[weekday] = file_hours
+                end
+            end
+        end
+    end
+
+    -- Convert to sorted array
+    local sorted_files = {}
+    for _, file_info in pairs(all_files) do
+        table.insert(sorted_files, file_info)
+    end
+
+    -- Sort by total hours (descending)
+    table.sort(sorted_files, function(a, b)
+        return a.total_hours > b.total_hours
+    end)
+
+    if #sorted_files == 0 then
+        table.insert(content, '')
+        table.insert(
+            content,
+            '┌─ Datei-Details ─────────────────────────────────────────┐'
+        )
+        table.insert(content, '│ Keine Dateien mit Arbeitszeit gefunden                 │')
+        table.insert(
+            content,
+            '└─────────────────────────────────────────────────────────┘'
+        )
+        return content
+    end
+
+    -- Add file details section
+    table.insert(content, '')
+    table.insert(
+        content,
+        '┌─ Datei-Details (nach Arbeitszeit sortiert) ────────────┐'
+    )
+
+    for i, file_info in ipairs(sorted_files) do
+        local percentage = summary.totals.totalHours > 0
+                and (file_info.total_hours / summary.totals.totalHours * 100)
+            or 0
+
+        table.insert(
+            content,
+            string.format(
+                '│ %-40s %8.2fh (%4.1f%%) │',
+                file_info.project .. '/' .. file_info.file,
+                file_info.total_hours,
+                percentage
+            )
+        )
+
+        -- Add a separator every 10 entries for better readability
+        if i % 10 == 0 and i < #sorted_files then
+            table.insert(
+                content,
+                '├─────────────────────────────────────────────────────────┤'
+            )
+        end
+    end
+
+    table.insert(
+        content,
+        '└─────────────────────────────────────────────────────────┘'
+    )
+
+    return content
+end
+
+---Show content in a floating window with details support
+---@param content table Array of content lines
+---@param title string Window title
+---@param summary table Weekly summary data
+---@param opts table Display options
+function M._showFloatingWindowWithDetails(content, title, summary, opts)
+    -- Store the original content and generate details content
+    local original_content = content
+    local details_content = {}
+
+    -- Combine original content with details if show_details is true
+    if opts.show_details then
+        for _, line in ipairs(original_content) do
+            table.insert(details_content, line)
+        end
+        local file_details = M._formatFileDetails(summary, opts)
+        for _, line in ipairs(file_details) do
+            table.insert(details_content, line)
+        end
+        content = details_content
+    end
+
+    -- Calculate window size
+    local max_width = 0
+    for _, line in ipairs(content) do
+        max_width = math.max(max_width, vim.fn.strdisplaywidth(line))
+    end
+
+    local width = math.min(max_width + 4, vim.o.columns - 10)
+    local height = math.min(#content + 2, vim.o.lines - 10)
+
+    -- Calculate position (centered)
+    local row = math.floor((vim.o.lines - height) / 2)
+    local col = math.floor((vim.o.columns - width) / 2)
+
+    -- Create buffer
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+
+    -- Create window
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = 'editor',
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = 'minimal',
+        border = 'rounded',
+        title = title,
+        title_pos = 'center',
+    })
+
+    -- Set key mappings for the floating window
+    local function close_window()
+        if vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_close(win, true)
+        end
+    end
+
+    local function toggle_details()
+        close_window()
+        -- Toggle show_details flag
+        local new_opts = vim.deepcopy(opts)
+        new_opts.show_details = not opts.show_details
+        M.showWeeklyOverview(new_opts)
+    end
+
+    -- Key mappings
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'q', '', {
+        noremap = true,
+        silent = true,
+        callback = close_window,
+    })
+
+    vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', '', {
+        noremap = true,
+        silent = true,
+        callback = close_window,
+    })
+
+    -- Filter options mapping
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'f', '', {
+        noremap = true,
+        silent = true,
+        callback = function()
+            close_window()
+            M._showFilterDialog()
+        end,
+    })
+
+    -- Details toggle mapping
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'd', '', {
+        noremap = true,
+        silent = true,
+        callback = toggle_details,
+    })
+
+    -- Set window options
+    vim.api.nvim_win_set_option(win, 'wrap', false)
+    vim.api.nvim_win_set_option(win, 'cursorline', true)
 end
 
 ---Show content in a floating window
