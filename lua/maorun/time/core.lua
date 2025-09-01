@@ -1564,8 +1564,8 @@ function M._calculatePauseTime(year_str, week_str, weekday)
     end
 
     -- Find earliest start time and latest end time using math.min/max for better performance
-    local earliest_start = math.min(table.unpack(start_times))
-    local latest_end = math.max(table.unpack(end_times))
+    local earliest_start = math.min(unpack(start_times))
+    local latest_end = math.max(unpack(end_times))
 
     -- Calculate total time span and pause time
     if earliest_start and latest_end and latest_end > earliest_start then
