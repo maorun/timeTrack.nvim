@@ -52,9 +52,9 @@ describe('Concurrent JSON File Access', function()
             },
         }
 
-        -- Use fixed date values to avoid timing issues
-        local year_str = '2025'
-        local week_str = '33'
+        -- Use current date values to match where addTime actually saves data
+        local year_str = os.date('%Y')
+        local week_str = os.date('%W')
 
         -- Instance A: Initialize and add some data
         local instance_a_data = time_init_module.setup(config)
@@ -147,9 +147,9 @@ describe('Concurrent JSON File Access', function()
             },
         }
 
-        -- Use fixed date values to avoid timing issues
-        local year_str = '2025'
-        local week_str = '33'
+        -- Use current date values to match where addTime actually saves data
+        local year_str = os.date('%Y')
+        local week_str = os.date('%W')
 
         time_init_module.setup(config)
 

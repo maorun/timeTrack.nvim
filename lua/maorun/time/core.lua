@@ -1413,11 +1413,8 @@ function M.getWeeklySummary(opts)
         { 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' }
 
     -- Check if data exists for this week
-    if
-        not config_module.obj.content.data
-        or not config_module.obj.content.data[year_str]
-        or not config_module.obj.content.data[year_str][week_str]
-    then
+    local week_data = utils.getWeekData(year_str, week_str)
+    if not week_data then
         -- Return empty summary with configured expected hours
         for _, weekday in ipairs(weekday_order) do
             local expected = config_module.obj.content.hoursPerWeekday[weekday] or 0
@@ -1426,14 +1423,13 @@ function M.getWeeklySummary(opts)
                 expectedHours = expected,
                 overtime = -expected,
                 projects = {},
+                pauseTime = 0,
             }
             summary.totals.expectedHours = summary.totals.expectedHours + expected
             summary.totals.totalOvertime = summary.totals.totalOvertime - expected
         end
         return summary
     end
-
-    local week_data = config_module.obj.content.data[year_str][week_str]
 
     -- Process each weekday
     for _, weekday in ipairs(weekday_order) do
@@ -1443,6 +1439,7 @@ function M.getWeeklySummary(opts)
             expectedHours = expected_hours,
             overtime = 0,
             projects = {},
+            pauseTime = 0,
         }
 
         -- Add to total expected hours
@@ -1472,6 +1469,9 @@ function M.getWeeklySummary(opts)
                 weekday_info.workedHours = total_hours
                 weekday_info.overtime = total_hours - expected_hours
             end
+
+            -- Calculate pause time for this day
+            weekday_info.pauseTime = M._calculatePauseTime(year_str, week_str, weekday)
 
             -- Collect project/file data if filtering is needed or for detailed view
             for project_name, project_data in pairs(weekday_data) do
@@ -1522,6 +1522,59 @@ function M.getWeeklySummary(opts)
     end
 
     return summary
+end
+
+---Calculate pause time for a specific day
+---Pause time is the duration between earliest start and latest end minus actual tracked time
+---@param year_str string
+---@param week_str string
+---@param weekday string
+---@return number Pause time in hours, 0 if no data or only one entry
+function M._calculatePauseTime(year_str, week_str, weekday)
+    -- Use helper function for safe data access
+    local weekday_data = utils.getWeekdayData(year_str, week_str, weekday)
+    if not weekday_data then
+        return 0
+    end
+
+    local start_times = {}
+    local end_times = {}
+    local total_tracked_time = 0
+
+    -- Collect all time entries for the day across all projects and files
+    for project_name, project_data in pairs(weekday_data) do
+        if project_name ~= 'summary' and type(project_data) == 'table' then
+            for file_name, file_data in pairs(project_data) do
+                if file_name ~= 'summary' and type(file_data) == 'table' and file_data.items then
+                    for _, entry in ipairs(file_data.items) do
+                        if entry.startTime and entry.endTime then
+                            table.insert(start_times, entry.startTime)
+                            table.insert(end_times, entry.endTime)
+                            total_tracked_time = total_tracked_time + (entry.diffInHours or 0)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Need at least 2 entries to calculate pause time
+    if #start_times < 2 then
+        return 0
+    end
+
+    -- Find earliest start time and latest end time using math.min/max for better performance
+    local earliest_start = math.min(table.unpack(start_times))
+    local latest_end = math.max(table.unpack(end_times))
+
+    -- Calculate total time span and pause time
+    if earliest_start and latest_end and latest_end > earliest_start then
+        local total_span_hours = (latest_end - earliest_start) / 3600
+        local pause_time = total_span_hours - total_tracked_time
+        return math.max(0, pause_time) -- Ensure non-negative
+    end
+
+    return 0
 end
 
 -- Zeit-Validierung & Korrekturmodus (Time Validation & Correction Mode)
@@ -1720,15 +1773,10 @@ function M.validateTimeData(opts)
     }
 
     -- If no data exists, return empty results
-    if
-        not config_module.obj.content.data
-        or not config_module.obj.content.data[year_str]
-        or not config_module.obj.content.data[year_str][week_str]
-    then
+    local week_data = utils.getWeekData(year_str, week_str)
+    if not week_data then
         return validation_results
     end
-
-    local week_data = config_module.obj.content.data[year_str][week_str]
 
     -- Determine which weekdays to check
     local weekdays_to_check = {}
