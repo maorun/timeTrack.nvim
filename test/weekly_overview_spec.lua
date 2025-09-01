@@ -440,4 +440,48 @@ describe('Weekly Overview Functionality', function()
             assert.is_true(#content > 0)
         end)
     end)
+
+    describe('Pause Time Functionality', function()
+        it('should include pause time in weekly summary', function()
+            local mock_time = 1678704000 -- March 13, 2023, week 11
+            os_module.time = function()
+                return mock_time
+            end
+            os_module.date = function(format, time_val)
+                time_val = time_val or mock_time
+                return original_os_date(format, time_val)
+            end
+
+            maorunTime.setup({ path = tempPath })
+
+            -- Add time entries with a gap to create pause time
+            -- Entry 1: 9:00-10:00 (1 hour)
+            maorunTime.addManualTimeEntry({
+                startTime = mock_time,
+                endTime = mock_time + 3600, -- +1 hour
+                weekday = 'Monday',
+                project = 'TestProject',
+                file = 'test.lua',
+            })
+
+            -- Entry 2: 11:00-12:00 (1 hour) - 1 hour gap = 1 hour pause
+            maorunTime.addManualTimeEntry({
+                startTime = mock_time + 7200, -- +2 hours (11:00)
+                endTime = mock_time + 10800, -- +3 hours (12:00)
+                weekday = 'Monday',
+                project = 'TestProject',
+                file = 'test.lua',
+            })
+
+            local summary = maorunTime.getWeeklySummary()
+
+            -- Check that pauseTime is included in the summary
+            assert.is_not_nil(summary.weekdays.Monday.pauseTime)
+            assert.are.equal(1, summary.weekdays.Monday.pauseTime)
+
+            -- Check that other days have pauseTime = 0
+            assert.are.equal(0, summary.weekdays.Tuesday.pauseTime)
+            assert.are.equal(0, summary.weekdays.Wednesday.pauseTime)
+        end)
+    end)
 end)

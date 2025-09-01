@@ -626,15 +626,15 @@ function M._formatWeeklySummaryContent(summary, opts)
     -- Daily breakdown
     table.insert(
         content,
-        '┌─ Tägliche Übersicht ─────────────────────────────────────┐'
+        '┌─ Tägliche Übersicht ──────────────────────────────────────────────────────┐'
     )
     table.insert(
         content,
-        '│ Tag        │ Gearbeitet │ Soll │ Überstunden │ Status   │'
+        '│ Tag        │ Gearbeitet │ Pause │ Soll │ Überstunden │ Status   │'
     )
     table.insert(
         content,
-        '├────────────┼────────────┼──────┼─────────────┼──────────┤'
+        '├────────────┼────────────┼───────┼──────┼─────────────┼──────────┤'
     )
 
     local weekday_names_de = {
@@ -668,9 +668,10 @@ function M._formatWeeklySummaryContent(summary, opts)
         table.insert(
             content,
             string.format(
-                '│ %-10s │ %8.2fh │ %4.0fh │ %9.2fh │ %-8s │',
+                '│ %-10s │ %8.2fh │ %5.1fh │ %4.0fh │ %9.2fh │ %-8s │',
                 day_name_de,
                 day_data.workedHours,
+                day_data.pauseTime or 0,
                 day_data.expectedHours,
                 day_data.overtime,
                 status
@@ -680,7 +681,7 @@ function M._formatWeeklySummaryContent(summary, opts)
 
     table.insert(
         content,
-        '└────────────┴────────────┴──────┴─────────────┴──────────┘'
+        '└────────────┴────────────┴───────┴──────┴─────────────┴──────────┘'
     )
     table.insert(content, '')
 
