@@ -120,4 +120,51 @@ function M.calculateAverage()
     return sum / count
 end
 
+---Safe getter for nested data structure access
+---@param year_str string|nil
+---@param week_str string|nil
+---@param weekday string|nil
+---@return table|nil Returns the data at the specified path, or nil if any part doesn't exist
+function M.getWeekdayData(year_str, week_str, weekday)
+    local data = config_module.obj.content.data
+    if not data then
+        return nil
+    end
+
+    if not year_str or not data[year_str] then
+        return nil
+    end
+
+    if not week_str or not data[year_str][week_str] then
+        return nil
+    end
+
+    if not weekday or not data[year_str][week_str][weekday] then
+        return nil
+    end
+
+    return data[year_str][week_str][weekday]
+end
+
+---Safe getter for week data access
+---@param year_str string|nil
+---@param week_str string|nil
+---@return table|nil Returns the week data, or nil if it doesn't exist
+function M.getWeekData(year_str, week_str)
+    local data = config_module.obj.content.data
+    if not data then
+        return nil
+    end
+
+    if not year_str or not data[year_str] then
+        return nil
+    end
+
+    if not week_str or not data[year_str][week_str] then
+        return nil
+    end
+
+    return data[year_str][week_str]
+end
+
 return M

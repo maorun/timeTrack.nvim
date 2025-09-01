@@ -1413,11 +1413,8 @@ function M.getWeeklySummary(opts)
         { 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' }
 
     -- Check if data exists for this week
-    if
-        not config_module.obj.content.data
-        or not config_module.obj.content.data[year_str]
-        or not config_module.obj.content.data[year_str][week_str]
-    then
+    local week_data = utils.getWeekData(year_str, week_str)
+    if not week_data then
         -- Return empty summary with configured expected hours
         for _, weekday in ipairs(weekday_order) do
             local expected = config_module.obj.content.hoursPerWeekday[weekday] or 0
@@ -1433,8 +1430,6 @@ function M.getWeeklySummary(opts)
         end
         return summary
     end
-
-    local week_data = config_module.obj.content.data[year_str][week_str]
 
     -- Process each weekday
     for _, weekday in ipairs(weekday_order) do
@@ -1536,18 +1531,14 @@ end
 ---@param weekday string
 ---@return number Pause time in hours, 0 if no data or only one entry
 function M._calculatePauseTime(year_str, week_str, weekday)
-    -- Check if data exists for this day
-    if
-        not config_module.obj.content.data
-        or not config_module.obj.content.data[year_str]
-        or not config_module.obj.content.data[year_str][week_str]
-        or not config_module.obj.content.data[year_str][week_str][weekday]
-    then
+    -- Use helper function for safe data access
+    local weekday_data = utils.getWeekdayData(year_str, week_str, weekday)
+    if not weekday_data then
         return 0
     end
 
-    local weekday_data = config_module.obj.content.data[year_str][week_str][weekday]
-    local all_entries = {}
+    local start_times = {}
+    local end_times = {}
     local total_tracked_time = 0
 
     -- Collect all time entries for the day across all projects and files
@@ -1557,7 +1548,8 @@ function M._calculatePauseTime(year_str, week_str, weekday)
                 if file_name ~= 'summary' and type(file_data) == 'table' and file_data.items then
                     for _, entry in ipairs(file_data.items) do
                         if entry.startTime and entry.endTime then
-                            table.insert(all_entries, entry)
+                            table.insert(start_times, entry.startTime)
+                            table.insert(end_times, entry.endTime)
                             total_tracked_time = total_tracked_time + (entry.diffInHours or 0)
                         end
                     end
@@ -1567,22 +1559,13 @@ function M._calculatePauseTime(year_str, week_str, weekday)
     end
 
     -- Need at least 2 entries to calculate pause time
-    if #all_entries < 2 then
+    if #start_times < 2 then
         return 0
     end
 
-    -- Find earliest start time and latest end time
-    local earliest_start = nil
-    local latest_end = nil
-
-    for _, entry in ipairs(all_entries) do
-        if not earliest_start or entry.startTime < earliest_start then
-            earliest_start = entry.startTime
-        end
-        if not latest_end or entry.endTime > latest_end then
-            latest_end = entry.endTime
-        end
-    end
+    -- Find earliest start time and latest end time using math.min/max for better performance
+    local earliest_start = math.min(table.unpack(start_times))
+    local latest_end = math.max(table.unpack(end_times))
 
     -- Calculate total time span and pause time
     if earliest_start and latest_end and latest_end > earliest_start then
@@ -1790,15 +1773,10 @@ function M.validateTimeData(opts)
     }
 
     -- If no data exists, return empty results
-    if
-        not config_module.obj.content.data
-        or not config_module.obj.content.data[year_str]
-        or not config_module.obj.content.data[year_str][week_str]
-    then
+    local week_data = utils.getWeekData(year_str, week_str)
+    if not week_data then
         return validation_results
     end
-
-    local week_data = config_module.obj.content.data[year_str][week_str]
 
     -- Determine which weekdays to check
     local weekdays_to_check = {}
