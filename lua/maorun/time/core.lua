@@ -294,8 +294,8 @@ function M.calculate(opts)
         weeknumber = os.date('%W'),
     })
 
-    local year_str = opts.year
-    local week_str = opts.weeknumber
+    local year_str = tostring(opts.year)
+    local week_str = tostring(opts.weeknumber)
 
     if
         not config_module.obj.content['data'][year_str]
@@ -956,8 +956,8 @@ end
 function M.listTimeEntries(opts)
     opts = opts or {}
 
-    local year_str = opts.year or os.date('%Y')
-    local week_str = opts.weeknumber or os.date('%W')
+    local year_str = tostring(opts.year or os.date('%Y'))
+    local week_str = tostring(opts.weeknumber or os.date('%W'))
     local weekday = opts.weekday
     local project = opts.project or 'default_project'
     local file = opts.file or 'default_file'
@@ -1393,8 +1393,8 @@ function M.getWeeklySummary(opts)
 
     -- Get current week if not specified
     local current_time = os.time()
-    local year_str = opts.year or os.date('%Y', current_time)
-    local week_str = opts.week or os.date('%W', current_time)
+    local year_str = tostring(opts.year or os.date('%Y', current_time))
+    local week_str = tostring(opts.week or os.date('%W', current_time))
 
     -- Initialize summary structure
     local summary = {
@@ -1757,8 +1757,8 @@ end
 ---@return table Validation results with overlaps, duplicates, and errors
 function M.validateTimeData(opts)
     opts = opts or {}
-    local year_str = opts.year or os.date('%Y')
-    local week_str = opts.week or os.date('%W')
+    local year_str = tostring(opts.year or os.date('%Y'))
+    local week_str = tostring(opts.week or os.date('%W'))
 
     local validation_results = {
         overlaps = {},
