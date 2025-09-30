@@ -781,10 +781,6 @@ function M._formatWeeklySummaryContent(summary, opts)
         content,
         'Drücke 1-7 für Tagesübersicht (Mo-So): 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa, 7=So'
     )
-    table.insert(
-        content,
-        'Drücke 1-7 für Tagesübersicht (Mo-So): 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa, 7=So'
-    )
 
     return content
 end
@@ -1747,17 +1743,32 @@ function M._formatDailySummaryContent(summary)
                     summary.pauseTime
                 )
             )
-            table.insert(
-                content,
-                string.format(
-                    '│ Format: %s-%s Uhr  Pause: %.1fh  %s-%s Uhr             │',
-                    os.date('%H', summary.earliestStart),
-                    os.date('%H', summary.earliestStart + 4 * 3600), -- Simplified: assume 4h + pause + remaining
-                    summary.pauseTime,
-                    os.date('%H', summary.latestEnd - 4 * 3600),
-                    os.date('%H', summary.latestEnd)
+
+            -- Show actual work periods instead of hardcoded format
+            if summary.workPeriods and #summary.workPeriods > 0 then
+                local period_strings = {}
+                for _, period in ipairs(summary.workPeriods) do
+                    table.insert(
+                        period_strings,
+                        string.format(
+                            '%s-%s Uhr',
+                            os.date('%H', period.start),
+                            os.date('%H', period.end_time)
+                        )
+                    )
+                end
+
+                local periods_text = table.concat(
+                    period_strings,
+                    '  Pause: '
+                        .. string.format('%.1fh', summary.pauseTime / #summary.workPeriods)
+                        .. '  '
                 )
-            )
+                table.insert(
+                    content,
+                    string.format('│ Format: %s                     │', periods_text)
+                )
+            end
         else
             table.insert(
                 content,

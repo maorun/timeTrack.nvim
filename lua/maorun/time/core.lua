@@ -1703,18 +1703,59 @@ function M.getDailySummary(opts)
         -- Calculate pause time using existing function
         summary.pauseTime = M._calculatePauseTime(year_str, week_str, weekday)
 
-        -- Create work periods (simplified - could be enhanced to merge overlapping periods)
-        summary.workPeriods = {
-            {
-                start = summary.earliestStart,
-                startReadable = os.date('%H:%M', summary.earliestStart),
-                end_time = summary.latestEnd,
-                endReadable = os.date('%H:%M', summary.latestEnd),
-            },
-        }
+        -- Create work periods by detecting gaps in work
+        summary.workPeriods = M._calculateWorkPeriods(all_entries)
     end
 
     return summary
+end
+
+---Calculate work periods based on time entries, detecting breaks between work sessions
+---@param entries table Array of time entries sorted by start time
+---@return table Array of work periods with start/end times
+function M._calculateWorkPeriods(entries)
+    if #entries == 0 then
+        return {}
+    end
+
+    local work_periods = {}
+    local current_period = {
+        start = entries[1].startTime,
+        startReadable = entries[1].startReadable,
+        end_time = entries[1].endTime,
+        endReadable = entries[1].endReadable,
+    }
+
+    -- Minimum gap in minutes to consider a break (30 minutes)
+    local min_break_gap = 30 * 60
+
+    for i = 2, #entries do
+        local prev_entry = entries[i - 1]
+        local curr_entry = entries[i]
+
+        -- Calculate gap between previous end and current start
+        local gap = curr_entry.startTime - prev_entry.endTime
+
+        if gap >= min_break_gap then
+            -- Found a significant break, end current period and start new one
+            table.insert(work_periods, current_period)
+            current_period = {
+                start = curr_entry.startTime,
+                startReadable = curr_entry.startReadable,
+                end_time = curr_entry.endTime,
+                endReadable = curr_entry.endReadable,
+            }
+        else
+            -- Continue current period, extend end time
+            current_period.end_time = curr_entry.endTime
+            current_period.endReadable = curr_entry.endReadable
+        end
+    end
+
+    -- Don't forget to add the last period
+    table.insert(work_periods, current_period)
+
+    return work_periods
 end
 
 -- Zeit-Validierung & Korrekturmodus (Time Validation & Correction Mode)
