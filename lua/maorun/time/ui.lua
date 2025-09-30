@@ -1758,12 +1758,18 @@ function M._formatDailySummaryContent(summary)
                     )
                 end
 
-                local periods_text = table.concat(
-                    period_strings,
-                    '  Pause: '
-                        .. string.format('%.1fh', summary.pauseTime / #summary.workPeriods)
-                        .. '  '
-                )
+                -- Calculate average pause time between periods (if multiple periods exist)
+                local pause_display = ''
+                if #summary.workPeriods > 1 and summary.pauseTime > 0 then
+                    local avg_pause = summary.pauseTime / (#summary.workPeriods - 1) -- gaps between periods
+                    pause_display = string.format('  Pause: %.1fh  ', avg_pause)
+                elseif #summary.workPeriods == 1 and summary.pauseTime > 0 then
+                    pause_display = string.format('  Pause: %.1fh  ', summary.pauseTime)
+                else
+                    pause_display = '  '
+                end
+
+                local periods_text = table.concat(period_strings, pause_display)
                 table.insert(
                     content,
                     string.format('│ Format: %s                     │', periods_text)

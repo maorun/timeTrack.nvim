@@ -1730,11 +1730,10 @@ function M._calculateWorkPeriods(entries)
     local min_break_gap = 30 * 60
 
     for i = 2, #entries do
-        local prev_entry = entries[i - 1]
         local curr_entry = entries[i]
 
-        -- Calculate gap between previous end and current start
-        local gap = curr_entry.startTime - prev_entry.endTime
+        -- Calculate gap between current period end and current entry start
+        local gap = curr_entry.startTime - current_period.end_time
 
         if gap >= min_break_gap then
             -- Found a significant break, end current period and start new one
