@@ -1577,6 +1577,146 @@ function M._calculatePauseTime(year_str, week_str, weekday)
     return 0
 end
 
+---Get detailed daily summary data
+---@param opts { year?: string, week?: string, weekday: string }
+---@return table Daily summary with projects, files, time periods, and goal status
+function M.getDailySummary(opts)
+    opts = opts or {}
+
+    -- Get current week if not specified
+    local current_time = os.time()
+    local year_str = tostring(opts.year or os.date('%Y', current_time))
+    local week_str = tostring(opts.week or os.date('%W', current_time))
+    local weekday = opts.weekday
+
+    if not weekday then
+        error('weekday parameter is required')
+    end
+
+    -- Initialize daily summary structure
+    local summary = {
+        year = year_str,
+        week = week_str,
+        weekday = weekday,
+        workedHours = 0,
+        expectedHours = config_module.obj.content.hoursPerWeekday[weekday] or 0,
+        overtime = 0,
+        goalAchieved = false,
+        pauseTime = 0,
+        workPeriods = {},
+        projects = {},
+        earliestStart = nil,
+        latestEnd = nil,
+    }
+
+    -- Calculate overtime
+    summary.overtime = summary.workedHours - summary.expectedHours
+    summary.goalAchieved = summary.workedHours >= summary.expectedHours
+
+    -- Get weekday data
+    local weekday_data = utils.getWeekdayData(year_str, week_str, weekday)
+    if not weekday_data then
+        return summary
+    end
+
+    -- Collect all time entries and calculate totals
+    local all_entries = {}
+
+    for project_name, project_data in pairs(weekday_data) do
+        if project_name ~= 'summary' and type(project_data) == 'table' then
+            summary.projects[project_name] = {
+                totalHours = 0,
+                files = {},
+            }
+
+            for file_name, file_data in pairs(project_data) do
+                if file_name ~= 'summary' and type(file_data) == 'table' then
+                    local file_hours = 0
+                    local file_entries = {}
+
+                    if file_data.items then
+                        for _, entry in ipairs(file_data.items) do
+                            if entry.startTime and entry.endTime and entry.diffInHours then
+                                table.insert(all_entries, {
+                                    startTime = entry.startTime,
+                                    endTime = entry.endTime,
+                                    startReadable = entry.startReadable,
+                                    endReadable = entry.endReadable,
+                                    diffInHours = entry.diffInHours,
+                                    project = project_name,
+                                    file = file_name,
+                                })
+
+                                table.insert(file_entries, {
+                                    startTime = entry.startTime,
+                                    endTime = entry.endTime,
+                                    startReadable = entry.startReadable,
+                                    endReadable = entry.endReadable,
+                                    diffInHours = entry.diffInHours,
+                                })
+
+                                file_hours = file_hours + entry.diffInHours
+                                summary.workedHours = summary.workedHours + entry.diffInHours
+                            end
+                        end
+                    end
+
+                    if file_hours > 0 then
+                        summary.projects[project_name].files[file_name] = {
+                            hours = file_hours,
+                            entries = file_entries,
+                        }
+                        summary.projects[project_name].totalHours = summary.projects[project_name].totalHours
+                            + file_hours
+                    end
+                end
+            end
+
+            -- Remove projects with no worked hours
+            if summary.projects[project_name].totalHours == 0 then
+                summary.projects[project_name] = nil
+            end
+        end
+    end
+
+    -- Update calculations with actual worked hours
+    summary.overtime = summary.workedHours - summary.expectedHours
+    summary.goalAchieved = summary.workedHours >= summary.expectedHours
+
+    -- Calculate pause time and work periods
+    if #all_entries > 0 then
+        -- Sort entries by start time
+        table.sort(all_entries, function(a, b)
+            return a.startTime < b.startTime
+        end)
+
+        summary.earliestStart = all_entries[1].startTime
+        summary.latestEnd = all_entries[#all_entries].endTime
+
+        -- Find latest end time (might not be the last entry if they overlap)
+        for _, entry in ipairs(all_entries) do
+            if not summary.latestEnd or entry.endTime > summary.latestEnd then
+                summary.latestEnd = entry.endTime
+            end
+        end
+
+        -- Calculate pause time using existing function
+        summary.pauseTime = M._calculatePauseTime(year_str, week_str, weekday)
+
+        -- Create work periods (simplified - could be enhanced to merge overlapping periods)
+        summary.workPeriods = {
+            {
+                start = summary.earliestStart,
+                startReadable = os.date('%H:%M', summary.earliestStart),
+                end_time = summary.latestEnd,
+                endReadable = os.date('%H:%M', summary.latestEnd),
+            },
+        }
+    end
+
+    return summary
+end
+
 -- Zeit-Validierung & Korrekturmodus (Time Validation & Correction Mode)
 
 ---Detect overlapping time entries within the same day/project/file

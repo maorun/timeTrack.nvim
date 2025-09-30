@@ -485,3 +485,173 @@ describe('Weekly Overview Functionality', function()
         end)
     end)
 end)
+
+describe('Daily Overview Functionality', function()
+    describe('getDailySummary', function()
+        it('should return empty summary for day with no data', function()
+            local mock_time = 1678704000 -- March 13, 2023, week 11
+            os_module.time = function()
+                return mock_time
+            end
+            os_module.date = function(format, time_val)
+                time_val = time_val or mock_time
+                return original_os_date(format, time_val)
+            end
+
+            maorunTime.setup({ path = tempPath })
+
+            local summary = maorunTime.getDailySummary({ weekday = 'Monday' })
+
+            -- Should return valid structure with zero values
+            assert.is_table(summary)
+            assert.are.equal('Monday', summary.weekday)
+            assert.are.equal(0, summary.workedHours)
+            assert.are.equal(8, summary.expectedHours) -- Default config
+            assert.are.equal(-8, summary.overtime)
+            assert.is_false(summary.goalAchieved)
+            assert.are.equal(0, summary.pauseTime)
+            assert.is_table(summary.projects)
+            assert.is_nil(summary.earliestStart)
+            assert.is_nil(summary.latestEnd)
+        end)
+
+        it('should calculate daily summary correctly with actual time data', function()
+            local mock_time = 1678704000 -- March 13, 2023, week 11
+            os_module.time = function()
+                return mock_time
+            end
+            os_module.date = function(format, time_val)
+                time_val = time_val or mock_time
+                return original_os_date(format, time_val)
+            end
+
+            maorunTime.setup({ path = tempPath })
+
+            -- Add some time entries for Monday
+            maorunTime.addManualTimeEntry({
+                startTime = mock_time + 8 * 3600, -- 8:00 AM
+                endTime = mock_time + 12 * 3600, -- 12:00 PM
+                weekday = 'Monday',
+                project = 'WorkProject',
+                file = 'main.lua',
+            })
+
+            maorunTime.addManualTimeEntry({
+                startTime = mock_time + 13 * 3600, -- 1:00 PM (after lunch)
+                endTime = mock_time + 17 * 3600, -- 5:00 PM
+                weekday = 'Monday',
+                project = 'WorkProject',
+                file = 'test.lua',
+            })
+
+            local summary = maorunTime.getDailySummary({ weekday = 'Monday' })
+
+            -- Should have calculated summary correctly
+            assert.are.equal('Monday', summary.weekday)
+            assert.are.equal(8, summary.workedHours) -- 4h + 4h
+            assert.are.equal(8, summary.expectedHours)
+            assert.are.equal(0, summary.overtime)
+            assert.is_true(summary.goalAchieved)
+            assert.are.equal(1, summary.pauseTime) -- 1 hour lunch break
+
+            -- Should have project data
+            assert.is_table(summary.projects)
+            assert.is_not_nil(summary.projects.WorkProject)
+            assert.are.equal(8, summary.projects.WorkProject.totalHours)
+
+            -- Should have file data
+            assert.is_not_nil(summary.projects.WorkProject.files['main.lua'])
+            assert.are.equal(4, summary.projects.WorkProject.files['main.lua'].hours)
+            assert.is_not_nil(summary.projects.WorkProject.files['test.lua'])
+            assert.are.equal(4, summary.projects.WorkProject.files['test.lua'].hours)
+
+            -- Should have time period info
+            assert.are.equal(mock_time + 8 * 3600, summary.earliestStart)
+            assert.are.equal(mock_time + 17 * 3600, summary.latestEnd)
+        end)
+
+        it('should handle multiple projects correctly', function()
+            local mock_time = 1678704000
+            os_module.time = function()
+                return mock_time
+            end
+            os_module.date = function(format, time_val)
+                time_val = time_val or mock_time
+                return original_os_date(format, time_val)
+            end
+
+            maorunTime.setup({ path = tempPath })
+
+            -- Add time entries for different projects
+            maorunTime.addManualTimeEntry({
+                startTime = mock_time + 8 * 3600,
+                endTime = mock_time + 12 * 3600,
+                weekday = 'Tuesday',
+                project = 'ProjectA',
+                file = 'file1.lua',
+            })
+
+            maorunTime.addManualTimeEntry({
+                startTime = mock_time + 13 * 3600,
+                endTime = mock_time + 15 * 3600,
+                weekday = 'Tuesday',
+                project = 'ProjectB',
+                file = 'file2.lua',
+            })
+
+            local summary = maorunTime.getDailySummary({ weekday = 'Tuesday' })
+
+            -- Should have both projects
+            assert.is_not_nil(summary.projects.ProjectA)
+            assert.is_not_nil(summary.projects.ProjectB)
+            assert.are.equal(4, summary.projects.ProjectA.totalHours)
+            assert.are.equal(2, summary.projects.ProjectB.totalHours)
+            assert.are.equal(6, summary.workedHours)
+        end)
+    end)
+
+    describe('showDailyOverview integration', function()
+        it('should expose showDailyOverview function in UI module', function()
+            local ui = require('maorun.time.ui')
+            assert.is_function(ui.showDailyOverview)
+        end)
+
+        it('should format daily summary content correctly', function()
+            local mock_time = 1678704000
+            os_module.time = function()
+                return mock_time
+            end
+            os_module.date = function(format, time_val)
+                time_val = time_val or mock_time
+                return original_os_date(format, time_val)
+            end
+
+            maorunTime.setup({ path = tempPath })
+
+            -- Add some test data
+            maorunTime.addManualTimeEntry({
+                startTime = mock_time + 8 * 3600,
+                endTime = mock_time + 12 * 3600,
+                weekday = 'Wednesday',
+                project = 'TestProject',
+                file = 'test.lua',
+            })
+
+            local ui = require('maorun.time.ui')
+            local summary = maorunTime.getDailySummary({ weekday = 'Wednesday' })
+            local content = ui._formatDailySummaryContent(summary)
+
+            -- Should return formatted content without error
+            assert.is_table(content)
+            assert.is_true(#content > 0)
+
+            -- Check for key sections
+            local content_str = table.concat(content, '\n')
+            -- Debug: print the content to see what's actually there
+            -- print("Content:", content_str)
+            assert.is_true(content_str:find('Tagesübersicht') ~= nil)
+            assert.is_true(content_str:find('Arbeitszeit%-Übersicht') ~= nil)
+            assert.is_true(content_str:find('TestProject') ~= nil)
+        end)
+    end)
+end)
