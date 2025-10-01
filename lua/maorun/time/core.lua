@@ -16,6 +16,25 @@ local notification_state = {
     },
 }
 
+---Load notification state from persistent storage
+local function loadNotificationState()
+    if config_module.obj.content and config_module.obj.content.notificationState then
+        notification_state = vim.tbl_deep_extend(
+            'force',
+            notification_state,
+            config_module.obj.content.notificationState
+        )
+    end
+end
+
+---Save notification state to persistent storage
+local function saveNotificationState()
+    if config_module.obj.content then
+        config_module.obj.content.notificationState = notification_state
+        utils.save()
+    end
+end
+
 ---Validate configuration options to prevent issues
 ---@param config table The configuration to validate
 function M._validateConfig(config)
@@ -69,6 +88,8 @@ end
 ---@param notification_config table The current notification configuration
 ---@param state_key string The state key for the current day
 function M._handleModeSwitch(notification_config, state_key)
+    local state_modified = false
+
     -- If we're switching to oncePerDay mode and have recurring state, clear it
     if
         notification_config.oncePerDay
@@ -83,10 +104,12 @@ function M._handleModeSwitch(notification_config, state_key)
         -- we should treat it as if we already notified for oncePerDay
         if time_since_last < notification_config.recurringMinutes then
             notification_state.dailyGoal.lastNotification[state_key] = recurring_time
+            state_modified = true
         end
 
         -- Clear the recurring state since we're in oncePerDay mode now
         notification_state.dailyGoal.lastRecurringNotification[state_key] = nil
+        state_modified = true
     end
 
     -- If we're switching to recurring mode and have oncePerDay state, use it as the base
@@ -100,6 +123,12 @@ function M._handleModeSwitch(notification_config, state_key)
 
         -- Clear the oncePerDay state since we're in recurring mode now
         notification_state.dailyGoal.lastNotification[state_key] = nil
+        state_modified = true
+    end
+
+    -- Save state if it was modified
+    if state_modified then
+        saveNotificationState()
     end
 end
 
@@ -200,6 +229,9 @@ function M.init(user_config)
     else
         config_module.obj.content = {}
     end
+
+    -- Load notification state from persistent storage
+    loadNotificationState()
     -- Ensure hoursPerWeekday is initialized if not present (e.g. new file)
     if config_module.obj.content['hoursPerWeekday'] == nil then
         config_module.obj.content['hoursPerWeekday'] = config_module.config.hoursPerWeekday
@@ -420,6 +452,7 @@ function M.checkDailyGoalNotification(year_str, week_str, weekday_name, total_ho
             if not notification_state.dailyGoal.lastNotification[state_key] then
                 should_notify = true
                 notification_state.dailyGoal.lastNotification[state_key] = current_time
+                saveNotificationState()
             end
         else
             -- Recurring notifications - check if enough time has passed
@@ -430,6 +463,7 @@ function M.checkDailyGoalNotification(year_str, week_str, weekday_name, total_ho
             if minutes_passed >= notification_config.recurringMinutes then
                 should_notify = true
                 notification_state.dailyGoal.lastRecurringNotification[state_key] = current_time
+                saveNotificationState()
             end
         end
     end
@@ -537,6 +571,7 @@ function M.checkCoreHoursCompliance(start_time, end_time, weekday_name)
             should_notify = false
         else
             notification_state.coreHours.lastNotification[state_key] = current_time
+            saveNotificationState()
         end
     end
 
