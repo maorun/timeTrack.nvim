@@ -19,7 +19,11 @@ local notification_state = {
 ---Load notification state from persistent storage
 local function loadNotificationState()
     if config_module.obj.content and config_module.obj.content.notificationState then
-        notification_state = vim.tbl_deep_extend('force', notification_state, config_module.obj.content.notificationState)
+        notification_state = vim.tbl_deep_extend(
+            'force',
+            notification_state,
+            config_module.obj.content.notificationState
+        )
     end
 end
 
@@ -85,7 +89,7 @@ end
 ---@param state_key string The state key for the current day
 function M._handleModeSwitch(notification_config, state_key)
     local state_modified = false
-    
+
     -- If we're switching to oncePerDay mode and have recurring state, clear it
     if
         notification_config.oncePerDay
@@ -121,7 +125,7 @@ function M._handleModeSwitch(notification_config, state_key)
         notification_state.dailyGoal.lastNotification[state_key] = nil
         state_modified = true
     end
-    
+
     -- Save state if it was modified
     if state_modified then
         saveNotificationState()
@@ -225,7 +229,7 @@ function M.init(user_config)
     else
         config_module.obj.content = {}
     end
-    
+
     -- Load notification state from persistent storage
     loadNotificationState()
     -- Ensure hoursPerWeekday is initialized if not present (e.g. new file)
