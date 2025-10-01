@@ -135,6 +135,15 @@ function M.setup(user_config)
         weeklyOverview = function(opts)
             ui.showWeeklyOverview(opts or {})
         end,
+        getWeeklySummary = function(opts)
+            return core.getWeeklySummary(opts or {})
+        end,
+        getDailySummary = function(opts)
+            return core.getDailySummary(opts or {})
+        end,
+        dailyOverview = function(opts)
+            ui.showDailyOverview(opts or {})
+        end,
         validate = function(opts)
             return core.validateTimeData(opts or {})
         end,
@@ -191,8 +200,12 @@ M.calculate = function(opts) -- Match the public Time.calculate behavior
 end
 M.exportTimeData = core.exportTimeData -- Expose the export function
 M.getWeeklySummary = core.getWeeklySummary -- Expose the weekly summary function
+M.getDailySummary = core.getDailySummary -- Expose the daily summary function
 M.showWeeklyOverview = function(opts)
     ui.showWeeklyOverview(opts or {})
+end
+M.showDailyOverview = function(opts)
+    ui.showDailyOverview(opts or {})
 end
 M.weekdays = config_module.weekdayNumberMap -- Expose weekday map
 M.get_config = core.get_config -- Expose the get_config function

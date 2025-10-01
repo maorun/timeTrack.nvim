@@ -777,6 +777,10 @@ function M._formatWeeklySummaryContent(summary, opts)
 
     table.insert(content, '')
     table.insert(content, 'Drücke q zum Schließen, f für Filter-Optionen, d für Datei-Details')
+    table.insert(
+        content,
+        'Drücke 1-7 für Tagesübersicht (Mo-So): 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa, 7=So'
+    )
 
     return content
 end
@@ -981,6 +985,24 @@ function M._showFloatingWindowWithDetails(content, title, summary, opts)
         silent = true,
         callback = toggle_details,
     })
+
+    -- Daily overview navigation - numbered keys 1-7 for Monday to Sunday
+    local weekday_order =
+        { 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday' }
+    for i, weekday in ipairs(weekday_order) do
+        vim.api.nvim_buf_set_keymap(buf, 'n', tostring(i), '', {
+            noremap = true,
+            silent = true,
+            callback = function()
+                close_window()
+                M.showDailyOverview({
+                    year = summary.year,
+                    week = summary.week,
+                    weekday = weekday,
+                })
+            end,
+        })
+    end
 
     -- Set window options
     vim.api.nvim_win_set_option(win, 'wrap', false)
@@ -1599,6 +1621,348 @@ function M._performValidationAction(action, issue, callback)
     else -- ignore
         callback()
     end
+end
+
+---Show daily overview for a specific day
+---@param opts { year?: string, week?: string, weekday: string }
+function M.showDailyOverview(opts)
+    opts = opts or {}
+
+    if not opts.weekday then
+        notify(
+            'Weekday parameter is required for daily overview',
+            'error',
+            { title = 'TimeTracking' }
+        )
+        return
+    end
+
+    -- Get daily summary data
+    local summary = core.getDailySummary(opts)
+
+    -- Format the content
+    local content = M._formatDailySummaryContent(summary)
+
+    -- Show in floating window
+    M._showDailyFloatingWindow(
+        content,
+        'Tagesübersicht - '
+            .. M._getGermanWeekdayName(summary.weekday)
+            .. ' (KW '
+            .. summary.week
+            .. '/'
+            .. summary.year
+            .. ')',
+        summary
+    )
+end
+
+---Format daily summary content for display
+---@param summary table Daily summary data
+---@return table Array of content lines
+function M._formatDailySummaryContent(summary)
+    local content = {}
+
+    local weekday_name_de = M._getGermanWeekdayName(summary.weekday)
+
+    -- Header
+    table.insert(
+        content,
+        string.format(
+            '═══ Tagesübersicht - %s, KW %s/%s ═══',
+            weekday_name_de,
+            summary.week,
+            summary.year
+        )
+    )
+    table.insert(content, '')
+
+    -- Goal achievement status
+    local goal_status = summary.goalAchieved and '🟢 Erreicht' or '🔴 Nicht erreicht'
+    local overtime_sign = summary.overtime >= 0 and '+' or ''
+
+    table.insert(
+        content,
+        '┌─ Arbeitszeit-Übersicht ──────────────────────────────────────┐'
+    )
+    table.insert(
+        content,
+        string.format(
+            '│ Gearbeitet:        %8.2f Stunden                        │',
+            summary.workedHours
+        )
+    )
+    table.insert(
+        content,
+        string.format(
+            '│ Tagesziel:         %8.2f Stunden                        │',
+            summary.expectedHours
+        )
+    )
+    table.insert(
+        content,
+        string.format(
+            '│ Überstunden:       %s%7.2f Stunden                        │',
+            overtime_sign,
+            summary.overtime
+        )
+    )
+    table.insert(
+        content,
+        string.format('│ Status:            %-8s                               │', goal_status)
+    )
+    table.insert(
+        content,
+        '└──────────────────────────────────────────────────────────────┘'
+    )
+    table.insert(content, '')
+
+    -- Work periods (if any work was done)
+    if summary.workedHours > 0 and summary.earliestStart and summary.latestEnd then
+        table.insert(
+            content,
+            '┌─ Arbeitszeiten ──────────────────────────────────────────────┐'
+        )
+
+        local total_span_hours = (summary.latestEnd - summary.earliestStart) / 3600
+
+        table.insert(
+            content,
+            string.format(
+                '│ Von: %s bis %s                                        │',
+                os.date('%H:%M', summary.earliestStart),
+                os.date('%H:%M', summary.latestEnd)
+            )
+        )
+
+        if summary.pauseTime > 0 then
+            table.insert(
+                content,
+                string.format(
+                    '│ Pause: %.1fh                                             │',
+                    summary.pauseTime
+                )
+            )
+
+            -- Show actual work periods instead of hardcoded format
+            if summary.workPeriods and #summary.workPeriods > 0 then
+                local period_strings = {}
+                for _, period in ipairs(summary.workPeriods) do
+                    table.insert(
+                        period_strings,
+                        string.format(
+                            '%s-%s Uhr',
+                            os.date('%H', period.start),
+                            os.date('%H', period.end_time)
+                        )
+                    )
+                end
+
+                -- Calculate average pause time between periods (if multiple periods exist)
+                local pause_display = ''
+                if #summary.workPeriods > 1 and summary.pauseTime > 0 then
+                    local avg_pause = summary.pauseTime / (#summary.workPeriods - 1) -- gaps between periods
+                    pause_display = string.format('  Pause: %.1fh  ', avg_pause)
+                elseif #summary.workPeriods == 1 and summary.pauseTime > 0 then
+                    pause_display = string.format('  Pause: %.1fh  ', summary.pauseTime)
+                else
+                    pause_display = '  '
+                end
+
+                local periods_text = table.concat(period_strings, pause_display)
+                table.insert(
+                    content,
+                    string.format('│ Format: %s                     │', periods_text)
+                )
+            end
+        else
+            table.insert(
+                content,
+                string.format(
+                    '│ Durchgehend: %s-%s Uhr (%.1fh)                        │',
+                    os.date('%H', summary.earliestStart),
+                    os.date('%H', summary.latestEnd),
+                    total_span_hours
+                )
+            )
+        end
+
+        table.insert(
+            content,
+            '└──────────────────────────────────────────────────────────────┘'
+        )
+        table.insert(content, '')
+    end
+
+    -- Project breakdown
+    if next(summary.projects) then
+        table.insert(
+            content,
+            '┌─ Projekte/Dateien (in Minuten) ─────────────────────────────┐'
+        )
+
+        -- Sort projects by total hours (descending)
+        local sorted_projects = {}
+        for project_name, project_data in pairs(summary.projects) do
+            table.insert(sorted_projects, {
+                name = project_name,
+                hours = project_data.totalHours,
+                files = project_data.files,
+            })
+        end
+        table.sort(sorted_projects, function(a, b)
+            return a.hours > b.hours
+        end)
+
+        for _, project in ipairs(sorted_projects) do
+            local project_minutes = math.floor(project.hours * 60)
+            table.insert(
+                content,
+                string.format('│ 📁 %-20s %25d min │', project.name, project_minutes)
+            )
+
+            -- Sort files by hours (descending)
+            local sorted_files = {}
+            for file_name, file_data in pairs(project.files) do
+                table.insert(sorted_files, {
+                    name = file_name,
+                    hours = file_data.hours,
+                })
+            end
+            table.sort(sorted_files, function(a, b)
+                return a.hours > b.hours
+            end)
+
+            for _, file in ipairs(sorted_files) do
+                local file_minutes = math.floor(file.hours * 60)
+                table.insert(
+                    content,
+                    string.format('│   📄 %-18s %25d min │', file.name, file_minutes)
+                )
+            end
+
+            -- Add separator between projects (except for last one)
+            if project ~= sorted_projects[#sorted_projects] then
+                table.insert(
+                    content,
+                    '├──────────────────────────────────────────────────────────────┤'
+                )
+            end
+        end
+
+        table.insert(
+            content,
+            '└──────────────────────────────────────────────────────────────┘'
+        )
+    else
+        table.insert(
+            content,
+            '┌─ Projekte/Dateien ──────────────────────────────────────────┐'
+        )
+        table.insert(content, '│ Keine Arbeitszeit an diesem Tag erfasst.                    │')
+        table.insert(
+            content,
+            '└──────────────────────────────────────────────────────────────┘'
+        )
+    end
+
+    table.insert(content, '')
+    table.insert(content, 'Drücke q zum Schließen, b um zur Wochenübersicht zurückzukehren')
+
+    return content
+end
+
+---Show daily overview in floating window
+---@param content table Array of content lines
+---@param title string Window title
+---@param summary table Daily summary data
+function M._showDailyFloatingWindow(content, title, summary)
+    -- Calculate window size
+    local max_width = 0
+    for _, line in ipairs(content) do
+        max_width = math.max(max_width, vim.fn.strdisplaywidth(line))
+    end
+
+    local width = math.min(max_width + 4, vim.o.columns - 10)
+    local height = math.min(#content + 2, vim.o.lines - 10)
+
+    -- Calculate position (centered)
+    local row = math.floor((vim.o.lines - height) / 2)
+    local col = math.floor((vim.o.columns - width) / 2)
+
+    -- Create buffer
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+
+    -- Create window
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = 'editor',
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = 'minimal',
+        border = 'rounded',
+        title = title,
+        title_pos = 'center',
+    })
+
+    -- Set key mappings for the floating window
+    local function close_window()
+        if vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_close(win, true)
+        end
+    end
+
+    local function back_to_weekly()
+        close_window()
+        -- Return to weekly overview
+        M.showWeeklyOverview({
+            year = summary.year,
+            week = summary.week,
+        })
+    end
+
+    -- Key mappings
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'q', '', {
+        noremap = true,
+        silent = true,
+        callback = close_window,
+    })
+
+    vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', '', {
+        noremap = true,
+        silent = true,
+        callback = close_window,
+    })
+
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'b', '', {
+        noremap = true,
+        silent = true,
+        callback = back_to_weekly,
+    })
+
+    -- Set window options
+    vim.api.nvim_win_set_option(win, 'wrap', false)
+    vim.api.nvim_win_set_option(win, 'cursorline', true)
+end
+
+---Get German weekday name
+---@param weekday string English weekday name
+---@return string German weekday name
+function M._getGermanWeekdayName(weekday)
+    local weekday_names_de = {
+        Monday = 'Montag',
+        Tuesday = 'Dienstag',
+        Wednesday = 'Mittwoch',
+        Thursday = 'Donnerstag',
+        Friday = 'Freitag',
+        Saturday = 'Samstag',
+        Sunday = 'Sonntag',
+    }
+    return weekday_names_de[weekday] or weekday
 end
 
 return M

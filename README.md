@@ -311,6 +311,92 @@ print(summary.totals.totalOvertime) -- Total overtime
 print(summary.weekdays.Monday.workedHours) -- Monday's hours
 ```
 
+## Daily Overview (Tagesübersicht)
+
+The daily overview feature allows you to dive deeper into individual days from the weekly overview. It provides detailed information about a specific day's work patterns, goal achievement, and project/file breakdowns.
+
+### Navigation from Weekly Overview
+
+From the weekly overview window, you can navigate to daily overviews using numbered keys:
+
+- **1** = Monday (Montag)
+- **2** = Tuesday (Dienstag) 
+- **3** = Wednesday (Mittwoch)
+- **4** = Thursday (Donnerstag)
+- **5** = Friday (Freitag)
+- **6** = Saturday (Samstag)
+- **7** = Sunday (Sonntag)
+
+### Daily Overview Features
+
+Each daily overview shows:
+
+#### Work Time Summary
+- **Worked hours** vs. **daily target** with visual status indicators
+- **Overtime calculation** (positive/negative)
+- **Goal achievement status**: 🟢 Erreicht (reached) or 🔴 Nicht erreicht (not reached)
+
+#### Work Periods
+- **Start and end times** for the day
+- **Break/pause time** calculation
+- **Work period format**: Shows actual work sessions separated by breaks (e.g., "8-12 Uhr  Pause: 1.0h  13-17 Uhr")
+
+#### Project and File Breakdown
+- **Time spent per project** in minutes
+- **Time spent per file** within each project in minutes
+- **Sorted by most worked time** (descending order)
+
+### Sample Daily Overview
+
+```
+═══ Tagesübersicht - Montag, KW 11/2023 ═══
+
+┌─ Arbeitszeit-Übersicht ──────────────────────────────────────┐
+│ Gearbeitet:        8.00 Stunden                        │
+│ Tagesziel:         8.00 Stunden                        │
+│ Überstunden:       +0.00 Stunden                        │
+│ Status:            🟢 Erreicht                               │
+└──────────────────────────────────────────────────────────────┘
+
+┌─ Arbeitszeiten ──────────────────────────────────────────────┐
+│ Von: 08:00 bis 17:00                                        │
+│ Pause: 1.0h                                             │
+│ Format: 8-12 Uhr  Pause: 1.0h  13-17 Uhr             │
+└──────────────────────────────────────────────────────────────┘
+
+┌─ Projekte/Dateien (in Minuten) ─────────────────────────────┐
+│ 📁 WorkProject                          480 min │
+│   📄 main.lua                          240 min │
+│   📄 test.lua                          240 min │
+│ 📁 PersonalProject                      120 min │
+│   📄 hobby.lua                         120 min │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Navigation Controls
+
+In the daily overview:
+- **q** or **Esc**: Close the daily overview
+- **b**: Return to the weekly overview
+
+### Programmatic Access
+
+You can also access daily summary data programmatically:
+
+```lua
+-- Get detailed daily summary
+local dailySummary = require('maorun.time').getDailySummary({
+    year = '2023',
+    week = '11', 
+    weekday = 'Monday'
+})
+
+-- Show daily overview window
+require('maorun.time').showDailyOverview({
+    weekday = 'Monday'
+})
+```
+
 ## Time Export
 
 The plugin supports exporting time tracking data in CSV and Markdown formats for weekly or monthly periods. This is useful for billing, reporting, or personal analysis.
