@@ -23,7 +23,7 @@ jobs:
           tar czf ./artifact_output/formatted-code.tgz --exclude=./.git --exclude=./artifact_output .
         shell: bash
       - name: Upload formatted code artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: formatted-code-archive
           path: ./artifact_output/formatted-code.tgz
@@ -103,7 +103,7 @@ jobs:
           tar czf ./artifact_output/documentation.tgz --exclude=./.git --exclude=./artifact_output .
         shell: bash
       - name: Upload documentation artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: documentation-archive
           path: ./artifact_output/documentation.tgz
@@ -178,7 +178,7 @@ jobs:
       - name: Generate Luacov report
         run: luacov -c .luacov
       - name: Upload coverage report artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-files
           path: |
@@ -199,7 +199,7 @@ jobs:
           ref: ${{ github.head_ref || github.ref }} # Checkout the appropriate branch/PR head
 
       - name: Download formatted code
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: formatted-code-archive
           path: temp_lint
@@ -225,7 +225,7 @@ jobs:
         shell: bash
 
       - name: Download documentation
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: documentation-archive
           path: temp_docs
@@ -255,7 +255,7 @@ jobs:
         shell: bash
 
       - name: Download coverage files
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: coverage-files
           path: temp_coverage
