@@ -12,7 +12,7 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
       - name: Stylua
-        uses: JohnnyMorganz/stylua-action@v4
+        uses: JohnnyMorganz/stylua-action@v5
         with:
           token: ${{ secrets.PAT }}
           version: latest
